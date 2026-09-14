@@ -136,6 +136,7 @@ class AuthController extends Controller
                 }
                 return redirect()->route('waka-kurikulum.dashboard');
             case 'kepala_sekolah':
+                return redirect()->route('kepala-sekolah.dashboard');
             default:
                 return redirect()->route('jurnal.index');
         }

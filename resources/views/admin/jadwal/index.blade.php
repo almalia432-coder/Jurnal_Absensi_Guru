@@ -137,6 +137,26 @@
         color: #ffffff;
     }
 
+    .btn-import-csv {
+        background: #f1f5f9;
+        color: #1e293b;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 9px 16px;
+        font-size: 13px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-import-csv:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+
     .btn-ta-pill {
         background: #ffffff;
         border: 1.5px solid #c7d2fe;
@@ -688,8 +708,8 @@
     @if(session('success'))
         <div class="toast"><i class="fa-solid fa-circle-check"></i><span>{{ session('success') }}</span></div>
     @endif
-    @if(session('error') || $errors->any())
-        <div class="toast error"><i class="fa-solid fa-circle-xmark"></i><span>{{ session('error') ?? $errors->first() }}</span></div>
+    @if(session('error') || (isset($errors) && $errors->any()))
+        <div class="toast error"><i class="fa-solid fa-circle-xmark"></i><span>{{ session('error') ?? ($errors->first() ?? '') }}</span></div>
     @endif
 </div>
 
@@ -736,6 +756,11 @@
                 <i class="fa-solid fa-list-ul"></i> Tabel Data
             </button>
         </div>
+
+        {{-- Import CSV Button --}}
+        <button type="button" class="btn-import-csv" onclick="openImportModal()">
+            <i class="fa-solid fa-file-arrow-up"></i> Import CSV
+        </button>
 
         {{-- Add Schedule Button --}}
         <button type="button" class="btn-add-jadwal" onclick="openAddModal()">
@@ -790,7 +815,6 @@
                         <th class="th-pill-hdr day-hdr">Rabu</th>
                         <th class="th-pill-hdr day-hdr">Kamis</th>
                         <th class="th-pill-hdr day-hdr">Jumat</th>
-                        <th class="th-pill-hdr day-hdr">Sabtu</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -804,7 +828,7 @@
                             </td>
 
                             {{-- Days Columns --}}
-                            @foreach(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'] as $hari)
+                            @foreach(['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'] as $hari)
                                 <td class="slot-cell" data-hari="{{ $hari }}" data-jam="{{ $jam }}" data-kelas="{{ $selectedKelas->id_kelas }}">
                                     @if(isset($matrixJadwal[$hari][$jam]))
                                         @php $j = $matrixJadwal[$hari][$jam]; @endphp
@@ -891,7 +915,7 @@
                         {{-- Istirahat 1 Divider (After Jam 4) --}}
                         @if($jam === 4)
                         <tr>
-                            <td colspan="7" class="break-row-cell">
+                            <td colspan="6" class="break-row-cell">
                                 <i class="fa-solid fa-mug-hot"></i> ISTIRAHAT 1 (09.40 — 09.55 WIB)
                             </td>
                         </tr>
@@ -900,7 +924,7 @@
                         {{-- Istirahat 2 / Dzuhur Divider (After Jam 7) --}}
                         @if($jam === 7)
                         <tr>
-                            <td colspan="7" class="break-row-cell" style="background:linear-gradient(90deg, #f0fdf4 0%, #dcfce7 50%, #f0fdf4 100%);color:#166534;">
+                            <td colspan="6" class="break-row-cell" style="background:linear-gradient(90deg, #f0fdf4 0%, #dcfce7 50%, #f0fdf4 100%);color:#166534;">
                                 <i class="fa-solid fa-mosque" style="color:#16a34a;"></i> ISTIRAHAT 2 &amp; SHOLAT DZUHUR (11.55 — 12.35 WIB)
                             </td>
                         </tr>
@@ -1193,6 +1217,44 @@
     </div>
 </div>
 
+{{-- Import CSV Modal --}}
+<div class="modal-bd" id="importModal">
+    <div class="modal-bx" style="max-width:540px;">
+        <div class="modal-hdr">
+            <h4 class="modal-ttl"><i class="fa-solid fa-file-csv" style="color:#2b43b9;margin-right:8px;"></i>Import Jadwal dari File CSV</h4>
+            <button class="btn-modal-close" onclick="closeModal('importModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:#475569;line-height:1.5;">
+            <div style="font-weight:800;color:#0f172a;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+                <i class="fa-solid fa-circle-info" style="color:#3b82f6;"></i> Petunjuk Format Kolom:
+            </div>
+            Gunakan format kolom: <b>nama_kelas, mapel, guru, hari, jam_dari, jam_sampai, tahun_ajaran, semester</b>.<br>
+            Sistem otomatis mengecek bentrok guru &amp; kelas serta menghitung durasi waktu KBM (Senin s/d Jumat).
+            <div style="margin-top:10px;">
+                <a href="{{ route('admin.import.template', 'jadwal') }}" class="btn-ta-pill" style="font-size:11.5px;padding:6px 12px;text-decoration:none;">
+                    <i class="fa-solid fa-download"></i> Unduh Template CSV Jadwal
+                </a>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('admin.jadwal.import-csv') }}" enctype="multipart/form-data">
+            @csrf
+            <div style="margin-bottom:18px;">
+                <label class="form-field-lbl">Pilih File CSV (.csv / .txt) <span style="color:#ef4444">*</span></label>
+                <input type="file" name="file_csv" accept=".csv, .txt, text/csv" class="form-field-ctrl" required style="padding:8px 10px;">
+            </div>
+
+            <div class="form-btn-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeModal('importModal')">Batal</button>
+                <button type="submit" class="btn-modal-submit">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Unggah &amp; Proses Impor
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -1221,6 +1283,7 @@
 
     function closeModal(id) { document.getElementById(id).classList.remove('show'); }
     function openSetTAModal() { document.getElementById('setTAModal').classList.add('show'); }
+    function openImportModal() { document.getElementById('importModal').classList.add('show'); }
 
     function onClassChange(classId) {
         window.location.href = `{{ route('admin.jadwal') }}?kelas=${classId}&mode=${currentViewMode}&tahun_ajaran=${currentTA}`;
@@ -1455,7 +1518,7 @@
         document.getElementById('deleteModal').classList.add('show');
     }
 
-    ['jadwalModal', 'setTAModal', 'deleteModal'].forEach(id => {
+    ['jadwalModal', 'setTAModal', 'deleteModal', 'importModal'].forEach(id => {
         document.getElementById(id).addEventListener('click', function(e) {
             if(e.target === this) closeModal(id);
         });

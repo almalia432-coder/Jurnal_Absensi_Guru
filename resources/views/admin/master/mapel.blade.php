@@ -134,6 +134,28 @@
         color: #ffffff;
     }
 
+    .btn-import-csv {
+        background: #f1f5f9;
+        color: #1e293b;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 11px 18px;
+        font-size: 13.5px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+    .btn-import-csv:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+
     .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 1; }
     .filter-item { display: flex; flex-direction: column; gap: 4px; }
     .filter-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: .5px; }
@@ -452,10 +474,17 @@
             </div>
         </form>
 
-        <button type="button" class="btn-add-mapel" onclick="openAddModal()">
-            <i class="fa-solid fa-plus"></i>
-            <span>Tambah Mapel Baru</span>
-        </button>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button type="button" class="btn-import-csv" onclick="openImportModal()">
+                <i class="fa-solid fa-file-arrow-up"></i>
+                <span>Import CSV</span>
+            </button>
+
+            <button type="button" class="btn-add-mapel" onclick="openAddModal()">
+                <i class="fa-solid fa-plus"></i>
+                <span>Tambah Mapel Baru</span>
+            </button>
+        </div>
     </div>
 
     {{-- Table Section --}}
@@ -778,6 +807,50 @@
     </div>
 </div>
 
+{{-- MODAL IMPORT MAPEL --}}
+<div class="custom-modal-backdrop" id="importMapelModal">
+    <div class="custom-modal" style="max-width: 520px;">
+        <div class="modal-hdr">
+            <div class="modal-title-text">
+                <i class="fa-solid fa-file-csv" style="color: #2b43b9;"></i>
+                <span>Import Mata Pelajaran dari CSV</span>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeImportModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding-top:14px;">
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:#475569;line-height:1.5;">
+                <div style="font-weight:800;color:#0f172a;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+                    <i class="fa-solid fa-circle-info" style="color:#3b82f6;"></i> Petunjuk Format Kolom:
+                </div>
+                Gunakan format kolom: <b>kode_mapel, nama_mapel, kelompok</b>.<br>
+                Kelompok: <i>Normatif, Adaptif, Produktif, Muatan_Lokal</i>.
+                <div style="margin-top:10px;">
+                    <a href="{{ route('admin.import.template', 'mapel') }}" class="btn-import-csv" style="font-size:11.5px;padding:6px 12px;text-decoration:none;">
+                        <i class="fa-solid fa-download"></i> Unduh Template CSV Mapel
+                    </a>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('admin.master.mapel.import-csv') }}" enctype="multipart/form-data">
+                @csrf
+                <div style="margin-bottom:18px;">
+                    <label class="form-label-custom">Pilih File CSV (.csv / .txt) <span style="color:#ef4444">*</span></label>
+                    <input type="file" name="file_csv" accept=".csv, .txt, text/csv" class="form-ctrl-custom" required style="padding:8px 10px;">
+                </div>
+
+                <div class="modal-ftr" style="padding:0;border:none;margin-top:20px;">
+                    <button type="button" class="btn-modal-cancel" onclick="closeImportModal()">Batal</button>
+                    <button type="submit" class="btn-modal-submit">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Unggah &amp; Proses Impor
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -787,6 +860,14 @@
         const toasts = document.querySelectorAll('.toast');
         toasts.forEach(t => t.style.display = 'none');
     }, 4000);
+
+    // Modal Import
+    function openImportModal() {
+        document.getElementById('importMapelModal').classList.add('show');
+    }
+    function closeImportModal() {
+        document.getElementById('importMapelModal').classList.remove('show');
+    }
 
     // Modal Add
     function openAddModal() {

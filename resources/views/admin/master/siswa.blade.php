@@ -55,6 +55,26 @@
         color: #ffffff;
     }
 
+    .btn-import-csv {
+        background: #f1f5f9;
+        color: #1e293b;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 11px 18px;
+        font-size: 13.5px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-import-csv:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+
     /* KPI Summary Cards */
     .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px; }
     .kpi-card {
@@ -353,7 +373,11 @@
         @endif
     </div>
 
-    <div>
+    <div style="display:flex;align-items:center;gap:10px;">
+        <button type="button" class="btn-import-csv" onclick="openImportModal()">
+            <i class="fa-solid fa-file-arrow-up"></i> Import CSV
+        </button>
+
         <button type="button" class="btn-add-siswa" onclick="openAddModal()">
             <i class="fa-solid fa-user-plus"></i> Tambah Siswa Baru
         </button>
@@ -376,7 +400,7 @@
         <thead>
             <tr>
                 <th style="width:48px;">#</th>
-                <th>Nama Siswa &amp; NIS</th>
+                <th>Nama Siswa &amp; Identitas (NISN / NISS)</th>
                 <th>Kelas</th>
                 <th>Jenis Kelamin</th>
                 <th>No. HP Ortu</th>
@@ -395,7 +419,14 @@
                         </div>
                         <div>
                             <div class="student-name">{{ $s->nama_lengkap }}</div>
-                            <div class="student-nis">NIS: {{ $s->nis }}{{ $s->nisn ? ' · NISN: '.$s->nisn : '' }}</div>
+                            <div class="student-nis">
+                                @if($s->nisn) <span>NISN: {{ $s->nisn }}</span> @endif
+                                @if($s->niss)
+                                    <span>· NISS: {{ $s->niss }}</span>
+                                @elseif($s->nis && $s->nis !== $s->nisn)
+                                    <span>· NIS: {{ $s->nis }}</span>
+                                @endif
+                            </div>
                         </div>
                     </div>
                 </td>
@@ -417,7 +448,7 @@
                 </td>
                 <td>
                     <div class="action-btns-group" style="justify-content:center;">
-                        <button class="btn-table-edit" title="Edit Data" onclick="openEditModal({{ $s->id_siswa }}, '{{ addslashes($s->nama_lengkap) }}', '{{ $s->nis }}', '{{ $s->nisn }}', '{{ $s->jenis_kelamin }}', '{{ $s->id_kelas }}', '{{ $s->no_hp_ortu }}', '{{ addslashes($s->alamat) }}', {{ $s->status_aktif ? 'true' : 'false' }})">
+                        <button class="btn-table-edit" title="Edit Data" onclick="openEditModal({{ $s->id_siswa }}, '{{ addslashes($s->nama_lengkap) }}', '{{ $s->nis }}', '{{ $s->nisn }}', '{{ $s->jenis_kelamin }}', '{{ $s->id_kelas }}', '{{ $s->no_hp_ortu }}', '{{ addslashes($s->alamat) }}', {{ $s->status_aktif ? 'true' : 'false' }}, '{{ $s->niss }}')">
                             <i class="fa-solid fa-pen-to-square"></i>
                         </button>
                         <button class="btn-table-delete" title="Hapus Data" onclick="openDeleteModal({{ $s->id_siswa }}, '{{ addslashes($s->nama_lengkap) }}')">
@@ -482,12 +513,13 @@
 
             <div class="form-grid-layout">
                 <div class="form-group-item">
-                    <label class="form-field-lbl">NIS <span style="color:#ef4444">*</span></label>
-                    <input type="text" name="nis" id="f_nis" class="form-field-ctrl" placeholder="Contoh: 2026001" required>
+                    <label class="form-field-lbl">NISN (Nomor Induk Siswa Nasional)</label>
+                    <input type="text" name="nisn" id="f_nisn" class="form-field-ctrl" placeholder="Contoh: 0105292765">
                 </div>
                 <div class="form-group-item">
-                    <label class="form-field-lbl">NISN</label>
-                    <input type="text" name="nisn" id="f_nisn" class="form-field-ctrl" placeholder="Opsional">
+                    <label class="form-field-lbl">N I S S (NIS Lokal Sekolah) <span style="font-size:11px;color:#94a3b8;">(Opsional)</span></label>
+                    <input type="text" name="niss" id="f_niss" class="form-field-ctrl" placeholder="Nomor induk sekolah jika ada">
+                    <input type="hidden" name="nis" id="f_nis">
                 </div>
                 <div class="form-group-item full-width">
                     <label class="form-field-lbl">Nama Lengkap <span style="color:#ef4444">*</span></label>
@@ -558,6 +590,58 @@
     </div>
 </div>
 
+{{-- Import CSV Modal --}}
+<div class="modal-bd" id="importModal">
+    <div class="modal-bx" style="max-width:540px;">
+        <div class="modal-hdr">
+            <h4 class="modal-ttl"><i class="fa-solid fa-file-csv" style="color:#2b43b9;margin-right:8px;"></i>Import Data Siswa dari File CSV</h4>
+            <button class="btn-modal-close" onclick="closeModal('importModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:#475569;line-height:1.5;">
+            <div style="font-weight:800;color:#0f172a;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+                <i class="fa-solid fa-circle-info" style="color:#3b82f6;"></i> Format Daftar Presensi SMKN 1 Boyolangu:
+            </div>
+            Gunakan format kolom: <b>NO, NISN, NAMA, N I S S, L/P, KELAS</b>.<br>
+            <ul style="margin:6px 0 6px 18px;padding:0;font-size:12px;color:#64748b;">
+                <li>Kolom <b>NISN</b>, <b>NAMA</b>, dan <b>L/P</b> adalah data utama siswa.</li>
+                <li>Kolom <b>N I S S</b> (NIS Lokal) bersifat opsional (jika kosong, sistem otomatis menyamakan dengan NISN).</li>
+                <li>Kolom <b>KELAS</b> dapat dicantumkan di CSV (misal: <code>X TKI 1</code>) atau ditentukan lewat pilihan kelas di bawah.</li>
+            </ul>
+            <div style="margin-top:10px;">
+                <a href="{{ route('admin.import.template', 'siswa') }}" class="btn-import-csv" style="font-size:11.5px;padding:6px 12px;text-decoration:none;">
+                    <i class="fa-solid fa-download"></i> Unduh Template CSV Sesuai Presensi Boyolangu
+                </a>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('admin.master.siswa.import-csv') }}" enctype="multipart/form-data">
+            @csrf
+            <div style="margin-bottom:14px;">
+                <label class="form-field-lbl">Pilih Kelas Target <span style="font-size:11px;color:#94a3b8;font-weight:normal;">(Opsional, jika di dalam file belum ada kolom kelas)</span></label>
+                <select name="id_kelas" class="form-field-ctrl" style="padding:9px 12px;">
+                    <option value="">-- Otomatis dari File CSV / Pilih Kelas --</option>
+                    @foreach($kelasList as $k)
+                        <option value="{{ $k->id_kelas }}">{{ $k->nama_kelas }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div style="margin-bottom:18px;">
+                <label class="form-field-lbl">Pilih File CSV (.csv / .txt) <span style="color:#ef4444">*</span></label>
+                <input type="file" name="file_csv" accept=".csv, .txt, text/csv" class="form-field-ctrl" required style="padding:8px 10px;">
+            </div>
+
+            <div class="form-btn-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeModal('importModal')">Batal</button>
+                <button type="submit" class="btn-modal-submit">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Unggah &amp; Proses Impor
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -568,6 +652,7 @@
     });
 
     function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+    function openImportModal() { document.getElementById('importModal').classList.add('show'); }
 
     function openAddModal() {
         document.getElementById('modalTitle').innerText = 'Tambah Siswa Baru';
@@ -576,18 +661,22 @@
         form.action = '{{ route("admin.master.siswa.store") }}';
         document.getElementById('methodField').innerHTML = '';
         form.reset();
+        document.getElementById('f_nis').value = '';
+        document.getElementById('f_nisn').value = '';
+        document.getElementById('f_niss').value = '';
         document.getElementById('siswaModal').classList.add('show');
     }
 
-    function openEditModal(id, nama, nis, nisn, jk, kelasId, hp, alamat, aktif) {
+    function openEditModal(id, nama, nis, nisn, jk, kelasId, hp, alamat, aktif, niss) {
         document.getElementById('modalTitle').innerText = 'Edit Data Siswa';
         document.getElementById('submitBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Perbarui Data';
         const form = document.getElementById('siswaForm');
         form.action = '/admin/master/siswa/' + id;
         document.getElementById('methodField').innerHTML = '@method("PUT")';
 
-        document.getElementById('f_nis').value    = nis;
-        document.getElementById('f_nisn').value   = nisn;
+        document.getElementById('f_nis').value    = nis || '';
+        document.getElementById('f_nisn').value   = nisn || '';
+        document.getElementById('f_niss').value   = niss || '';
         document.getElementById('f_nama').value   = nama;
         document.getElementById('f_jk').value     = jk;
         document.getElementById('f_kelas').value  = kelasId;
@@ -604,7 +693,7 @@
         document.getElementById('deleteModal').classList.add('show');
     }
 
-    ['siswaModal','deleteModal'].forEach(id => {
+    ['siswaModal','deleteModal','importModal'].forEach(id => {
         document.getElementById(id).addEventListener('click', function(e) {
             if(e.target === this) closeModal(id);
         });

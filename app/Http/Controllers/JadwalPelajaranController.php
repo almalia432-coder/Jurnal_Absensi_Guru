@@ -81,7 +81,7 @@ class JadwalPelajaranController extends Controller
         $tahunAjaranList   = TahunAjaran::orderByDesc('is_aktif')->orderByDesc('id')->get();
         $existingTahunList = TahunAjaran::select('nama')->distinct()->pluck('nama')->toArray();
 
-        $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+        $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
 
         // Selected Class for Matrix View (defaults to first class in list if not specified)
         $selectedKelasId = $kelasFilter ?: ($kelasList->first()?->id_kelas ?? null);
@@ -141,7 +141,7 @@ class JadwalPelajaranController extends Controller
                 });
             });
 
-        $jadwalList = $query->orderByRaw("FIELD(hari, 'Senin','Selasa','Rabu','Kamis','Jumat','Sabtu')")
+        $jadwalList = $query->orderByRaw("FIELD(hari, 'Senin','Selasa','Rabu','Kamis','Jumat')")
             ->orderBy('jam_ke')
             ->paginate(20)
             ->withQueryString();
@@ -198,7 +198,7 @@ class JadwalPelajaranController extends Controller
         $validated = $request->validate([
             'nama_tahun_ajaran' => 'required|string|max:20',
             'semester'          => 'required|in:Ganjil,Genap',
-            'hari'              => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu',
+            'hari'              => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat',
             'jam_dari'          => 'required|integer|min:1|max:12',
             'jam_sampai'        => 'required|integer|min:1|max:12|gte:jam_dari',
             'jam_mulai'         => 'nullable|date_format:H:i',
@@ -310,7 +310,7 @@ class JadwalPelajaranController extends Controller
         $validated = $request->validate([
             'nama_tahun_ajaran' => 'required|string|max:20',
             'semester'          => 'required|in:Ganjil,Genap',
-            'hari'              => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu',
+            'hari'              => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat',
             'jam_dari'          => 'required|integer|min:1|max:12',
             'jam_sampai'        => 'required|integer|min:1|max:12|gte:jam_dari',
             'jam_mulai'         => 'nullable|date_format:H:i',
@@ -396,7 +396,7 @@ class JadwalPelajaranController extends Controller
         $jadwal = JadwalPelajaran::with(['guru', 'mapel', 'kelas'])->findOrFail($id);
 
         $validated = $request->validate([
-            'target_hari' => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat,Sabtu',
+            'target_hari' => 'required|in:Senin,Selasa,Rabu,Kamis,Jumat',
             'target_jam'  => 'required|integer|min:1|max:12',
             'id_kelas'    => 'nullable|exists:kelas,id_kelas',
         ]);

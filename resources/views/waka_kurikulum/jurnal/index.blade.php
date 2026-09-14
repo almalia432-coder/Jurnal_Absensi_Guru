@@ -18,15 +18,15 @@
         font-size: 13.5px; color: #0f172a; background: #f8fafc;
         min-width: 150px; font-family: inherit;
     }
-    .filter-input:focus, .filter-select:focus { outline: none; border-color: #0ea5e9; background: white; }
-    .btn-filter { padding: 9px 18px; background: #0ea5e9; color: white; border: none; border-radius: 10px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-    .btn-filter:hover { background: #0284c7; }
+    .filter-input:focus, .filter-select:focus { outline: none; border-color: #2b43b9; background: white; }
+    .btn-filter { padding: 9px 18px; background: #2b43b9; color: white; border: none; border-radius: 10px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s; }
+    .btn-filter:hover { background: #1e3a8a; }
 
     .table-card { background: white; border-radius: 18px; border: 1px solid #e2e8f0; overflow: hidden; }
     .table-hdr { padding: 18px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
     .table-title { font-size: 15px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
-    .table-title i { color: #0ea5e9; }
-    .count-badge { font-size: 12px; background: #e0f2fe; color: #0369a1; padding: 2px 10px; border-radius: 8px; font-weight: 700; }
+    .table-title i { color: #2b43b9; }
+    .count-badge { font-size: 12px; background: #eef2ff; color: #2b43b9; padding: 2px 10px; border-radius: 8px; font-weight: 700; }
 
     .data-table { width: 100%; border-collapse: collapse; }
     .data-table th { padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #94a3b8; border-bottom: 1px solid #f1f5f9; letter-spacing: 0.5px; }

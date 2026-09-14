@@ -20,8 +20,13 @@ use App\Http\Controllers\GuruPiketDashboardController;
 use App\Http\Controllers\GuruMapelDashboardController;
 use App\Http\Controllers\SatpamDashboardController;
 use App\Http\Controllers\WakaKurikulumDashboardController;
+use App\Http\Controllers\WakaKurikulumMapelController;
+use App\Http\Controllers\WakaKurikulumGuruMengajarController;
+use App\Http\Controllers\WakaKurikulumJadwalController;
+use App\Http\Controllers\CsvImportController;
 use App\Http\Controllers\WakaSdmDashboardController;
 use App\Http\Controllers\WaliMuridDashboardController;
+use App\Http\Controllers\KepalaSekolahDashboardController;
 
 Route::get('/', function () {
     return redirect()->route('admin.dashboard');
@@ -49,11 +54,15 @@ Route::prefix('admin')->middleware('auth')->group(function () {
     // Jadwal Pelajaran
     Route::get('/jadwal', [JadwalPelajaranController::class, 'index'])->name('admin.jadwal');
     Route::post('/jadwal', [JadwalPelajaranController::class, 'store'])->name('admin.jadwal.store');
+    Route::post('/jadwal/import-csv', [CsvImportController::class, 'importJadwal'])->name('admin.jadwal.import-csv');
     Route::post('/jadwal/set-tahun-ajaran', [JadwalPelajaranController::class, 'setTahunAjaran'])->name('admin.jadwal.set-ta');
     Route::post('/jadwal/swap', [JadwalPelajaranController::class, 'swap'])->name('admin.jadwal.swap');
     Route::post('/jadwal/{id}/move', [JadwalPelajaranController::class, 'move'])->name('admin.jadwal.move');
     Route::put('/jadwal/{id}', [JadwalPelajaranController::class, 'update'])->name('admin.jadwal.update');
     Route::delete('/jadwal/{id}', [JadwalPelajaranController::class, 'destroy'])->name('admin.jadwal.destroy');
+
+    // Download CSV Templates
+    Route::get('/import/template/{type}', [CsvImportController::class, 'downloadTemplate'])->name('admin.import.template');
 
     // Master Data sub-menu
     Route::prefix('master')->name('admin.master.')->group(function () {
@@ -64,15 +73,17 @@ Route::prefix('admin')->middleware('auth')->group(function () {
         Route::post('/user/{id}/toggle-status', [MasterUserController::class, 'toggleStatus'])->name('user.toggle-status');
         Route::delete('/user/{id}', [MasterUserController::class, 'destroy'])->name('user.destroy');
 
-        // Siswa CRUD
+        // Siswa CRUD & Import
         Route::get('/siswa', [MasterSiswaController::class, 'index'])->name('siswa');
         Route::post('/siswa', [MasterSiswaController::class, 'store'])->name('siswa.store');
+        Route::post('/siswa/import-csv', [CsvImportController::class, 'importSiswa'])->name('siswa.import-csv');
         Route::put('/siswa/{id}', [MasterSiswaController::class, 'update'])->name('siswa.update');
         Route::delete('/siswa/{id}', [MasterSiswaController::class, 'destroy'])->name('siswa.destroy');
 
-        // Guru CRUD
+        // Guru CRUD & Import
         Route::get('/guru', [MasterGuruController::class, 'index'])->name('guru');
         Route::post('/guru', [MasterGuruController::class, 'store'])->name('guru.store');
+        Route::post('/guru/import-csv', [CsvImportController::class, 'importGuru'])->name('guru.import-csv');
         Route::put('/guru/{id}', [MasterGuruController::class, 'update'])->name('guru.update');
         Route::delete('/guru/{id}', [MasterGuruController::class, 'destroy'])->name('guru.destroy');
 
@@ -88,9 +99,10 @@ Route::prefix('admin')->middleware('auth')->group(function () {
         Route::put('/kelas/{id}', [MasterKelasController::class, 'update'])->name('kelas.update');
         Route::delete('/kelas/{id}', [MasterKelasController::class, 'destroy'])->name('kelas.destroy');
 
-        // Mapel CRUD
+        // Mapel CRUD & Import
         Route::get('/mapel', [MasterMapelController::class, 'index'])->name('mapel');
         Route::post('/mapel', [MasterMapelController::class, 'store'])->name('mapel.store');
+        Route::post('/mapel/import-csv', [CsvImportController::class, 'importMapel'])->name('mapel.import-csv');
         Route::put('/mapel/{id}', [MasterMapelController::class, 'update'])->name('mapel.update');
         Route::delete('/mapel/{id}', [MasterMapelController::class, 'destroy'])->name('mapel.destroy');
     });
@@ -190,15 +202,55 @@ Route::prefix('satpam')->name('satpam.')->middleware('auth')->group(function () 
 Route::prefix('waka-kurikulum')->name('waka-kurikulum.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [WakaKurikulumDashboardController::class, 'index'])->name('dashboard');
     Route::get('/jurnal', [WakaKurikulumDashboardController::class, 'jurnal'])->name('jurnal');
-    Route::get('/jadwal', [WakaKurikulumDashboardController::class, 'jadwal'])->name('jadwal');
+
+    // Manajemen Mata Pelajaran
+    Route::get('/mapel', [WakaKurikulumMapelController::class, 'index'])->name('mapel.index');
+    Route::post('/mapel', [WakaKurikulumMapelController::class, 'store'])->name('mapel.store');
+    Route::post('/mapel/import-csv', [CsvImportController::class, 'importMapel'])->name('mapel.import-csv');
+    Route::put('/mapel/{id}', [WakaKurikulumMapelController::class, 'update'])->name('mapel.update');
+    Route::delete('/mapel/{id}', [WakaKurikulumMapelController::class, 'destroy'])->name('mapel.destroy');
+    Route::get('/mapel/{id}/detail', [WakaKurikulumMapelController::class, 'detail'])->name('mapel.detail');
+
+    // Pengaturan Guru Mengajar & Rekap Beban Mengajar (JP)
+    Route::get('/guru-mengajar', [WakaKurikulumGuruMengajarController::class, 'index'])->name('guru-mengajar.index');
+    Route::get('/guru-mengajar/export', [WakaKurikulumGuruMengajarController::class, 'exportCsv'])->name('guru-mengajar.export');
+    Route::get('/guru-mengajar/{id}', [WakaKurikulumGuruMengajarController::class, 'detail'])->name('guru-mengajar.detail');
+    Route::post('/guru-mengajar/plotting', [WakaKurikulumGuruMengajarController::class, 'storePlotting'])->name('guru-mengajar.plotting');
+    Route::delete('/guru-mengajar/{id}/clear-jadwal', [WakaKurikulumGuruMengajarController::class, 'clearJadwalGuru'])->name('guru-mengajar.clear-jadwal');
+
+    // Pengaturan & Manajemen Jadwal Pelajaran
+    Route::get('/jadwal', [WakaKurikulumJadwalController::class, 'index'])->name('jadwal');
+    Route::post('/jadwal', [WakaKurikulumJadwalController::class, 'store'])->name('jadwal.store');
+    Route::post('/jadwal/import-csv', [CsvImportController::class, 'importJadwal'])->name('jadwal.import-csv');
+    Route::post('/jadwal/set-tahun-ajaran', [WakaKurikulumJadwalController::class, 'setTahunAjaran'])->name('jadwal.set-ta');
+    Route::post('/jadwal/swap', [WakaKurikulumJadwalController::class, 'swap'])->name('jadwal.swap');
+    Route::post('/jadwal/{id}/move', [WakaKurikulumJadwalController::class, 'move'])->name('jadwal.move');
+    Route::put('/jadwal/{id}', [WakaKurikulumJadwalController::class, 'update'])->name('jadwal.update');
+    Route::delete('/jadwal/{id}', [WakaKurikulumJadwalController::class, 'destroy'])->name('jadwal.destroy');
+
+    // Download CSV Templates for Waka
+    Route::get('/import/template/{type}', [CsvImportController::class, 'downloadTemplate'])->name('import.template');
 });
 
 // Waka SDM / Kepegawaian Routes (auth protected)
 Route::prefix('waka-sdm')->name('waka-sdm.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [WakaSdmDashboardController::class, 'index'])->name('dashboard');
     Route::get('/guru', [WakaSdmDashboardController::class, 'guru'])->name('guru');
+
+    // Persetujuan Izin Guru
     Route::get('/izin', [WakaSdmDashboardController::class, 'izin'])->name('izin');
     Route::post('/izin/{id}/status', [WakaSdmDashboardController::class, 'updateStatusIzin'])->name('izin.status');
+
+    // Persetujuan Dispensasi Siswa
+    Route::get('/dispensasi', [WakaSdmDashboardController::class, 'dispensasi'])->name('dispensasi');
+    Route::post('/dispensasi/{id}/status', [WakaSdmDashboardController::class, 'updateStatusDispensasi'])->name('dispensasi.status');
+
+    // Laporan Rekapitulasi Persetujuan
+    Route::get('/laporan', [WakaSdmDashboardController::class, 'laporan'])->name('laporan');
+    Route::get('/laporan/export', [WakaSdmDashboardController::class, 'exportLaporan'])->name('laporan.export');
+
+    // Pusat Bantuan / SOP
+    Route::get('/help', [WakaSdmDashboardController::class, 'help'])->name('help');
 });
 
 // Wali Murid / Siswa Portal Routes (auth protected)
@@ -208,6 +260,13 @@ Route::prefix('wali-murid')->name('wali-murid.')->middleware('auth')->group(func
     Route::get('/jurnal', [WaliMuridDashboardController::class, 'jurnal'])->name('jurnal');
     Route::get('/jadwal', [WaliMuridDashboardController::class, 'jadwal'])->name('jadwal');
     Route::get('/dispensasi', [WaliMuridDashboardController::class, 'dispensasi'])->name('dispensasi');
+});
+
+// Kepala Sekolah Routes (auth protected)
+Route::prefix('kepala-sekolah')->name('kepala-sekolah.')->middleware('auth')->group(function () {
+    Route::get('/dashboard', [KepalaSekolahDashboardController::class, 'dashboard'])->name('dashboard');
+    Route::get('/izin-guru',  [KepalaSekolahDashboardController::class, 'izinGuru'])->name('izin-guru');
+    Route::get('/dispensasi', [KepalaSekolahDashboardController::class, 'dispensasi'])->name('dispensasi');
 });
 
 Route::resource('jurnal', JurnalMengajarController::class);

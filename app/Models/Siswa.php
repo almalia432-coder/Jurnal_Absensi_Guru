@@ -17,6 +17,7 @@ class Siswa extends Model
         'user_id',
         'nis',
         'nisn',
+        'niss',
         'nama_lengkap',
         'jenis_kelamin',
         'id_kelas',

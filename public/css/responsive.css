@@ -156,8 +156,43 @@ body {
 
 img,
 video,
-canvas,
-svg {
+canvas {
     max-width: 100%;
     height: auto;
+}
+
+/* Restrict generic SVGs except explicitly sized icons */
+svg:not([width]):not([height]):not([class*="fa-"]) {
+    max-width: 100%;
+}
+
+/* Laravel Default Pagination Fix (prevents huge chevron SVGs) */
+nav[role="navigation"] svg,
+.pagination svg,
+svg.w-5,
+svg.h-5 {
+    width: 18px !important;
+    height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    min-width: 18px !important;
+    display: inline-block !important;
+    vertical-align: middle;
+}
+
+nav[role="navigation"] > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+}
+
+nav[role="navigation"] a,
+nav[role="navigation"] span[aria-disabled],
+nav[role="navigation"] span[aria-current] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }

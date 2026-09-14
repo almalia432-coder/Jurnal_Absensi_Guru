@@ -55,6 +55,26 @@
         color: #ffffff;
     }
 
+    .btn-import-csv {
+        background: #f1f5f9;
+        color: #1e293b;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 11px 18px;
+        font-size: 13.5px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .btn-import-csv:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+        border-color: #94a3b8;
+    }
+
     /* KPI Summary Cards */
     .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px; }
     .kpi-card {
@@ -270,8 +290,8 @@
     @if(session('success'))
         <div class="toast"><i class="fa-solid fa-circle-check"></i><span>{{ session('success') }}</span></div>
     @endif
-    @if(session('error') || $errors->any())
-        <div class="toast error"><i class="fa-solid fa-circle-xmark"></i><span>{{ session('error') ?? $errors->first() }}</span></div>
+    @if(session('error') || (isset($errors) && $errors->any()))
+        <div class="toast error"><i class="fa-solid fa-circle-xmark"></i><span>{{ session('error') ?? ($errors->first() ?? '') }}</span></div>
     @endif
 </div>
 
@@ -347,6 +367,10 @@
     </div>
 
     <div>
+        <button type="button" class="btn-import-csv" onclick="openImportModal()">
+            <i class="fa-solid fa-file-arrow-up"></i> Import CSV
+        </button>
+
         <button type="button" class="btn-add-guru" onclick="openAddModal()">
             <i class="fa-solid fa-user-plus"></i> Tambah Guru Baru
         </button>
@@ -612,6 +636,42 @@
             </div>
         </form>
     </div>
+{{-- Import CSV Modal --}}
+<div class="modal-bd" id="importModal">
+    <div class="modal-bx" style="max-width:540px;">
+        <div class="modal-hdr">
+            <h4 class="modal-ttl"><i class="fa-solid fa-file-csv" style="color:#2b43b9;margin-right:8px;"></i>Import Data Guru dari File CSV</h4>
+            <button class="btn-modal-close" onclick="closeModal('importModal')"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;margin-bottom:18px;font-size:12.5px;color:#475569;line-height:1.5;">
+            <div style="font-weight:800;color:#0f172a;margin-bottom:4px;display:flex;align-items:center;gap:6px;">
+                <i class="fa-solid fa-circle-info" style="color:#3b82f6;"></i> Petunjuk Format Kolom:
+            </div>
+            Gunakan format kolom: <b>nip, nama_lengkap, jenis_kelamin, role, email, no_hp, alamat</b>.<br>
+            Sistem otomatis membuatkan akun login sistem (password default: <code>password123</code>).
+            <div style="margin-top:10px;">
+                <a href="{{ route('admin.import.template', 'guru') }}" class="btn-import-csv" style="font-size:11.5px;padding:6px 12px;text-decoration:none;">
+                    <i class="fa-solid fa-download"></i> Unduh Template CSV Guru
+                </a>
+            </div>
+        </div>
+
+        <form method="POST" action="{{ route('admin.master.guru.import-csv') }}" enctype="multipart/form-data">
+            @csrf
+            <div style="margin-bottom:18px;">
+                <label class="form-field-lbl">Pilih File CSV (.csv / .txt) <span style="color:#ef4444">*</span></label>
+                <input type="file" name="file_csv" accept=".csv, .txt, text/csv" class="form-field-ctrl" required style="padding:8px 10px;">
+            </div>
+
+            <div class="form-btn-actions">
+                <button type="button" class="btn-modal-cancel" onclick="closeModal('importModal')">Batal</button>
+                <button type="submit" class="btn-modal-submit">
+                    <i class="fa-solid fa-cloud-arrow-up"></i> Unggah &amp; Proses Impor
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 @endsection
@@ -624,6 +684,7 @@
     });
 
     function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+    function openImportModal() { document.getElementById('importModal').classList.add('show'); }
 
     function handleGuruRoleChange(role) {
         const kelasField = document.getElementById('kelasField');
@@ -679,7 +740,7 @@
         document.getElementById('deleteModal').classList.add('show');
     }
 
-    ['guruModal','deleteModal'].forEach(id => {
+    ['guruModal','deleteModal','importModal'].forEach(id => {
         document.getElementById(id).addEventListener('click', function(e) {
             if(e.target === this) closeModal(id);
         });

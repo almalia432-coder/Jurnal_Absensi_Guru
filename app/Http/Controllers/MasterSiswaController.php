@@ -20,7 +20,8 @@ class MasterSiswaController extends Controller
                 $q->where(function ($q2) use ($search) {
                     $q2->where('nama_lengkap', 'LIKE', "%{$search}%")
                        ->orWhere('nis', 'LIKE', "%{$search}%")
-                       ->orWhere('nisn', 'LIKE', "%{$search}%");
+                       ->orWhere('nisn', 'LIKE', "%{$search}%")
+                       ->orWhere('niss', 'LIKE', "%{$search}%");
                 });
             })
             ->when($kelasId, fn($q) => $q->where('id_kelas', $kelasId))
@@ -45,8 +46,9 @@ class MasterSiswaController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'nis'           => 'required|string|max:20|unique:siswa,nis',
-            'nisn'          => 'nullable|string|max:20|unique:siswa,nisn',
+            'nis'           => 'nullable|string|max:30|unique:siswa,nis',
+            'nisn'          => 'nullable|string|max:30|unique:siswa,nisn',
+            'niss'          => 'nullable|string|max:30',
             'nama_lengkap'  => 'required|string|max:255',
             'jenis_kelamin' => 'required|in:L,P',
             'id_kelas'      => 'required|exists:kelas,id_kelas',
@@ -56,6 +58,9 @@ class MasterSiswaController extends Controller
         ]);
 
         $validated['status_aktif'] = $request->boolean('status_aktif', true);
+        if (empty($validated['nis']) && !empty($validated['nisn'])) {
+            $validated['nis'] = $validated['nisn'];
+        }
         Siswa::create($validated);
 
         return redirect()->route('admin.master.siswa')->with('success', "Siswa {$validated['nama_lengkap']} berhasil ditambahkan.");
@@ -66,8 +71,9 @@ class MasterSiswaController extends Controller
         $siswa = Siswa::findOrFail($id);
 
         $validated = $request->validate([
-            'nis'           => "required|string|max:20|unique:siswa,nis,{$siswa->id_siswa},id_siswa",
-            'nisn'          => "nullable|string|max:20|unique:siswa,nisn,{$siswa->id_siswa},id_siswa",
+            'nis'           => "nullable|string|max:30|unique:siswa,nis,{$siswa->id_siswa},id_siswa",
+            'nisn'          => "nullable|string|max:30|unique:siswa,nisn,{$siswa->id_siswa},id_siswa",
+            'niss'          => 'nullable|string|max:30',
             'nama_lengkap'  => 'required|string|max:255',
             'jenis_kelamin' => 'required|in:L,P',
             'id_kelas'      => 'required|exists:kelas,id_kelas',
@@ -77,6 +83,9 @@ class MasterSiswaController extends Controller
         ]);
 
         $validated['status_aktif'] = $request->boolean('status_aktif', true);
+        if (empty($validated['nis']) && !empty($validated['nisn'])) {
+            $validated['nis'] = $validated['nisn'];
+        }
         $siswa->update($validated);
 
         return redirect()->route('admin.master.siswa')->with('success', "Data siswa {$siswa->nama_lengkap} berhasil diperbarui.");
