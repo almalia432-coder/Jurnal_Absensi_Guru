@@ -141,6 +141,7 @@ Route::prefix('guru-piket')->name('guru-piket.')->middleware('auth')->group(func
     
     // Izin Guru & Kelas Terdampak
     Route::get('/izin-guru', [GuruPiketDashboardController::class, 'izinGuru'])->name('izin-guru');
+    Route::post('/izin-guru/{id}/status', [GuruPiketDashboardController::class, 'updateStatusIzin'])->name('izin-guru.status');
     
     // Rekap Presensi Siswa Se-Sekolah
     Route::get('/rekap-presensi', [GuruPiketDashboardController::class, 'rekapPresensi'])->name('rekap');
@@ -266,6 +267,7 @@ Route::prefix('wali-murid')->name('wali-murid.')->middleware('auth')->group(func
 Route::prefix('kepala-sekolah')->name('kepala-sekolah.')->middleware('auth')->group(function () {
     Route::get('/dashboard', [KepalaSekolahDashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('/izin-guru',  [KepalaSekolahDashboardController::class, 'izinGuru'])->name('izin-guru');
+    Route::post('/izin-guru/{id}/status', [KepalaSekolahDashboardController::class, 'updateStatusIzin'])->name('izin-guru.status');
     Route::get('/dispensasi', [KepalaSekolahDashboardController::class, 'dispensasi'])->name('dispensasi');
 });
 

@@ -16,6 +16,7 @@ use App\Models\DispensasiSiswa;
 use App\Models\LaporanPiket;
 use App\Models\Jurusan;
 use App\Models\KepalaSekolah;
+use App\Models\Notifikasi;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -525,7 +526,7 @@ class GuruPiketDashboardController extends Controller
     }
 
     /**
-     * Halaman Monitoring Izin Guru
+     * Halaman Monitoring & Persetujuan Izin Guru oleh Guru Piket
      */
     public function izinGuru(Request $request)
     {
@@ -540,16 +541,23 @@ class GuruPiketDashboardController extends Controller
 
         $tahunAjaranAktif = TahunAjaran::where('is_aktif', true)->first();
 
-        // Guru yang izin pada rentang tanggal terpilih
-        $izinGuruList = IzinGuru::with(['guru', 'disetujuiOlehUser'])
+        // 1. Izin yang membutuhkan persetujuan Guru Piket (Tahap 1)
+        $pendingPiketList = IzinGuru::with(['guru.user'])
+            ->where('tahap_approval', 'piket')
+            ->where('status', 'Menunggu')
+            ->orderByDesc('id')
+            ->get();
+
+        // 2. Guru yang izin pada rentang tanggal terpilih (semua status untuk monitoring)
+        $izinGuruList = IzinGuru::with(['guru', 'disetujuiOlehUser', 'piketApprover', 'wakaApprover', 'kepsekApprover'])
             ->where('tanggal_mulai', '<=', $tanggal)
             ->where('tanggal_selesai', '>=', $tanggal)
             ->orderByDesc('id')
             ->get();
 
-        $izinGuruIds = $izinGuruList->pluck('id_guru')->toArray();
+        $izinGuruIds = $izinGuruList->where('status', '!=', 'Ditolak')->pluck('id_guru')->toArray();
 
-        // Jadwal kelas yang terdampak guru berhalangan
+        // 3. Jadwal kelas yang terdampak guru berhalangan
         $jadwalTerdampak = collect();
         if (count($izinGuruIds) > 0) {
             $jadwalTerdampak = JadwalPelajaran::with(['guru', 'kelas', 'mapel'])
@@ -560,9 +568,88 @@ class GuruPiketDashboardController extends Controller
                 ->get();
         }
 
+        // 4. Semua riwayat izin untuk tab riwayat lengkap
+        $semuaIzinList = IzinGuru::with(['guru', 'piketApprover', 'wakaApprover', 'kepsekApprover'])
+            ->orderByDesc('id')
+            ->paginate(15);
+
         return view('guru_piket.izin_guru.index', compact(
-            'user', 'guruPiket', 'tanggal', 'todayFormatted', 'hariIni', 'izinGuruList', 'jadwalTerdampak'
+            'user', 'guruPiket', 'tanggal', 'todayFormatted', 'hariIni',
+            'pendingPiketList', 'izinGuruList', 'jadwalTerdampak', 'semuaIzinList'
         ));
+    }
+
+    /**
+     * Update Status Persetujuan Izin Guru oleh Guru Piket (Tahap 1)
+     */
+    public function updateStatusIzin(Request $request, $id)
+    {
+        $request->validate([
+            'status'  => 'required|in:Disetujui,Ditolak',
+            'catatan' => 'nullable|string|max:255',
+        ]);
+
+        $izin = IzinGuru::with(['guru.user'])->findOrFail($id);
+
+        if ($request->status === 'Disetujui') {
+            $izin->update([
+                'piket_status'      => 'Disetujui',
+                'piket_approved_by' => Auth::id(),
+                'piket_at'          => now(),
+                'piket_catatan'     => $request->catatan,
+                'tahap_approval'    => 'waka_sdm',
+                // overall status tetap 'Menunggu' sampai Kepala Sekolah menyetujui tahap akhir
+            ]);
+
+            // Kirim notifikasi ke Waka SDM
+            $wakaUsers = User::where('role', 'waka_sdm')
+                ->orWhere(fn($q) => $q->where('role', 'waka')->whereHas('waka', fn($w) => $w->where('bidang', 'SDM')))
+                ->get();
+
+            $guruNama = $izin->guru->nama_lengkap ?? 'Guru';
+            foreach ($wakaUsers as $wUser) {
+                Notifikasi::create([
+                    'user_id'        => $wUser->id,
+                    'judul'          => 'Persetujuan Izin Guru (Tahap 2 - Waka SDM)',
+                    'pesan'          => "Pengajuan izin guru {$guruNama} telah disetujui Guru Piket. Menunggu peninjauan & persetujuan Anda sebagai Waka SDM.",
+                    'tipe'           => 'izin_guru',
+                    'reference_id'   => $izin->id,
+                    'reference_type' => IzinGuru::class,
+                    'is_read'        => false,
+                ]);
+            }
+
+            return back()->with('success', "Izin guru {$guruNama} berhasil disetujui oleh Guru Piket dan diteruskan ke Waka SDM.");
+        } else {
+            // Ditolak oleh Guru Piket
+            $izin->update([
+                'status'            => 'Ditolak',
+                'piket_status'      => 'Ditolak',
+                'piket_approved_by' => Auth::id(),
+                'piket_at'          => now(),
+                'piket_catatan'     => $request->catatan,
+                'tahap_approval'    => 'ditolak',
+                'ditolak_oleh_role' => 'guru_piket',
+                'ditolak_catatan'   => $request->catatan,
+            ]);
+
+            // Kirim notifikasi tegas ke Guru Mapel: Ditolak dan HARUS MELANJUTKAN KBM
+            $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;
+            if ($targetUserId) {
+                Notifikasi::create([
+                    'user_id'        => $targetUserId,
+                    'judul'          => 'Pengajuan Izin Ditolak oleh Guru Piket',
+                    'pesan'          => "Pengajuan izin {$izin->jenis_izin} Anda TIDAK DISETUJUI oleh Guru Piket." . ($request->catatan ? " Catatan: \"{$request->catatan}\"." : "") . " Anda diwajibkan untuk tetap hadir dan melanjutkan KBM.",
+                    'tipe'           => 'izin_guru',
+                    'reference_id'   => $izin->id,
+                    'reference_type' => IzinGuru::class,
+                    'is_read'        => false,
+                ]);
+            }
+
+            $guruNama = $izin->guru->nama_lengkap ?? 'Guru';
+            return back()->with('warning', "Pengajuan izin guru {$guruNama} telah ditolak. Guru bersangkutan telah dinotifikasi untuk tetap melanjutkan KBM.");
+        }
     }
 
     /**

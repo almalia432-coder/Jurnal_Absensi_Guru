@@ -8,6 +8,8 @@ use App\Models\IzinGuru;
 use App\Models\DispensasiSiswa;
 use App\Models\Guru;
 use App\Models\Siswa;
+use App\Models\Notifikasi;
+use App\Models\User;
 use Carbon\Carbon;
 
 class KepalaSekolahDashboardController extends Controller
@@ -124,13 +126,19 @@ class KepalaSekolahDashboardController extends Controller
     {
         $today = Carbon::today();
         $stats = $this->getSharedStats();
-        $kepsekIzinMenunggu = $stats['izinMenunggu'];
+        // Izin yang spesifik menunggu persetujuan Kepala Sekolah (Tahap 3)
+        $kepsekIzinMenunggu = IzinGuru::where('tahap_approval', 'kepsek')->count();
         $kepsekDispMenunggu = $stats['dispMenunggu'];
 
-        $query = IzinGuru::with('guru');
+        $query = IzinGuru::with(['guru.user', 'piketApprover', 'wakaApprover', 'kepsekApprover']);
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $st = $request->status;
+            if ($st === 'menunggu_kepsek' || $st === 'Menunggu') {
+                $query->where('tahap_approval', 'kepsek');
+            } else {
+                $query->where('status', $st);
+            }
         }
         if ($request->filled('jenis')) {
             $query->where('jenis_izin', $request->jenis);
@@ -149,13 +157,94 @@ class KepalaSekolahDashboardController extends Controller
         // Stats for cards
         $guruAktifIzin = IzinGuru::whereDate('tanggal_mulai', '<=', $today)
             ->whereDate('tanggal_selesai', '>=', $today)
-            ->whereIn('status', ['Disetujui', 'Selesai'])->count();
+            ->where('status', 'Disetujui')->count();
         $totalGuru = Guru::where('status_aktif', true)->count();
+
+        // Specific count summary for tabs
+        $tabCounts = (object) [
+            'semua'           => IzinGuru::count(),
+            'menunggu_kepsek' => IzinGuru::where('tahap_approval', 'kepsek')->count(),
+            'disetujui'       => IzinGuru::where('status', 'Disetujui')->count(),
+            'ditolak'         => IzinGuru::where('status', 'Ditolak')->count(),
+        ];
 
         return view('kepala_sekolah.izin_guru.index', array_merge($stats, compact(
             'izinList', 'guruAktifIzin', 'totalGuru',
-            'kepsekIzinMenunggu', 'kepsekDispMenunggu', 'today'
+            'kepsekIzinMenunggu', 'kepsekDispMenunggu', 'today', 'tabCounts'
         )));
+    }
+
+    /**
+     * Persetujuan / Penolakan Final Izin Guru oleh Kepala Sekolah (Tahap 3)
+     */
+    public function updateStatusIzin(Request $request, $id)
+    {
+        $request->validate([
+            'status'  => 'required|in:Disetujui,Ditolak',
+            'catatan' => 'nullable|string|max:255',
+        ]);
+
+        $izin = IzinGuru::with(['guru.user'])->findOrFail($id);
+        $guruNama = $izin->guru->nama_lengkap ?? 'Guru';
+
+        if ($request->status === 'Disetujui') {
+            // Semua 3 pihak telah menyetujui: Guru Piket -> Waka SDM -> Kepala Sekolah
+            $izin->update([
+                'status'              => 'Disetujui',
+                'kepsek_status'       => 'Disetujui',
+                'kepsek_approved_by'  => Auth::id(),
+                'kepsek_at'           => now(),
+                'kepsek_catatan'      => $request->catatan,
+                'tahap_approval'      => 'selesai',
+                'disetujui_oleh'      => Auth::id(),
+                'tanggal_persetujuan' => now(),
+                'catatan_persetujuan' => $request->catatan,
+            ]);
+
+            // Kirim notifikasi resmi ke Guru Mapel bahwa izin DISETUJUI PENUH
+            $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;
+            if ($targetUserId) {
+                Notifikasi::create([
+                    'user_id'        => $targetUserId,
+                    'judul'          => 'Pengajuan Izin Disetujui Penuh (Resmi)',
+                    'pesan'          => "Kabar baik! Pengajuan izin {$izin->jenis_izin} Anda telah DISETUJUI secara berjenjang oleh Guru Piket, Waka SDM, dan Kepala Sekolah. Anda resmi diberikan izin tidak mengajar sesuai periode pengajuan.",
+                    'tipe'           => 'izin_guru',
+                    'reference_id'   => $izin->id,
+                    'reference_type' => IzinGuru::class,
+                    'is_read'        => false,
+                ]);
+            }
+
+            return back()->with('success', "Persetujuan final berhasil disimpan. Permohonan izin guru {$guruNama} resmi disetujui penuh.");
+        } else {
+            // Ditolak oleh Kepala Sekolah
+            $izin->update([
+                'status'              => 'Ditolak',
+                'kepsek_status'       => 'Ditolak',
+                'kepsek_approved_by'  => Auth::id(),
+                'kepsek_at'           => now(),
+                'kepsek_catatan'      => $request->catatan,
+                'tahap_approval'      => 'ditolak',
+                'ditolak_oleh_role'   => 'kepala_sekolah',
+                'ditolak_catatan'     => $request->catatan,
+            ]);
+
+            // Kirim notifikasi ke Guru Mapel: Ditolak oleh Kepsek dan WAJIB LANJUT KBM
+            $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;
+            if ($targetUserId) {
+                Notifikasi::create([
+                    'user_id'        => $targetUserId,
+                    'judul'          => 'Pengajuan Izin Ditolak oleh Kepala Sekolah',
+                    'pesan'          => "Pengajuan izin {$izin->jenis_izin} Anda TIDAK DISETUJUI oleh Kepala Sekolah." . ($request->catatan ? " Catatan: \"{$request->catatan}\"." : "") . " Anda diwajibkan untuk tetap hadir dan melanjutkan KBM di kelas.",
+                    'tipe'           => 'izin_guru',
+                    'reference_id'   => $izin->id,
+                    'reference_type' => IzinGuru::class,
+                    'is_read'        => false,
+                ]);
+            }
+
+            return back()->with('warning', "Pengajuan izin guru {$guruNama} telah ditolak oleh Kepala Sekolah. Guru bersangkutan telah dinotifikasi untuk tetap melanjutkan KBM.");
+        }
     }
 
     // ───────────────────────────── DISPENSASI PAGE ─────────────────────────────

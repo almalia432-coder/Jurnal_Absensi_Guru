@@ -22,16 +22,24 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
 
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
             background-color: #f2f4f8;
             color: #2b3674;
             display: flex;
-            min-height: 100vh;
+            height: 100vh;
+            overflow: hidden;
         }
 
         /* Sidebar Styling */
         .sidebar {
             width: 260px;
+            height: 100vh;
             background-color: #f6f7fb;
             border-right: 1px solid #e3e8f0;
             display: flex;
@@ -39,6 +47,21 @@
             justify-content: space-between;
             padding: 28px 20px;
             flex-shrink: 0;
+            overflow-y: auto;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 4px;
         }
 
         .sidebar-brand {
@@ -198,9 +221,26 @@
         /* Main Content Wrapper */
         .main-wrapper {
             flex: 1;
+            height: 100vh;
             padding: 24px 32px;
             overflow-y: auto;
+            overflow-x: hidden;
             min-width: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .main-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+        .main-wrapper::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .main-wrapper::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .main-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
         }
 
         /* Header Card Banner */
@@ -583,7 +623,9 @@
             body {
                 flex-direction: column;
                 min-height: 100vh;
+                height: auto;
                 overflow-x: hidden;
+                overflow-y: auto;
             }
 
             .mobile-topbar {
@@ -616,9 +658,11 @@
             }
 
             .main-wrapper {
+                height: auto;
                 padding: 16px 14px;
                 width: 100%;
                 overflow-x: hidden;
+                overflow-y: visible;
             }
 
             .top-header-banner {

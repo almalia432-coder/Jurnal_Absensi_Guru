@@ -6,57 +6,99 @@
 
 @section('styles')
 <style>
-    /* Toast Notification */
-    .toast-container { position: fixed; top: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column; gap: 10px; }
+    /* ── Toast Notification ── */
+    .toast-container {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 99999;
+        display: flex\\\\\\\
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+    }
     .toast {
-        display: flex; align-items: center; gap: 12px; background: #ffffff; border-radius: 14px; padding: 14px 18px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.12); border-left: 4px solid #10b981; font-size: 14px; font-weight: 600; color: #0f172a;
-        min-width: 320px; animation: toastSlideIn .3s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #ffffff;
+        border-radius: 14px;
+        padding: 14px 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        border-left: 4px solid #10b981;
+        font-size: 14px;
+        font-weight: 600;
+        color: #0f172a;
+        min-width: 320px;
+        pointer-events: auto;
+        animation: toastSlideIn .3s ease;
     }
     .toast.error { border-left-color: #ef4444; }
     .toast i { font-size: 18px; color: #10b981; }
     .toast.error i { color: #ef4444; }
-    @keyframes toastSlideIn { from { opacity:0; transform:translateX(40px);} to { opacity:1; transform:translateX(0);} }
+    @keyframes toastSlideIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
 
-    /* KPI Summary Cards */
-    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px; }
+    /* ── Main Container ── */
+    .user-page-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* ── KPI Summary Cards ── */
+    .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 18px;
+    }
     .kpi-card {
         background: #ffffff;
         border-radius: 18px;
         padding: 20px 22px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
         border: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
         gap: 16px;
         transition: all 0.25s ease;
     }
-    .kpi-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.07); border-color: #cbd5e1; }
+    .kpi-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.07);
+        border-color: #cbd5e1;
+    }
     
     .kpi-icon {
-        width: 52px; height: 52px;
+        width: 52px;
+        height: 52px;
         border-radius: 16px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 22px; flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        flex-shrink: 0;
     }
-    .kpi-icon.indigo  { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #3730a3; }
-    .kpi-icon.emerald { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; }
-    .kpi-icon.violet  { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #5b21b6; }
-    .kpi-icon.sky     { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0369a1; }
+    .kpi-icon.indigo, .kpi-icon.total   { background: linear-gradient(135deg, #e0e7ff, #c7d2fe); color: #3730a3; }
+    .kpi-icon.emerald, .kpi-icon.active { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; }
+    .kpi-icon.violet, .kpi-icon.admin   { background: linear-gradient(135deg, #ede9fe, #ddd6fe); color: #5b21b6; }
+    .kpi-icon.sky, .kpi-icon.guru       { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0369a1; }
     
-    .kpi-val { font-size: 28px; font-weight: 900; color: #0f172a; line-height: 1.1; letter-spacing: -0.5px; }
-    .kpi-lbl { font-size: 12px; font-weight: 700; color: #64748b; margin-top: 3px; }
-    .kpi-sub { font-size: 11px; font-weight: 600; color: #94a3b8; margin-top: 2px; }
+    .kpi-val { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.1; letter-spacing: -0.5px; }
+    .kpi-lbl { font-size: 12px; font-weight: 700; color: #64748b; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-sub { font-size: 11.5px; font-weight: 500; color: #94a3b8; margin-top: 2px; }
 
-    /* Role Management Nav Tabs */
+    /* ── Role Navigation Tabs ── */
     .role-tabs-wrap {
         display: flex;
         gap: 8px;
         overflow-x: auto;
         padding-bottom: 4px;
-        margin-bottom: 20px;
         scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
     }
+    .role-tabs-wrap::-webkit-scrollbar { height: 4px; }
+    .role-tabs-wrap::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
     .role-tab-btn {
         display: inline-flex;
         align-items: center;
@@ -71,6 +113,7 @@
         border: 1.5px solid #e2e8f0;
         transition: all 0.2s ease;
         white-space: nowrap;
+        flex-shrink: 0;
     }
     .role-tab-btn:hover {
         background: #f8fafc;
@@ -81,10 +124,10 @@
         background: #2b43b9;
         color: #ffffff;
         border-color: #2b43b9;
-        box-shadow: 0 4px 14px rgba(43,67,185,0.25);
+        box-shadow: 0 4px 14px rgba(43, 67, 185, 0.25);
     }
     .role-tab-count {
-        background: rgba(0,0,0,0.06);
+        background: rgba(0, 0, 0, 0.06);
         color: inherit;
         font-size: 11px;
         font-weight: 800;
@@ -92,18 +135,17 @@
         border-radius: 20px;
     }
     .role-tab-btn.active .role-tab-count {
-        background: rgba(255,255,255,0.25);
+        background: rgba(255, 255, 255, 0.25);
         color: #ffffff;
     }
 
-    /* Page Action Card */
+    /* ── Action & Filter Card ── */
     .page-action-card {
         background: #ffffff;
         border-radius: 18px;
-        padding: 18px 24px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+        padding: 16px 22px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
         border: 1px solid #e2e8f0;
-        margin-bottom: 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -125,18 +167,34 @@
         gap: 8px;
         text-decoration: none;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 4px 14px rgba(43,67,185,0.25);
+        box-shadow: 0 4px 14px rgba(43, 67, 185, 0.25);
         white-space: nowrap;
     }
     .btn-add-user:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(43,67,185,0.35);
+        box-shadow: 0 6px 20px rgba(43, 67, 185, 0.35);
         color: #ffffff;
     }
 
-    .filter-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; flex: 1; }
-    .filter-item { display: flex; flex-direction: column; gap: 4px; }
-    .filter-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: .5px; }
+    .filter-group {
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
+        flex: 1;
+    }
+    .filter-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    .filter-label {
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: .5px;
+    }
     
     .filter-input, .filter-select {
         background: #f8fafc;
@@ -153,11 +211,18 @@
     .filter-input:focus, .filter-select:focus {
         border-color: #2b43b9;
         background: #ffffff;
-        box-shadow: 0 0 0 3px rgba(43,67,185,0.1);
+        box-shadow: 0 0 0 3px rgba(43, 67, 185, 0.1);
     }
 
     .search-input-wrap { position: relative; }
-    .search-input-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 14px; }
+    .search-input-wrap i {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+        font-size: 14px;
+    }
     .search-input-wrap input { padding-left: 36px; }
 
     .btn-filter-action {
@@ -175,14 +240,17 @@
         align-items: center;
         gap: 6px;
     }
-    .btn-filter-action:hover { background: #e2e8f0; color: #0f172a; }
+    .btn-filter-action:hover {
+        background: #e2e8f0;
+        color: #0f172a;
+    }
 
-    /* Table Section */
+    /* ── Table Card ── */
     .table-card {
         background: #ffffff;
         border-radius: 20px;
         padding: 24px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.03);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
         border: 1px solid #e2e8f0;
     }
     .table-hdr {
@@ -193,20 +261,55 @@
         padding-bottom: 16px;
         border-bottom: 1px solid #f1f5f9;
     }
-    .table-title { font-size: 17px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+    .table-title {
+        font-size: 17px;
+        font-weight: 800;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
     .table-title i { color: #2b43b9; }
-    .count-badge { font-size: 12px; font-weight: 700; color: #2b43b9; background: #eaeff8; padding: 5px 14px; border-radius: 20px; }
+    .count-badge {
+        font-size: 12px;
+        font-weight: 700;
+        color: #2b43b9;
+        background: #eaeff8;
+        padding: 5px 14px;
+        border-radius: 20px;
+    }
 
-    .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .table-responsive-wrap {
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .data-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
     .data-table th {
-        font-size: 11px; font-weight: 800; text-transform: uppercase; color: #64748b; letter-spacing: 0.6px;
-        padding: 12px 16px; text-align: left; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: 0.6px;
+        padding: 12px 16px;
+        text-align: left;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
     }
     .data-table th:first-child { border-radius: 10px 0 0 10px; }
     .data-table th:last-child  { border-radius: 0 10px 10px 0; text-align: right; }
     
     .data-table td {
-        padding: 16px; font-size: 13.5px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; transition: background 0.15s ease;
+        padding: 16px;
+        font-size: 13.5px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+        transition: background 0.15s ease;
     }
     .data-table tbody tr:hover td { background: #f8fafc; }
     .data-table td:last-child { text-align: right; }
@@ -214,202 +317,364 @@
     /* User Profile Info in Table */
     .user-info-box { display: flex; align-items: center; gap: 12px; }
     .user-avatar-circle {
-        width: 42px; height: 42px; border-radius: 12px; object-fit: cover;
-        background: #eaeff8; display: flex; align-items: center; justify-content: center;
-        font-weight: 800; font-size: 15px; color: #2b43b9; flex-shrink: 0;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        object-fit: cover;
+        background: #eaeff8;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 15px;
+        color: #2b43b9;
+        flex-shrink: 0;
+        border: 1px solid #e2e8f0;
     }
     .user-name-text { font-weight: 700; color: #0f172a; font-size: 14px; line-height: 1.2; }
-    .user-email-text { font-size: 12px; color: #64748b; margin-top: 2px; }
+    .user-email-text { font-size: 12px; color: #64748b; margin-top: 3px; }
 
     /* Role Badges */
     .role-badge {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 4px 10px; border-radius: 8px; font-size: 11.5px; font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 700;
+        white-space: nowrap;
     }
     .role-badge.admin          { background: #ede9fe; color: #6d28d9; border: 1px solid #ddd6fe; }
     .role-badge.wali_kelas     { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
     .role-badge.guru_mapel     { background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
     .role-badge.guru_piket     { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .role-badge.waka_kurikulum { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .role-badge.waka_sdm       { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
+    .role-badge.wali_murid     { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
     .role-badge.kepala_sekolah { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
     .role-badge.waka           { background: #ffedd5; color: #c2410c; border: 1px solid #fed7aa; }
     .role-badge.satpam         { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
 
     /* Status Badges */
     .status-badge {
-        display: inline-flex; align-items: center; gap: 6px;
-        padding: 4px 10px; border-radius: 20px; font-size: 11.5px; font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 11.5px;
+        font-weight: 700;
     }
     .status-badge.active   { background: #d1fae5; color: #065f46; }
     .status-badge.inactive { background: #fee2e2; color: #991b1b; }
     .status-dot { width: 7px; height: 7px; border-radius: 50%; }
-    .status-badge.active .status-dot   { background: #10b981; }
-    .status-badge.inactive .status-dot { background: #ef4444; }
+    .status-badge.active .status-dot   { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.6); }
+    .status-badge.inactive .status-dot { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.6); }
 
     /* Action Buttons */
-    .action-btn-group { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
+    .action-btn-group {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        justify-content: flex-end;
+    }
     .btn-tbl-action {
-        width: 34px; height: 34px; border-radius: 9px;
-        border: 1px solid #e2e8f0; background: #ffffff;
-        color: #64748b; display: flex; align-items: center; justify-content: center;
-        font-size: 13px; cursor: pointer; transition: all 0.2s ease;
+        width: 35px;
+        height: 35px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
+        background: #ffffff;
+        color: #64748b;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13.5px;
+        cursor: pointer;
+        transition: all 0.2s ease;
         text-decoration: none;
     }
-    .btn-tbl-action:hover { border-color: #cbd5e1; color: #0f172a; transform: translateY(-1px); }
+    .btn-tbl-action:hover {
+        border-color: #cbd5e1;
+        color: #0f172a;
+        transform: translateY(-1px);
+    }
+    .btn-tbl-action.view:hover   { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
     .btn-tbl-action.edit:hover   { background: #eff6ff; border-color: #93c5fd; color: #2563eb; }
     .btn-tbl-action.toggle:hover { background: #fef3c7; border-color: #fde68a; color: #b45309; }
     .btn-tbl-action.delete:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
-    .btn-tbl-action.view:hover   { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
 
-    /* Pagination */
-    .pagination-container { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
+    /* Empty state */
+    .table-empty-cell {
+        text-align: center;
+        padding: 56px 16px;
+        color: #94a3b8;
+    }
+    .empty-icon-box {
+        font-size: 40px;
+        margin-bottom: 12px;
+        color: #cbd5e1;
+    }
+    .empty-title {
+        font-weight: 700;
+        font-size: 15px;
+        color: #475569;
+    }
+    .empty-desc {
+        font-size: 13px;
+        margin-top: 4px;
+    }
+
+    /* ── Pagination ── */
+    .table-pagination-footer {
+        padding: 16px 4px 4px 4px;
+        border-top: 1px solid #f1f5f9;
+        margin-top: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
     .pag-text { font-size: 13px; color: #64748b; font-weight: 600; }
-    .pag-pills { display: flex; gap: 6px; }
-    .pag-pills a, .pag-pills span {
-        display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px;
-        font-size: 13px; font-weight: 700; text-decoration: none; transition: all 0.2s ease;
-    }
-    .pag-pills a { background: #f1f5f9; color: #475569; }
-    .pag-pills a:hover { background: #eaeff8; color: #2b43b9; }
-    .pag-pills span.active { background: #2b43b9; color: #ffffff; box-shadow: 0 4px 12px rgba(43,67,185,0.25); }
-    .pag-pills span.disabled { background: #f8fafc; color: #cbd5e1; cursor: default; }
 
-    /* Modal Styling */
+    /* ── Modal Styling ── */
     .custom-modal-backdrop {
-        position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
-        z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
     }
-    .custom-modal-backdrop.show { display: flex; animation: fadeIn .2s ease; }
+    .custom-modal-backdrop.show {
+        display: flex;
+        animation: fadeIn .2s ease;
+    }
     .custom-modal {
-        background: #ffffff; border-radius: 24px; width: 100%; max-width: 560px;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: scaleUp .25s ease;
+        background: #ffffff;
+        border-radius: 24px;
+        width: 100%;
+        max-width: 560px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        overflow: hidden;
+        animation: scaleUp .25s ease;
     }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
     .modal-hdr {
-        padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
-    .modal-title-text { font-size: 17px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
-    .modal-close-btn { background: none; border: none; font-size: 18px; color: #94a3b8; cursor: pointer; border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; }
+    .modal-title-text {
+        font-size: 17px;
+        font-weight: 800;
+        color: #0f172a;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 18px;
+        color: #94a3b8;
+        cursor: pointer;
+        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+    }
     .modal-close-btn:hover { background: #f1f5f9; color: #0f172a; }
 
-    .modal-body { padding: 24px; max-height: 75vh; overflow-y: auto; }
-    .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .modal-body {
+        padding: 24px;
+        max-height: 75vh;
+        overflow-y: auto;
+    }
+    .form-row-2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
     .form-group-custom { margin-bottom: 16px; }
-    .form-label-custom { display: block; font-size: 12px; font-weight: 700; color: #334155; margin-bottom: 6px; }
+    .form-label-custom {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: #334155;
+        margin-bottom: 6px;
+    }
     .form-label-custom span { color: #ef4444; }
     
     .form-ctrl-custom {
-        width: 100%; background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 12px;
-        padding: 10px 14px; font-size: 13.5px; font-weight: 600; color: #0f172a; outline: none; transition: all 0.2s ease;
+        width: 100%;
+        background: #f8fafc;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 10px 14px;
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #0f172a;
+        outline: none;
+        transition: all 0.2s ease;
     }
-    .form-ctrl-custom:focus { border-color: #2b43b9; background: #ffffff; box-shadow: 0 0 0 3px rgba(43,67,185,0.1); }
+    .form-ctrl-custom:focus {
+        border-color: #2b43b9;
+        background: #ffffff;
+        box-shadow: 0 0 0 3px rgba(43, 67, 185, 0.1);
+    }
 
     .modal-ftr {
-        padding: 16px 24px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: flex-end; gap: 12px;
+        padding: 16px 24px;
+        background: #f8fafc;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
     }
     .btn-modal-cancel {
-        padding: 10px 18px; border-radius: 12px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; font-size: 13px; cursor: pointer;
+        padding: 10px 18px;
+        border-radius: 12px;
+        border: 1.5px solid #cbd5e1;
+        background: #ffffff;
+        color: #475569;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.2s ease;
     }
-    .btn-modal-submit {
-        padding: 10px 22px; border-radius: 12px; border: none; background: #2b43b9; color: #ffffff; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 4px 14px rgba(43,67,185,0.25);
-    }
-    .btn-modal-submit:hover { background: #1e3399; }
-    .btn-modal-delete {
-        padding: 10px 22px; border-radius: 12px; border: none; background: #ef4444; color: #ffffff; font-weight: 700; font-size: 13px; cursor: pointer;
-    }
-    .btn-modal-delete:hover { background: #dc2626; }
+    .btn-modal-cancel:hover { background: #e2e8f0; color: #0f172a; }
 
-    /* Responsive */
+    .btn-modal-submit {
+        padding: 10px 22px;
+        border-radius: 12px;
+        border: none;
+        background: #2b43b9;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        box-shadow: 0 4px 14px rgba(43, 67, 185, 0.25);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+    }
+    .btn-modal-submit:hover {
+        background: #1e3399;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(43, 67, 185, 0.35);
+    }
+
+    .btn-modal-delete {
+        padding: 10px 22px;
+        border-radius: 12px;
+        border: none;
+        background: #ef4444;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+    }
+    .btn-modal-delete:hover {
+        background: #dc2626;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.3);
+    }
+
+    /* ── Responsive ── */
     @media (max-width: 1024px) {
         .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     }
     @media (max-width: 640px) {
         .kpi-grid { grid-template-columns: 1fr; }
         .form-row-2 { grid-template-columns: 1fr; }
+        .filter-group { flex-direction: column; align-items: stretch; }
+        .filter-input, .filter-select { min-width: 100%; }
+        .btn-add-user { width: 100%; justify-content: center; }
     }
 </style>
 @endsection
 
 @section('content')
-<div class="user-management-container">
 
-    {{-- Flash Notifications --}}
-    <div class="toast-container" id="toastContainer">
-        @if(session('success'))
-            <div class="toast">
-                <i class="fa-solid fa-circle-check"></i>
-                <span>{{ session('success') }}</span>
-            </div>
-        @endif
-        @if(session('error'))
-            <div class="toast error">
-                <i class="fa-solid fa-circle-exclamation"></i>
-                <span>{{ session('error') }}</span>
-            </div>
-        @endif
-<div class="user-page-container">
-
-    {{-- Header Banner --}}
-    <div class="page-header-card">
-        <div class="header-left">
-            <div class="header-icon-box">
-                <i class="fa-solid fa-users-gear"></i>
-            </div>
-            <div>
-                <h1 class="header-title">Manajemen Akun Pengguna</h1>
-                <p class="header-subtitle">Kelola seluruh hak akses login, peran manajemen, status aktif, dan keamanan sistem informasi.</p>
-            </div>
+{{-- Flash Toast Notifications --}}
+<div class="toast-container" id="toastContainer">
+    @if(session('success'))
+        <div class="toast">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>{{ session('success') }}</span>
         </div>
-        <div class="header-right">
-            <span class="system-time-badge">
-                <i class="fa-regular fa-clock"></i> {{ now()->locale('id')->isoFormat('dddd, D MMMM Y') }}
-            </span>
+    @endif
+    @if(session('error') || (isset($errors) && $errors->any()))
+        <div class="toast error">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <span>{{ session('error') ?? ($errors->first() ?? '') }}</span>
         </div>
-    </div>
+    @endif
+</div>
 
-    {{-- KPI Cards --}}
+<div class="user-page-wrapper">
+
+    {{-- KPI Summary Cards --}}
     <div class="kpi-grid">
-        <div class="kpi-card total">
-            <div class="kpi-icon-wrap total">
+        <div class="kpi-card">
+            <div class="kpi-icon indigo">
                 <i class="fa-solid fa-users"></i>
             </div>
-            <div class="kpi-body">
-                <div class="kpi-val">{{ $totalUser }}</div>
-                <div class="kpi-lbl">TOTAL AKUN</div>
+            <div>
+                <div class="kpi-val">{{ number_format($totalUser, 0, ',', '.') }}</div>
+                <div class="kpi-lbl">Total Akun</div>
                 <div class="kpi-sub">Terdaftar di Database</div>
             </div>
         </div>
 
-        <div class="kpi-card active">
-            <div class="kpi-icon-wrap active">
+        <div class="kpi-card">
+            <div class="kpi-icon emerald">
                 <i class="fa-solid fa-user-check"></i>
             </div>
-            <div class="kpi-body">
-                <div class="kpi-val">{{ $totalActive }}</div>
-                <div class="kpi-lbl">AKUN AKTIF</div>
+            <div>
+                <div class="kpi-val">{{ number_format($totalActive, 0, ',', '.') }}</div>
+                <div class="kpi-lbl">Akun Aktif</div>
                 <div class="kpi-sub">{{ $totalUser > 0 ? round(($totalActive / $totalUser) * 100) : 0 }}% Akses Diizinkan</div>
             </div>
         </div>
 
-        <div class="kpi-card admin">
-            <div class="kpi-icon-wrap admin">
+        <div class="kpi-card">
+            <div class="kpi-icon violet">
                 <i class="fa-solid fa-user-shield"></i>
             </div>
-            <div class="kpi-body">
-                <div class="kpi-val">{{ $totalAdmin }}</div>
-                <div class="kpi-lbl">ADMINISTRATOR</div>
+            <div>
+                <div class="kpi-val">{{ number_format($totalAdmin, 0, ',', '.') }}</div>
+                <div class="kpi-lbl">Administrator</div>
                 <div class="kpi-sub">Hak Akses Penuh Sistem</div>
             </div>
         </div>
 
-        <div class="kpi-card guru">
-            <div class="kpi-icon-wrap guru">
+        <div class="kpi-card">
+            <div class="kpi-icon sky">
                 <i class="fa-solid fa-chalkboard-user"></i>
             </div>
-            <div class="kpi-body">
-                <div class="kpi-val">{{ $totalGuru }}</div>
-                <div class="kpi-lbl">DEWAN GURU</div>
+            <div>
+                <div class="kpi-val">{{ number_format($totalGuru, 0, ',', '.') }}</div>
+                <div class="kpi-lbl">Dewan Guru</div>
                 <div class="kpi-sub">Wali &amp; Pengampu Mapel</div>
             </div>
         </div>
@@ -493,15 +758,14 @@
                 </select>
             </div>
 
-            <div class="filter-item" style="justify-content: flex-end;">
-                <span class="filter-label" style="visibility:hidden;">Aksi</span>
+            <div class="filter-item">
                 <div style="display: flex; gap: 8px;">
                     <button type="submit" class="btn-filter-action">
                         <i class="fa-solid fa-filter"></i> Filter
                     </button>
                     @if($search || ($status !== null && $status !== '') || ($role && $role !== 'all'))
                         <a href="{{ route('admin.master.user') }}" class="btn-filter-action" title="Reset Filter">
-                            <i class="fa-solid fa-rotate-left"></i>
+                            <i class="fa-solid fa-rotate-left"></i> Reset
                         </a>
                     @endif
                 </div>
@@ -582,7 +846,7 @@
                                         <div class="user-name-text">
                                             {{ $u->name }}
                                             @if($u->id === Auth::id())
-                                                <span style="font-size: 11px; background: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 6px; font-weight: 700; margin-left: 4px;">Akun Anda</span>
+                                                <span style="font-size: 11px; background: #e0e7ff; color: #3730a3; padding: 2px 7px; border-radius: 6px; font-weight: 700; margin-left: 4px;">Akun Anda</span>
                                             @endif
                                         </div>
                                         <div class="user-email-text">
@@ -622,7 +886,7 @@
                                     <form action="{{ route('admin.master.user.toggle-status', $u->id) }}" method="POST" style="display: inline;">
                                         @csrf
                                         <button type="submit" 
-                                                class="btn-tbl-action {{ $u->is_active ? 'toggle-on' : 'toggle-off' }}" 
+                                                class="btn-tbl-action toggle" 
                                                 title="{{ $u->is_active ? 'Non-aktifkan Akun' : 'Aktifkan Akun' }}"
                                                 {{ $u->id === Auth::id() ? 'disabled style=opacity:0.4;cursor:not-allowed;' : '' }}>
                                             <i class="fa-solid {{ $u->is_active ? 'fa-user-slash' : 'fa-user-check' }}"></i>
@@ -631,7 +895,7 @@
 
                                     {{-- Detail Modal --}}
                                     <button type="button" 
-                                            class="btn-tbl-action" 
+                                            class="btn-tbl-action view" 
                                             title="Lihat Detail Akun"
                                             onclick="openDetailModal(@json($u), '{{ $roleLabel }}', '{{ $avatarUrl }}')">
                                         <i class="fa-solid fa-eye"></i>
@@ -658,12 +922,12 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 48px 16px; color: #94a3b8;">
-                                <div style="font-size: 36px; margin-bottom: 12px; color: #cbd5e1;">
+                            <td colspan="6" class="table-empty-cell">
+                                <div class="empty-icon-box">
                                     <i class="fa-solid fa-users-slash"></i>
                                 </div>
-                                <div style="font-weight: 700; font-size: 15px; color: #475569;">Tidak ada data pengguna ditemukan</div>
-                                <div style="font-size: 13px; margin-top: 4px;">Coba ubah kata kunci pencarian atau filter role.</div>
+                                <div class="empty-title">Tidak ada data pengguna ditemukan</div>
+                                <div class="empty-desc">Coba ubah kata kunci pencarian atau filter role.</div>
                             </td>
                         </tr>
                     @endforelse
@@ -673,8 +937,8 @@
 
         {{-- Pagination --}}
         @if($userList->hasPages())
-            <div style="padding: 16px 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                <div style="font-size: 13px; color: #64748b;">
+            <div class="table-pagination-footer">
+                <div class="pag-text">
                     Menampilkan <strong>{{ $userList->firstItem() }}</strong> - <strong>{{ $userList->lastItem() }}</strong> dari <strong>{{ $userList->total() }}</strong> pengguna
                 </div>
                 <div>
@@ -1028,6 +1292,13 @@
     window.addEventListener('click', function(e) {
         if (e.target.classList.contains('custom-modal-backdrop')) {
             e.target.classList.remove('show');
+        }
+    });
+
+    // Close modal on Escape key
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            document.querySelectorAll('.custom-modal-backdrop.show').forEach(m => m.classList.remove('show'));
         }
     });
 </script>

@@ -219,8 +219,16 @@ class WakaSdmDashboardController extends Controller
         $status = $request->input('status');
         $bulan  = $request->input('bulan');
 
-        $query = IzinGuru::with(['guru.user', 'disetujuiOlehUser'])
-            ->when($status && $status !== 'semua', fn($q) => $q->where('status', $status))
+        $query = IzinGuru::with(['guru.user', 'piketApprover', 'wakaApprover', 'kepsekApprover', 'disetujuiOlehUser'])
+            ->when($status && $status !== 'semua', function ($q) use ($status) {
+                if ($status === 'menunggu_waka' || $status === 'Menunggu') {
+                    $q->where('tahap_approval', 'waka_sdm');
+                } elseif ($status === 'diteruskan_kepsek') {
+                    $q->where('tahap_approval', 'kepsek');
+                } else {
+                    $q->where('status', $status);
+                }
+            })
             ->when($search, function ($q) use ($search) {
                 $q->whereHas('guru', fn($qg) => $qg->where('nama_lengkap', 'LIKE', "%{$search}%")->orWhere('nip', 'LIKE', "%{$search}%"))
                   ->orWhere('alasan', 'LIKE', "%{$search}%")
@@ -233,10 +241,11 @@ class WakaSdmDashboardController extends Controller
         $izinList = $query->orderByDesc('id')->paginate(15)->withQueryString();
 
         $counts = (object) [
-            'semua'     => IzinGuru::count(),
-            'menunggu'  => IzinGuru::where('status', 'Menunggu')->count(),
-            'disetujui' => IzinGuru::where('status', 'Disetujui')->count(),
-            'ditolak'   => IzinGuru::where('status', 'Ditolak')->count(),
+            'semua'           => IzinGuru::count(),
+            'menunggu_waka'   => IzinGuru::where('tahap_approval', 'waka_sdm')->count(),
+            'diteruskan_kepsek' => IzinGuru::where('tahap_approval', 'kepsek')->count(),
+            'disetujui'       => IzinGuru::where('status', 'Disetujui')->count(),
+            'ditolak'         => IzinGuru::where('status', 'Ditolak')->count(),
         ];
 
         return view('waka_sdm.izin.index', compact(
@@ -245,7 +254,7 @@ class WakaSdmDashboardController extends Controller
     }
 
     /**
-     * Update Status Persetujuan Izin Guru
+     * Update Status Persetujuan Izin Guru oleh Waka SDM (Tahap 2)
      */
     public function updateStatusIzin(Request $request, $id)
     {
@@ -255,28 +264,61 @@ class WakaSdmDashboardController extends Controller
         ]);
 
         $izin = IzinGuru::with('guru')->findOrFail($id);
-        $izin->update([
-            'status'              => $request->status,
-            'disetujui_oleh'      => Auth::id(),
-            'tanggal_persetujuan' => now(),
-            'catatan_persetujuan' => $request->catatan,
-        ]);
+        $guruNama = $izin->guru->nama_lengkap ?? 'Guru';
 
-        // Kirim notifikasi sistem ke user guru yang bersangkutan jika ada akun user
-        if ($izin->guru && $izin->guru->user_id) {
-            Notifikasi::create([
-                'user_id'        => $izin->guru->user_id,
-                'judul'          => "Pengajuan Izin " . ($request->status === 'Ditolak' ? 'Ditolak' : 'Disetujui'),
-                'pesan'          => "Pengajuan izin {$izin->jenis_izin} Anda telah {$request->status} oleh Waka SDM." . ($request->catatan ? " Catatan: {$request->catatan}" : ""),
-                'tipe'           => 'izin_guru',
-                'reference_id'   => $izin->id,
-                'reference_type' => IzinGuru::class,
-                'is_read'        => false,
+        if ($request->status === 'Disetujui') {
+            $izin->update([
+                'waka_status'      => 'Disetujui',
+                'waka_approved_by' => Auth::id(),
+                'waka_at'          => now(),
+                'waka_catatan'     => $request->catatan,
+                'tahap_approval'   => 'kepsek',
             ]);
-        }
 
-        $namaGuru = $izin->guru->nama_lengkap ?? 'Guru';
-        return back()->with('success', "Status izin guru {$namaGuru} berhasil diubah menjadi {$request->status}.");
+            // Kirim notifikasi ke Kepala Sekolah untuk persetujuan final (Tahap 3)
+            $kepsekUsers = User::where('role', 'kepala_sekolah')->get();
+            foreach ($kepsekUsers as $kUser) {
+                Notifikasi::create([
+                    'user_id'        => $kUser->id,
+                    'judul'          => 'Persetujuan Izin Guru Final (Tahap 3 - Kepala Sekolah)',
+                    'pesan'          => "Pengajuan izin guru {$guruNama} telah disetujui Guru Piket dan Waka SDM. Menunggu persetujuan final dari Anda sebagai Kepala Sekolah.",
+                    'tipe'           => 'izin_guru',
+                    'reference_id'   => $izin->id,
+                    'reference_type' => IzinGuru::class,
+                    'is_read'        => false,
+                ]);
+            }
+
+            return back()->with('success', "Izin guru {$guruNama} berhasil disetujui Waka SDM dan diteruskan ke Kepala Sekolah (Tahap 3).");
+        } else {
+            // Ditolak oleh Waka SDM
+            $izin->update([
+                'status'            => 'Ditolak',
+                'waka_status'       => 'Ditolak',
+                'waka_approved_by'  => Auth::id(),
+                'waka_at'           => now(),
+                'waka_catatan'      => $request->catatan,
+                'tahap_approval'    => 'ditolak',
+                'ditolak_oleh_role' => 'waka_sdm',
+                'ditolak_catatan'   => $request->catatan,
+            ]);
+
+            // Kirim notifikasi ke Guru Mapel: Ditolak dan WAJIB LANJUT KBM
+            $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;
+            if ($targetUserId) {
+                Notifikasi::create([
+                    'user_id'        => $targetUserId,
+                    'judul'          => 'Pengajuan Izin Ditolak oleh Waka SDM',
+                    'pesan'          => "Pengajuan izin {$izin->jenis_izin} Anda TIDAK DISETUJUI oleh Waka SDM." . ($request->catatan ? " Catatan: \"{$request->catatan}\"." : "") . " Anda diwajibkan untuk tetap hadir dan melanjutkan KBM.",
+                    'tipe'           => 'izin_guru',
+                    'reference_id'   => $izin->id,
+                    'reference_type' => IzinGuru::class,
+                    'is_read'        => false,
+                ]);
+            }
+
+            return back()->with('warning', "Pengajuan izin guru {$guruNama} telah ditolak. Guru bersangkutan telah dinotifikasi untuk tetap melanjutkan KBM.");
+        }
     }
 
     /**

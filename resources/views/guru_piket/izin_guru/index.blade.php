@@ -1,8 +1,8 @@
 @extends('layouts.guru_piket')
 
-@section('title', 'Monitoring Izin Guru - Jurnal Absensi SMKN 1 BOYOLANGU')
-@section('header_title', 'Monitoring Izin Guru & Kelas Terdampak')
-@section('header_subtitle', 'Pantau guru yang berhalangan hadir dan kelola kebutuhan tugas mandiri / guru pengganti')
+@section('title', 'Monitoring & Persetujuan Izin Guru - Jurnal Absensi SMKN 1 BOYOLANGU')
+@section('header_title', 'Persetujuan & Monitoring Izin Guru')
+@section('header_subtitle', 'Verifikasi pengajuan izin berhalangan mengajar (Tahap 1) dan pantau jadwal kelas terdampak')
 
 @section('styles')
 <style>
@@ -33,8 +33,9 @@
 
     .two-cols-layout {
         display: grid;
-        grid-template-columns: 1fr 1.2fr;
+        grid-template-columns: 1.1fr 1fr;
         gap: 24px;
+        margin-bottom: 24px;
     }
 
     .section-card {
@@ -43,6 +44,7 @@
         padding: 22px 24px;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
         border: 1px solid #eef2f7;
+        margin-bottom: 24px;
     }
     .section-header {
         display: flex;
@@ -82,16 +84,129 @@
     }
     .custom-table tr:hover td { background-color: #f8fafc; }
 
+    /* Badges */
     .status-badge {
         font-size: 10.5px;
         font-weight: 800;
-        padding: 3px 8px;
+        padding: 4px 9px;
         border-radius: 6px;
         text-transform: uppercase;
+        display: inline-block;
     }
     .status-badge.warning { background: #fff7ed; color: #f97316; }
     .status-badge.danger  { background: #fef2f2; color: #ef4444; }
     .status-badge.success { background: #e6f9f0; color: #10b981; }
+    .status-badge.info    { background: #e0e7ff; color: #3b82f6; }
+    .status-badge.purple  { background: #f3e8ff; color: #8b5cf6; }
+
+    /* Stage Pill */
+    .stage-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 12px;
+        background: #f1f5f9;
+        color: #475569;
+    }
+
+    /* Action Buttons */
+    .btn-action-group {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .btn-approve {
+        background: #10b981;
+        color: #ffffff;
+        border: none;
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+    .btn-approve:hover {
+        background: #059669;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(16, 185, 129, 0.25);
+    }
+    .btn-reject {
+        background: #ef4444;
+        color: #ffffff;
+        border: none;
+        padding: 7px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+    .btn-reject:hover {
+        background: #dc2626;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
+    }
+
+    /* Modal Backdrop & Container */
+    .modal-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .modal-backdrop.active { display: flex; }
+    .modal-box {
+        background: #ffffff;
+        width: 100%;
+        max-width: 480px;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        animation: modalFadeIn 0.2s ease-out;
+    }
+    @keyframes modalFadeIn {
+        from { opacity: 0; transform: translateY(12px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    .modal-head {
+        padding: 20px 24px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .modal-head h4 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .modal-body {
+        padding: 24px;
+    }
+    .modal-foot {
+        padding: 16px 24px;
+        background: #f8fafc;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
 
     @media (max-width: 1024px) {
         .two-cols-layout { grid-template-columns: 1fr; }
@@ -105,25 +220,110 @@
 @endsection
 
 @section('content')
-<!-- Filter Bar -->
+<!-- Filter Tanggal & Info -->
 <div class="filter-card">
-    <form method="GET" action="{{ route('guru-piket.izin-guru') }}" style="display: flex; align-items: center; gap: 12px;">
+    <form method="GET" action="{{ route('guru-piket.izin-guru') }}" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
         <span style="font-size: 13px; font-weight: 700; color: #707e94;">Pilih Tanggal:</span>
         <input type="date" name="tanggal" value="{{ $tanggal }}" onchange="this.form.submit()" class="filter-input">
+        <noscript><button type="submit" class="btn-approve" style="padding: 8px 12px;">Terapkan</button></noscript>
     </form>
 
-    <div style="font-size: 13.5px; font-weight: 700; color: #2b43b9;">
+    <div style="font-size: 13.5px; font-weight: 700; color: #2b43b9; display: flex; align-items: center; gap: 8px;">
         <i class="fa-solid fa-calendar-day"></i> {{ $todayFormatted }}
     </div>
 </div>
 
+<!-- SECTION 1: Permohonan Izin Menunggu Persetujuan Guru Piket (Tahap 1) -->
+<div class="section-card" style="border-left: 5px solid #2b43b9;">
+    <div class="section-header">
+        <div class="section-title">
+            <i class="fa-solid fa-user-clock" style="color: #2b43b9; font-size: 18px;"></i>
+            <span>Persetujuan Izin Guru Baru (Tahap 1 - Guru Piket)</span>
+            <span class="status-badge {{ $pendingPiketList->count() > 0 ? 'warning' : 'success' }}" style="border-radius: 12px; font-size: 11.5px;">
+                {{ $pendingPiketList->count() }} Menunggu
+            </span>
+        </div>
+        <div style="font-size: 12px; color: #64748b; font-weight: 600;">
+            Alur: <strong>Guru Piket</strong> &rarr; Waka SDM &rarr; Kepala Sekolah
+        </div>
+    </div>
+
+    <div class="table-responsive-wrap">
+        <table class="custom-table">
+            <thead>
+                <tr>
+                    <th>Guru Pengampu</th>
+                    <th>Kategori</th>
+                    <th>Rentang Tanggal</th>
+                    <th>Alasan & Keterangan</th>
+                    <th>Berkas</th>
+                    <th style="text-align: right;">Aksi Keputusan Piket</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse($pendingPiketList as $pIzin)
+                <tr>
+                    <td>
+                        <strong style="color: #1b2559; font-size: 13.5px;">{{ $pIzin->guru->nama_lengkap ?? 'Guru' }}</strong>
+                        <div style="font-size: 11.5px; color: #6b7a99;">
+                            NIP: {{ $pIzin->guru->nip ?? '-' }} &bull; {{ $pIzin->guru->no_hp ?? '-' }}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="status-badge warning">{{ str_replace('_', ' ', $pIzin->jenis_izin) }}</span>
+                    </td>
+                    <td>
+                        <strong style="color: #0f172a;">{{ Carbon\Carbon::parse($pIzin->tanggal_mulai)->translatedFormat('d M Y') }}</strong>
+                        @if($pIzin->tanggal_mulai != $pIzin->tanggal_selesai)
+                            <div style="font-size: 11.5px; color: #64748b;">
+                                s/d {{ Carbon\Carbon::parse($pIzin->tanggal_selesai)->translatedFormat('d M Y') }}
+                            </div>
+                        @endif
+                    </td>
+                    <td style="max-width: 240px;">
+                        <div style="font-size: 13px; color: #334155;">{{ $pIzin->alasan }}</div>
+                    </td>
+                    <td>
+                        @if($pIzin->bukti_file)
+                            <a href="{{ Storage::url($pIzin->bukti_file) }}" target="_blank" style="font-size: 11.5px; color: #2b43b9; font-weight: 700; text-decoration: none;">
+                                <i class="fa-solid fa-paperclip"></i> Lihat Lampiran
+                            </a>
+                        @else
+                            <span style="color: #94a3b8; font-size: 12px;">-</span>
+                        @endif
+                    </td>
+                    <td style="text-align: right;">
+                        <div class="btn-action-group" style="justify-content: flex-end;">
+                            <button type="button" class="btn-approve" onclick="openApprovalModal({{ $pIzin->id }}, '{{ addslashes($pIzin->guru->nama_lengkap ?? 'Guru') }}', 'Disetujui')">
+                                <i class="fa-solid fa-check"></i> Setujui
+                            </button>
+                            <button type="button" class="btn-reject" onclick="openApprovalModal({{ $pIzin->id }}, '{{ addslashes($pIzin->guru->nama_lengkap ?? 'Guru') }}', 'Ditolak')">
+                                <i class="fa-solid fa-xmark"></i> Tolak
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="6" style="text-align: center; color: #6b7a99; padding: 28px;">
+                        <i class="fa-solid fa-circle-check" style="font-size: 28px; color: #10b981; margin-bottom: 6px; display: block;"></i>
+                        <div>Tidak ada pengajuan izin guru yang sedang menunggu persetujuan Guru Piket.</div>
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- SECTION 2: Dua Kolom (Guru Izin Hari Ini & Jadwal Terdampak) -->
 <div class="two-cols-layout">
     <!-- Left: Daftar Guru Izin Hari Ini -->
-    <div class="section-card">
+    <div class="section-card" style="margin-bottom: 0;">
         <div class="section-header">
             <div class="section-title">
                 <i class="fa-solid fa-user-xmark" style="color: #f97316;"></i>
-                <span>Daftar Guru Izin / Sakit ({{ $izinGuruList->count() }})</span>
+                <span>Guru Izin pada Tanggal Ini ({{ $izinGuruList->count() }})</span>
             </div>
         </div>
 
@@ -132,8 +332,8 @@
                 <thead>
                     <tr>
                         <th>Guru</th>
-                        <th>Jenis</th>
-                        <th>Alasan & Bukti</th>
+                        <th>Kategori</th>
+                        <th>Status Persetujuan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -142,26 +342,29 @@
                         <td>
                             <strong style="color: #1b2559; font-size: 13.5px;">{{ $iz->guru->nama_lengkap ?? 'Guru' }}</strong>
                             <div style="font-size: 11.5px; color: #6b7a99;">
-                                NIP: {{ $iz->guru->nip ?? '-' }} &bull; {{ $iz->guru->no_hp ?? '-' }}
+                                NIP: {{ $iz->guru->nip ?? '-' }} &bull; {{ $iz->alasan }}
                             </div>
                         </td>
                         <td>
-                            <span class="status-badge warning">{{ $iz->jenis_izin }}</span>
+                            <span class="status-badge warning">{{ str_replace('_', ' ', $iz->jenis_izin) }}</span>
                         </td>
                         <td>
-                            <div>{{ $iz->alasan }}</div>
-                            @if($iz->bukti_file)
-                                <a href="{{ Storage::url($iz->bukti_file) }}" target="_blank" style="font-size: 11px; color: #2b43b9; font-weight: 700;">
-                                    <i class="fa-solid fa-paperclip"></i> Surat Izin/Dokter
-                                </a>
+                            @if($iz->status === 'Disetujui')
+                                <span class="status-badge success"><i class="fa-solid fa-circle-check"></i> Disetujui Penuh</span>
+                            @elseif($iz->status === 'Ditolak')
+                                <span class="status-badge danger"><i class="fa-solid fa-circle-xmark"></i> Ditolak ({{ $iz->ditolak_oleh_role ?? 'Sekolah' }})</span>
+                            @else
+                                <span class="status-badge info">
+                                    <i class="fa-solid fa-spinner fa-spin"></i> {{ $iz->tahap_label }}
+                                </span>
                             @endif
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="3" style="text-align: center; color: #6b7a99; padding: 32px;">
-                            <i class="fa-solid fa-circle-check" style="font-size: 28px; color: #10b981; margin-bottom: 6px;"></i>
-                            <div>Tidak ada guru yang mengajukan izin pada tanggal ini.</div>
+                        <td colspan="3" style="text-align: center; color: #6b7a99; padding: 28px;">
+                            <i class="fa-solid fa-circle-check" style="font-size: 26px; color: #10b981; margin-bottom: 6px; display: block;"></i>
+                            <div>Tidak ada guru yang mengajukan izin pada tanggal terpilih.</div>
                         </td>
                     </tr>
                     @endforelse
@@ -171,11 +374,11 @@
     </div>
 
     <!-- Right: Jadwal & Kelas Terdampak -->
-    <div class="section-card">
+    <div class="section-card" style="margin-bottom: 0;">
         <div class="section-header">
             <div class="section-title">
                 <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
-                <span>Jadwal & Kelas Terdampak (Perlu Tindak Lanjut Piket)</span>
+                <span>Jadwal Kelas Terdampak (Perlu Ditindaklanjuti)</span>
             </div>
         </div>
 
@@ -203,14 +406,14 @@
                         </td>
                         <td>
                             <div style="color: #1b2559; font-weight: 700;">{{ $jt->guru->nama_lengkap ?? '-' }}</div>
-                            <span class="status-badge danger">Butuh Tugas Mandiri</span>
+                            <span class="status-badge danger">Perlu Guru Pengganti / Tugas</span>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="3" style="text-align: center; color: #6b7a99; padding: 32px;">
-                            <i class="fa-solid fa-circle-check" style="font-size: 28px; color: #10b981; margin-bottom: 6px;"></i>
-                            <div>Tidak ada jadwal kelas yang kosong / terdampak pada hari ini.</div>
+                        <td colspan="3" style="text-align: center; color: #6b7a99; padding: 28px;">
+                            <i class="fa-solid fa-circle-check" style="font-size: 26px; color: #10b981; margin-bottom: 6px; display: block;"></i>
+                            <div>Tidak ada jadwal kelas yang berhalangan hadir pada hari ini.</div>
                         </td>
                     </tr>
                     @endforelse
@@ -219,4 +422,89 @@
         </div>
     </div>
 </div>
+
+<!-- Modal Konfirmasi Persetujuan / Penolakan -->
+<div id="modalApprovalPiket" class="modal-backdrop">
+    <div class="modal-box">
+        <div class="modal-head">
+            <h4 id="modalTitle">Konfirmasi Persetujuan Izin</h4>
+            <button type="button" onclick="closeApprovalModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #94a3b8;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="formApprovalPiket" method="POST" action="">
+            @csrf
+            <div class="modal-body">
+                <input type="hidden" name="status" id="modalStatusInput" value="">
+                
+                <p id="modalDesc" style="font-size: 13.5px; color: #334155; margin-bottom: 16px;">
+                    Apakah Anda yakin ingin menyetujui pengajuan izin ini?
+                </p>
+
+                <div id="alertRejectWarning" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px; margin-bottom: 14px; font-size: 12.5px; color: #991b1b;">
+                    <i class="fa-solid fa-circle-exclamation"></i> <strong>Peringatan Penolakan:</strong> Pengajuan izin akan dibatalkan, dan sistem akan langsung menotifikasi guru pengampu untuk <strong>tetap hadir dan melanjutkan KBM</strong>.
+                </div>
+
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 12.5px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">
+                        Catatan Piket (Opsional untuk Setujui, Disarankan untuk Tolak):
+                    </label>
+                    <textarea name="catatan" id="modalCatatanInput" rows="3" class="filter-input" style="width: 100%; box-sizing: border-box;" placeholder="Tambahkan catatan atau alasan keputusan..."></textarea>
+                </div>
+            </div>
+            <div class="modal-foot">
+                <button type="button" onclick="closeApprovalModal()" style="padding: 8px 16px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; cursor: pointer;">
+                    Batal
+                </button>
+                <button type="submit" id="modalSubmitBtn" class="btn-approve">
+                    Konfirmasi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openApprovalModal(id, namaGuru, status) {
+        const form = document.getElementById('formApprovalPiket');
+        form.action = `/guru-piket/izin-guru/${id}/status`;
+
+        const statusInput = document.getElementById('modalStatusInput');
+        statusInput.value = status;
+
+        const title = document.getElementById('modalTitle');
+        const desc = document.getElementById('modalDesc');
+        const warning = document.getElementById('alertRejectWarning');
+        const submitBtn = document.getElementById('modalSubmitBtn');
+        const catatan = document.getElementById('modalCatatanInput');
+        catatan.value = '';
+
+        if (status === 'Disetujui') {
+            title.textContent = 'Setujui Izin Guru (Lanjut ke Waka SDM)';
+            desc.innerHTML = `Setujui permohonan izin dari <strong>${namaGuru}</strong>? Pengajuan ini akan diteruskan ke sistem Waka SDM untuk persetujuan tahap 2.`;
+            warning.style.display = 'none';
+            submitBtn.className = 'btn-approve';
+            submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Ya, Setujui & Teruskan';
+        } else {
+            title.textContent = 'Tolak Izin Guru';
+            desc.innerHTML = `Tolak permohonan izin dari <strong>${namaGuru}</strong>?`;
+            warning.style.display = 'block';
+            submitBtn.className = 'btn-reject';
+            submitBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> Tolak Izin (Wajib Lanjut KBM)';
+        }
+
+        document.getElementById('modalApprovalPiket').classList.add('active');
+    }
+
+    function closeApprovalModal() {
+        document.getElementById('modalApprovalPiket').classList.remove('active');
+    }
+
+    // Close when click backdrop
+    document.getElementById('modalApprovalPiket').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeApprovalModal();
+        }
+    });
+</script>
 @endsection

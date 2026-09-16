@@ -6,23 +6,24 @@
 <style>
     /* Section Greeting */
     .greeting-section {
-        margin-bottom: 24px;
+        margin-bottom: 22px;
     }
 
     .greeting-title {
-        font-size: 22px;
-        font-weight: 700;
-        color: #1b2559;
+        font-size: 20px;
+        font-weight: 800;
+        color: #0f172a;
         margin-bottom: 4px;
+        letter-spacing: -0.3px;
     }
 
     .greeting-subtitle {
-        font-size: 14px;
-        color: #6b7a99;
+        font-size: 13.5px;
+        color: #64748b;
         font-weight: 500;
     }
 
-    /* Top 5 Stat Cards Grid */
+    /* Top 5 Stat Cards Grid (Image 2 style) */
     .stats-grid {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
@@ -33,82 +34,89 @@
     .stat-card {
         background-color: #ffffff;
         border-radius: 16px;
-        padding: 20px;
+        padding: 20px 22px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
-        border: 1px solid #eef2f7;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.02);
+        border: 1px solid #e5e9f2;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .stat-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
     }
 
     .stat-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 12px;
+        margin-bottom: 8px;
     }
 
     .stat-label {
         font-size: 12px;
         font-weight: 700;
         text-transform: uppercase;
-        color: #a3ed9d;
-        color: #707e94;
+        color: #64748b;
         letter-spacing: 0.5px;
+        line-height: 1.35;
     }
 
     .stat-icon {
         width: 38px;
         height: 38px;
-        border-radius: 50%;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 16px;
+        flex-shrink: 0;
     }
 
     .stat-icon.blue {
-        background-color: #eef2ff;
-        color: #2b43b9;
+        background-color: #e0e7ff;
+        color: #2563eb;
+        border: 1px solid #c7d2fe;
     }
 
     .stat-icon.green {
-        background-color: #e6f9f0;
-        color: #10b981;
+        background-color: #d1fae5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
     }
 
     .stat-icon.orange {
-        background-color: #fff7ed;
-        color: #f97316;
+        background-color: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fde68a;
     }
 
     .stat-icon.red {
-        background-color: #fef2f2;
-        color: #ef4444;
+        background-color: #ffe4e6;
+        color: #e11d48;
+        border: 1px solid #fecdd3;
     }
 
     .stat-icon.dark {
-        background-color: #f1f5f9;
-        color: #334155;
+        background-color: #ede9fe;
+        color: #7c3aed;
+        border: 1px solid #ddd6fe;
     }
 
     .stat-value {
-        font-size: 28px;
+        font-size: 36px;
         font-weight: 800;
-        color: #1b2559;
-        line-height: 1.1;
-        margin-bottom: 8px;
+        color: #0f172a;
+        line-height: 1;
+        margin: 12px 0 6px 0;
+        letter-spacing: -0.5px;
     }
 
     .stat-footer {
-        font-size: 12px;
-        color: #707e94;
+        font-size: 11.5px;
+        color: #94a3b8;
         font-weight: 600;
         display: flex;
         align-items: center;
@@ -116,12 +124,12 @@
     }
 
     .stat-badge-green {
-        color: #10b981;
+        color: #059669;
         font-weight: 700;
     }
 
     .stat-badge-red {
-        color: #ef4444;
+        color: #e11d48;
         font-weight: 700;
     }
 
@@ -129,29 +137,30 @@
     .charts-grid {
         display: grid;
         grid-template-columns: 1.6fr 1fr;
-        gap: 20px;
+        gap: 18px;
         margin-bottom: 24px;
     }
 
     .chart-card {
         background-color: #ffffff;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
-        border: 1px solid #eef2f7;
+        border-radius: 18px;
+        padding: 22px 24px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+        border: 1px solid #e5e9f2;
     }
 
     .chart-card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
     }
 
     .chart-card-title {
         font-size: 16px;
-        font-weight: 700;
-        color: #1b2559;
+        font-weight: 800;
+        color: #0f172a;
+        letter-spacing: -0.2px;
     }
 
     .class-select {
@@ -192,13 +201,13 @@
     .donut-center-pct {
         font-size: 22px;
         font-weight: 800;
-        color: #1b2559;
+        color: #0f172a;
         line-height: 1;
     }
 
     .donut-center-lbl {
         font-size: 11px;
-        color: #6b7a99;
+        color: #64748b;
         font-weight: 600;
         margin-top: 2px;
     }
@@ -207,54 +216,42 @@
     .widgets-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 20px;
+        gap: 18px;
     }
 
     .widget-card {
         background-color: #ffffff;
-        border-radius: 16px;
-        padding: 24px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
-        border: 1px solid #eef2f7;
+        border-radius: 18px;
+        padding: 22px 24px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02);
+        border: 1px solid #e5e9f2;
     }
 
     .widget-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: #1b2559;
-        margin-bottom: 20px;
+        font-size: 16.5px;
+        font-weight: 800;
+        color: #0f172a;
+        margin-bottom: 18px;
         display: flex;
         align-items: center;
         gap: 8px;
+        letter-spacing: -0.2px;
     }
 
     .attention-list, .activity-list {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
     }
 
     .attention-item {
         display: flex;
         align-items: center;
         gap: 14px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #f1f5f9;
-    }
-
-    .attention-item:last-child {
-        border-bottom: none;
-        padding-bottom: 0;
-    }
-
-    .attention-item {
-        display: flex;
-        align-items: flex-start;
-        gap: 14px;
         padding: 12px 14px;
-        border-radius: 14px;
+        border-radius: 12px;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid transparent;
+        border: 1px solid #f1f5f9;
         background: #ffffff;
     }
 
@@ -267,34 +264,36 @@
     .attention-icon {
         width: 38px;
         height: 38px;
-        border-radius: 12px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 15px;
         flex-shrink: 0;
-        color: #ffffff;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
     }
 
     .attention-icon.danger {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        background: #ffe4e6;
+        color: #e11d48;
+        border: 1px solid #fecdd3;
     }
 
     .attention-icon.warning {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+        background: #fef3c7;
+        color: #d97706;
+        border: 1px solid #fde68a;
     }
 
     .attention-icon.info {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        background: #e0e7ff;
+        color: #2563eb;
+        border: 1px solid #c7d2fe;
     }
 
     .attention-icon.success {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        background: #d1fae5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
     }
 
     .attention-content {
@@ -333,15 +332,15 @@
     .activity-avatar {
         width: 38px;
         height: 38px;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-        color: #3730a3;
+        border-radius: 10px;
+        background: #e0e7ff;
+        color: #2563eb;
+        border: 1px solid #c7d2fe;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 15px;
         flex-shrink: 0;
-        box-shadow: 0 3px 8px rgba(43, 67, 185, 0.12);
     }
 
     .activity-content {
@@ -401,8 +400,8 @@
             border-radius: 14px;
         }
         .stat-value {
-            font-size: 22px;
-            margin-bottom: 4px;
+            font-size: 24px;
+            margin: 8px 0 4px 0;
         }
         .stat-icon {
             width: 32px;
@@ -444,7 +443,7 @@
             grid-column: span 2;
         }
         .stat-value {
-            font-size: 20px;
+            font-size: 22px;
         }
         .stat-icon {
             width: 28px;
@@ -487,7 +486,7 @@
         <div class="stat-header">
             <span class="stat-label">HADIR HARI INI</span>
             <div class="stat-icon green">
-                <i class="fa-solid fa-circle-check"></i>
+                <i class="fa-solid fa-check"></i>
             </div>
         </div>
         <div class="stat-value">{{ number_format($hadirHariIni, 0, ',', '.') }}</div>
@@ -499,9 +498,9 @@
     <!-- Card 3: Izin / Sakit -->
     <div class="stat-card">
         <div class="stat-header">
-            <span class="stat-label">Izin / Sakit</span>
+            <span class="stat-label">IZIN / SAKIT</span>
             <div class="stat-icon orange">
-                <i class="fa-solid fa-clock"></i>
+                <i class="fa-regular fa-clock"></i>
             </div>
         </div>
         <div class="stat-value">{{ $izinSakitHariIni }}</div>
@@ -513,9 +512,9 @@
     <!-- Card 4: Alpa Hari Ini -->
     <div class="stat-card">
         <div class="stat-header">
-            <span class="stat-label">Alpa Hari Ini</span>
+            <span class="stat-label">ALPA HARI INI</span>
             <div class="stat-icon red">
-                <i class="fa-solid fa-circle-xmark"></i>
+                <i class="fa-solid fa-xmark"></i>
             </div>
         </div>
         <div class="stat-value">{{ $alpaHariIni }}</div>
@@ -527,7 +526,7 @@
     <!-- Card 5: Jurnal Terisi -->
     <div class="stat-card">
         <div class="stat-header">
-            <span class="stat-label">Jurnal Terisi</span>
+            <span class="stat-label">JURNAL TERISI</span>
             <div class="stat-icon dark">
                 <i class="fa-solid fa-bookmark"></i>
             </div>

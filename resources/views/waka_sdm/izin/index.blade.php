@@ -90,17 +90,21 @@
                 <span>Semua</span>
                 <span class="tab-badge">{{ $counts->semua }}</span>
             </a>
-            <a href="{{ route('waka-sdm.izin', ['status' => 'Menunggu', 'search' => $search]) }}" class="tab-btn {{ $status === 'Menunggu' ? 'active' : '' }}">
-                <span>Menunggu</span>
-                <span class="tab-badge">{{ $counts->menunggu }}</span>
+            <a href="{{ route('waka-sdm.izin', ['status' => 'menunggu_waka', 'search' => $search]) }}" class="tab-btn {{ $status === 'menunggu_waka' || $status === 'Menunggu' ? 'active' : '' }}">
+                <span>Menunggu Waka SDM</span>
+                <span class="tab-badge" style="background:#fef3c7; color:#b45309;">{{ $counts->menunggu_waka }}</span>
+            </a>
+            <a href="{{ route('waka-sdm.izin', ['status' => 'diteruskan_kepsek', 'search' => $search]) }}" class="tab-btn {{ $status === 'diteruskan_kepsek' ? 'active' : '' }}">
+                <span>Diteruskan ke Kepsek</span>
+                <span class="tab-badge" style="background:#e0e7ff; color:#3730a3;">{{ $counts->diteruskan_kepsek }}</span>
             </a>
             <a href="{{ route('waka-sdm.izin', ['status' => 'Disetujui', 'search' => $search]) }}" class="tab-btn {{ $status === 'Disetujui' ? 'active' : '' }}">
-                <span>Disetujui</span>
-                <span class="tab-badge">{{ $counts->disetujui }}</span>
+                <span>Disetujui Penuh</span>
+                <span class="tab-badge" style="background:#d1fae5; color:#065f46;">{{ $counts->disetujui }}</span>
             </a>
             <a href="{{ route('waka-sdm.izin', ['status' => 'Ditolak', 'search' => $search]) }}" class="tab-btn {{ $status === 'Ditolak' ? 'active' : '' }}">
                 <span>Ditolak</span>
-                <span class="tab-badge">{{ $counts->ditolak }}</span>
+                <span class="tab-badge" style="background:#fee2e2; color:#b91c1c;">{{ $counts->ditolak }}</span>
             </a>
         </div>
 
@@ -176,31 +180,88 @@
                             </td>
                             <td>
                                 @if($iz->status === 'Disetujui')
-                                    <span class="status-pill disetujui">Disetujui</span>
+                                    <span class="status-pill disetujui"><i class="fa-solid fa-circle-check"></i> Disetujui Penuh</span>
                                 @elseif($iz->status === 'Ditolak')
-                                    <span class="status-pill ditolak">Ditolak</span>
+                                    <span class="status-pill ditolak"><i class="fa-solid fa-circle-xmark"></i> Ditolak ({{ $iz->ditolak_oleh_role ?? 'Sekolah' }})</span>
+                                @elseif($iz->tahap_approval === 'waka_sdm')
+                                    <span class="status-pill menunggu" style="background:#fef3c7; color:#b45309;">
+                                        <i class="fa-solid fa-hourglass-half"></i> Menunggu Waka SDM
+                                    </span>
+                                    <div style="font-size:11px; color:#10b981; font-weight:700; margin-top:2px;">
+                                        &bull; Lolos Guru Piket
+                                    </div>
+                                @elseif($iz->tahap_approval === 'kepsek')
+                                    <span class="status-pill" style="background:#e0e7ff; color:#3730a3;">
+                                        <i class="fa-solid fa-paper-plane"></i> Diteruskan ke Kepsek
+                                    </span>
                                 @else
-                                    <span class="status-pill menunggu">Menunggu</span>
+                                    <span class="status-pill menunggu" style="background:#f1f5f9; color:#475569;">
+                                        <i class="fa-solid fa-clock"></i> Tahap Guru Piket
+                                    </span>
                                 @endif
                             </td>
                             <td>
-                                @if($iz->disetujuiOlehUser)
-                                    <div style="font-size:12.5px; font-weight:700; color:#0f172a;">{{ $iz->disetujuiOlehUser->name }}</div>
-                                    @if($iz->catatan_persetujuan)
-                                        <div style="font-size:11.5px; color:#64748b; font-style:italic;">"{{ $iz->catatan_persetujuan }}"</div>
+                                <div style="font-size:11.5px; line-height:1.4;">
+                                    <div><strong>1. Piket:</strong> 
+                                        @if($iz->piket_status === 'Disetujui')
+                                            <span style="color:#10b981; font-weight:700;">Disetujui</span>
+                                        @elseif($iz->piket_status === 'Ditolak')
+                                            <span style="color:#ef4444; font-weight:700;">Ditolak</span>
+                                        @else
+                                            <span style="color:#94a3b8;">Menunggu</span>
+                                        @endif
+                                    </div>
+                                    <div><strong>2. Waka SDM:</strong> 
+                                        @if($iz->waka_status === 'Disetujui')
+                                            <span style="color:#10b981; font-weight:700;">Disetujui</span>
+                                        @elseif($iz->waka_status === 'Ditolak')
+                                            <span style="color:#ef4444; font-weight:700;">Ditolak</span>
+                                        @else
+                                            <span style="color:#94a3b8;">Menunggu</span>
+                                        @endif
+                                    </div>
+                                    <div><strong>3. Kepsek:</strong> 
+                                        @if($iz->kepsek_status === 'Disetujui')
+                                            <span style="color:#10b981; font-weight:700;">Disetujui</span>
+                                        @elseif($iz->kepsek_status === 'Ditolak')
+                                            <span style="color:#ef4444; font-weight:700;">Ditolak</span>
+                                        @else
+                                            <span style="color:#94a3b8;">Menunggu</span>
+                                        @endif
+                                    </div>
+                                    @if($iz->waka_catatan)
+                                        <div style="font-size:11px; color:#64748b; font-style:italic; margin-top:2px;">
+                                            Catatan: "{{ $iz->waka_catatan }}"
+                                        </div>
                                     @endif
-                                @else
-                                    <span style="color:#94a3b8; font-size:12px;">Belum diproses</span>
-                                @endif
+                                </div>
                             </td>
                             <td style="text-align: right;">
                                 <div class="action-btns" style="justify-content: flex-end;">
-                                    <button type="button" class="btn-act approve" onclick="openActionModal({{ $iz->id }}, '{{ addslashes($nama) }}', 'Disetujui')">
-                                        <i class="fa-solid fa-check"></i> Setujui
-                                    </button>
-                                    <button type="button" class="btn-act reject" onclick="openActionModal({{ $iz->id }}, '{{ addslashes($nama) }}', 'Ditolak')">
-                                        <i class="fa-solid fa-xmark"></i> Tolak
-                                    </button>
+                                    @if($iz->tahap_approval === 'waka_sdm')
+                                        <button type="button" class="btn-act approve" onclick="openActionModal({{ $iz->id }}, '{{ addslashes($nama) }}', 'Disetujui')">
+                                            <i class="fa-solid fa-check"></i> Setujui
+                                        </button>
+                                        <button type="button" class="btn-act reject" onclick="openActionModal({{ $iz->id }}, '{{ addslashes($nama) }}', 'Ditolak')">
+                                            <i class="fa-solid fa-xmark"></i> Tolak
+                                        </button>
+                                    @elseif($iz->tahap_approval === 'kepsek')
+                                        <span style="font-size:11.5px; font-weight:700; color:#4338ca; background:#e0e7ff; padding:4px 8px; border-radius:6px;">
+                                            Di Kepala Sekolah
+                                        </span>
+                                    @elseif($iz->status === 'Disetujui')
+                                        <span style="font-size:11.5px; font-weight:700; color:#065f46; background:#d1fae5; padding:4px 8px; border-radius:6px;">
+                                            Disetujui Penuh
+                                        </span>
+                                    @elseif($iz->status === 'Ditolak')
+                                        <span style="font-size:11.5px; font-weight:700; color:#991b1b; background:#fee2e2; padding:4px 8px; border-radius:6px;">
+                                            Ditolak
+                                        </span>
+                                    @else
+                                        <span style="font-size:11.5px; font-weight:600; color:#64748b;">
+                                            Tahap Guru Piket
+                                        </span>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -223,18 +284,22 @@
 
 {{-- Action Modal --}}
 <div class="modal-overlay" id="actionModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-    <div style="background:white; border-radius:20px; width:100%; max-width:440px; box-shadow:0 24px 60px rgba(0,0,0,0.18); overflow:hidden; padding:24px;">
+    <div style="background:white; border-radius:20px; width:100%; max-width:460px; box-shadow:0 24px 60px rgba(0,0,0,0.18); overflow:hidden; padding:24px;">
         <h3 id="modalActionTitle" style="font-size:17px; font-weight:800; color:#0f172a; margin-bottom:8px;">Konfirmasi Persetujuan</h3>
         <p id="modalActionDesc" style="font-size:13px; color:#64748b; margin-bottom:16px;"></p>
         
+        <div id="modalRejectNotice" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px; margin-bottom:14px; font-size:12.5px; color:#991b1b;">
+            <i class="fa-solid fa-circle-exclamation"></i> <strong>Instruksi Penolakan:</strong> Penolakan izin oleh Waka SDM akan mengirim notifikasi langsung ke guru mapel bahwa permohonan ditolak dan guru <strong>harus tetap melanjutkan KBM</strong>.
+        </div>
+
         <form id="actionForm" method="POST">
             @csrf
             <input type="hidden" name="status" id="actionStatusInput">
             <div style="margin-bottom:18px;">
                 <label style="font-size:12.5px; font-weight:700; color:#1e293b; display:block; margin-bottom:6px;">
-                    Catatan Persetujuan (Opsional):
+                    Catatan Waka SDM (Opsional untuk Setuju, Disarankan untuk Tolak):
                 </label>
-                <textarea name="catatan" class="filter-input" style="width:100%; height:70px; resize:vertical;" placeholder="Tambahkan catatan jika ada..."></textarea>
+                <textarea name="catatan" class="filter-input" style="width:100%; height:70px; resize:vertical; box-sizing:border-box;" placeholder="Tambahkan catatan jika ada..."></textarea>
             </div>
             <div style="display:flex; justify-content:flex-end; gap:10px;">
                 <button type="button" class="tab-btn" onclick="closeActionModal()">Batal</button>
@@ -250,16 +315,22 @@
     function openActionModal(id, guruName, status) {
         document.getElementById('actionForm').action = `/waka-sdm/izin/${id}/status`;
         document.getElementById('actionStatusInput').value = status;
-        document.getElementById('modalActionTitle').innerText = `${status} Izin Guru`;
-        document.getElementById('modalActionDesc').innerText = `Apakah Anda yakin ingin mengubah status pengajuan izin untuk ${guruName} menjadi ${status}?`;
         
+        const notice = document.getElementById('modalRejectNotice');
         const btn = document.getElementById('btnActionSubmit');
+
         if (status === 'Disetujui') {
+            document.getElementById('modalActionTitle').innerText = 'Setujui Izin Guru (Tahap 2)';
+            document.getElementById('modalActionDesc').innerHTML = `Apakah Anda yakin ingin menyetujui pengajuan izin untuk <strong>${guruName}</strong>? Pengajuan ini akan diteruskan ke <strong>Kepala Sekolah</strong> untuk persetujuan final.`;
+            notice.style.display = 'none';
             btn.style.background = '#059669';
-            btn.innerText = 'Ya, Setujui';
+            btn.innerText = 'Ya, Setujui & Teruskan';
         } else {
+            document.getElementById('modalActionTitle').innerText = 'Tolak Izin Guru (Tahap 2)';
+            document.getElementById('modalActionDesc').innerHTML = `Tolak permohonan izin untuk <strong>${guruName}</strong>?`;
+            notice.style.display = 'block';
             btn.style.background = '#dc2626';
-            btn.innerText = 'Ya, Tolak';
+            btn.innerText = 'Tolak Izin (Wajib Lanjut KBM)';
         }
 
         const modal = document.getElementById('actionModal');

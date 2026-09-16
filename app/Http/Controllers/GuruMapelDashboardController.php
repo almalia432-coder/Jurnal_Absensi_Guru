@@ -12,6 +12,7 @@ use App\Models\PresensiSiswa;
 use App\Models\JadwalPelajaran;
 use App\Models\TahunAjaran;
 use App\Models\IzinGuru;
+use App\Models\Notifikasi;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -126,6 +127,15 @@ class GuruMapelDashboardController extends Controller
             ->take(6)
             ->get();
 
+        // 5. Cek Notifikasi Status Izin Terakhir (Persetujuan / Penolakan Lanjut KBM)
+        // Hanya tampil jika tanggal selesai izin belum terlewati (>= hari ini)
+        $latestIzinNotice = IzinGuru::with(['piketApprover', 'wakaApprover', 'kepsekApprover'])
+            ->where('id_guru', $guru->id_guru)
+            ->whereDate('tanggal_selesai', '>=', $today)
+            ->whereIn('status', ['Disetujui', 'Ditolak'])
+            ->latest('updated_at')
+            ->first();
+
         return view('guru_mapel.dashboard.index', [
             'guru' => $guru,
             'user' => $user,
@@ -134,6 +144,7 @@ class GuruMapelDashboardController extends Controller
             'hariIni' => $hariIni,
             'jadwalCards' => $jadwalCards,
             'riwayatJurnal' => $riwayatJurnal,
+            'latestIzinNotice' => $latestIzinNotice,
             'metrics' => [
                 'jadwal_hari_ini' => $totalJadwalHariIni,
                 'jurnal_terisi_hari_ini' => $totalJurnalHariIni,
@@ -505,14 +516,24 @@ class GuruMapelDashboardController extends Controller
         Carbon::setLocale('id');
         $guru = $this->resolveGuru();
 
-        $izinList = IzinGuru::where('id_guru', $guru->id_guru ?? 0)
+        $izinList = IzinGuru::with(['guru', 'piketApprover', 'wakaApprover', 'kepsekApprover'])
+            ->where('id_guru', $guru->id_guru ?? 0)
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
+        // Cari permohonan izin yang ditolak dan belum lewat tanggalnya (tanggal_selesai >= hari ini)
+        $recentRejected = IzinGuru::with(['piketApprover', 'wakaApprover', 'kepsekApprover'])
+            ->where('id_guru', $guru->id_guru ?? 0)
+            ->where('status', 'Ditolak')
+            ->whereDate('tanggal_selesai', '>=', Carbon::today()->format('Y-m-d'))
+            ->latest('updated_at')
+            ->first();
+
         return view('guru_mapel.izin.index', [
-            'guru' => $guru,
-            'izinList' => $izinList,
-            'today' => Carbon::today()->format('Y-m-d'),
+            'guru'           => $guru,
+            'izinList'       => $izinList,
+            'recentRejected' => $recentRejected,
+            'today'          => Carbon::today()->format('Y-m-d'),
         ]);
     }
 
@@ -536,19 +557,42 @@ class GuruMapelDashboardController extends Controller
             $filePath = $request->file('bukti_file')->store('izin_guru', 'public');
         }
 
-        IzinGuru::create([
-            'id_guru'         => $guru->id_guru,
-            'tanggal_mulai'   => $validated['tanggal_mulai'],
-            'tanggal_selesai' => $validated['tanggal_selesai'],
-            'jenis_izin'      => $validated['jenis_izin'],
-            'alasan'          => $validated['alasan'],
-            'bukti_file'      => $filePath,
-            'status'          => 'Menunggu',
-            'diinput_oleh'    => Auth::id(),
+        $izin = IzinGuru::create([
+            'id_guru'           => $guru->id_guru,
+            'tanggal_mulai'     => $validated['tanggal_mulai'],
+            'tanggal_selesai'   => $validated['tanggal_selesai'],
+            'jenis_izin'        => $validated['jenis_izin'],
+            'alasan'            => $validated['alasan'],
+            'bukti_file'        => $filePath,
+            'status'            => 'Menunggu',
+            'tahap_approval'    => 'piket',
+            'piket_status'      => 'Menunggu',
+            'waka_status'       => 'Menunggu',
+            'kepsek_status'     => 'Menunggu',
+            'diinput_oleh'      => Auth::id(),
         ]);
 
+        // Notifikasi ke seluruh Guru Piket yang sedang aktif/terdaftar
+        $piketUsers = User::where('role', 'guru_piket')->get();
+        $tanggalStr = Carbon::parse($validated['tanggal_mulai'])->translatedFormat('d M Y');
+        if ($validated['tanggal_mulai'] !== $validated['tanggal_selesai']) {
+            $tanggalStr .= ' s/d ' . Carbon::parse($validated['tanggal_selesai'])->translatedFormat('d M Y');
+        }
+
+        foreach ($piketUsers as $pUser) {
+            Notifikasi::create([
+                'user_id'        => $pUser->id,
+                'judul'          => 'Pengajuan Izin Guru Baru (Tahap 1 - Piket)',
+                'pesan'          => "Guru {$guru->nama_lengkap} mengajukan izin {$validated['jenis_izin']} ({$tanggalStr}). Menunggu peninjauan & persetujuan Anda sebagai Guru Piket.",
+                'tipe'           => 'izin_guru',
+                'reference_id'   => $izin->id,
+                'reference_type' => IzinGuru::class,
+                'is_read'        => false,
+            ]);
+        }
+
         return redirect()->route('guru-mapel.izin')
-            ->with('success', 'Pengajuan izin berhasil dikirimkan ke Guru Piket dan Manajemen Sekolah.');
+            ->with('success', 'Pengajuan izin berhasil dikirimkan. Permintaan saat ini masuk ke sistem Guru Piket untuk peninjauan tahap 1.');
     }
 
     /**

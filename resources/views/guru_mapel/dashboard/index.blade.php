@@ -300,6 +300,86 @@
 @endsection
 
 @section('content')
+
+@if(isset($latestIzinNotice) && $latestIzinNotice)
+    @php
+        $noticeKey = 'dismissed_izin_' . $latestIzinNotice->id . '_' . ($latestIzinNotice->updated_at ? $latestIzinNotice->updated_at->timestamp : '0');
+    @endphp
+    @if($latestIzinNotice->status === 'Ditolak')
+    <div id="noticeBanner_{{ $latestIzinNotice->id }}" class="izin-notice-banner" style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 2px solid #ef4444; border-radius: 16px; padding: 18px 24px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15); position: relative;">
+        <div style="display: flex; align-items: center; gap: 16px; flex: 1; min-width: 260px;">
+            <div style="width: 44px; height: 44px; border-radius: 12px; background: #ef4444; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div>
+                <div style="font-weight: 800; font-size: 15px; color: #991b1b; margin-bottom: 2px;">
+                    Pemberitahuan: Permintaan Izin Anda Tidak Disetujui!
+                </div>
+                <div style="font-size: 13px; color: #7f1d1d;">
+                    Pengajuan izin kategori <strong>{{ $latestIzinNotice->jenis_izin }}</strong> untuk tanggal <strong>{{ Carbon\Carbon::parse($latestIzinNotice->tanggal_mulai)->translatedFormat('d M Y') }}</strong> telah ditolak oleh <strong>{{ $latestIzinNotice->penolak_label }}</strong>.
+                    @if($latestIzinNotice->ditolak_catatan)
+                        <br><em>Catatan: "{{ $latestIzinNotice->ditolak_catatan }}"</em>
+                    @endif
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="background: #dc2626; color: #ffffff; padding: 7px 14px; border-radius: 10px; font-weight: 800; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-chalkboard-user"></i> Harap Melanjutkan KBM
+            </span>
+            <a href="{{ route('guru-mapel.izin') }}" style="background: #ffffff; border: 1.5px solid #fca5a5; color: #991b1b; padding: 7px 14px; border-radius: 10px; font-weight: 700; font-size: 12px; text-decoration: none;">
+                Lihat Detail Izin
+            </a>
+            <button type="button" onclick="dismissIzinNotice('{{ $latestIzinNotice->id }}', '{{ $noticeKey }}')" title="Tutup Pemberitahuan" style="background: rgba(239, 68, 68, 0.15); border: none; width: 34px; height: 34px; border-radius: 10px; color: #991b1b; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s ease;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+    @elseif($latestIzinNotice->status === 'Disetujui')
+    <div id="noticeBanner_{{ $latestIzinNotice->id }}" class="izin-notice-banner" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border: 1.5px solid #22c55e; border-radius: 16px; padding: 16px 22px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; position: relative;">
+        <div style="display: flex; align-items: center; gap: 14px; flex: 1; min-width: 260px;">
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #16a34a; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
+                <i class="fa-solid fa-circle-check"></i>
+            </div>
+            <div>
+                <div style="font-weight: 800; font-size: 14px; color: #166534; margin-bottom: 2px;">
+                    Izin Mengajar Telah Disetujui Penuh
+                </div>
+                <div style="font-size: 12.5px; color: #15803d;">
+                    Pengajuan izin <strong>{{ $latestIzinNotice->jenis_izin }}</strong> Anda untuk tanggal <strong>{{ Carbon\Carbon::parse($latestIzinNotice->tanggal_mulai)->translatedFormat('d M Y') }}</strong> telah disetujui resmi oleh Guru Piket, Waka SDM, dan Kepala Sekolah.
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <a href="{{ route('guru-mapel.izin') }}" style="background: #ffffff; border: 1.5px solid #86efac; color: #15803d; padding: 6px 12px; border-radius: 10px; font-weight: 700; font-size: 12px; text-decoration: none;">
+                Lihat Riwayat
+            </a>
+            <button type="button" onclick="dismissIzinNotice('{{ $latestIzinNotice->id }}', '{{ $noticeKey }}')" title="Tutup Pemberitahuan" style="background: rgba(22, 163, 74, 0.15); border: none; width: 34px; height: 34px; border-radius: 10px; color: #166534; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.2s ease;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+    @endif
+    <script>
+        (function() {
+            if (localStorage.getItem('{{ $noticeKey }}') === '1') {
+                const el = document.getElementById('noticeBanner_{{ $latestIzinNotice->id }}');
+                if (el) el.style.display = 'none';
+            }
+        })();
+        function dismissIzinNotice(id, key) {
+            localStorage.setItem(key, '1');
+            const el = document.getElementById('noticeBanner_' + id);
+            if (el) {
+                el.style.opacity = '0';
+                el.style.transform = 'scale(0.98)';
+                el.style.transition = 'all 0.25s ease';
+                setTimeout(() => el.remove(), 250);
+            }
+        }
+    </script>
+@endif
+
 <!-- 1. Greeting Section & Quick Actions -->
 <div class="greeting-section" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>

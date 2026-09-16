@@ -22,30 +22,51 @@
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
 
-        body {
-            background-color: #f2f4f8;
-            color: #2b3674;
-            display: flex;
-            min-height: 100vh;
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
         }
 
-        /* Sidebar Styling */
+        body {
+            background-color: #f4f6fa;
+            color: #1e293b;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* ── Sidebar Styling (Fixed, Image 2 style) ── */
         .sidebar {
-            width: 260px;
-            background-color: #f6f7fb;
-            border-right: 1px solid #e3e8f0;
+            width: 255px;
+            height: 100vh;
+            background-color: #f8fafc;
+            border-right: 1px solid #e5e9f2;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 28px 20px;
+            padding: 24px 18px;
             flex-shrink: 0;
+            overflow-y: auto;
+            z-index: 100;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 4px;
         }
 
         .sidebar-brand {
             display: flex;
             align-items: center;
             gap: 12px;
-            margin-bottom: 30px;
+            padding: 4px 6px 20px 6px;
         }
 
         .sidebar-logo-img {
@@ -71,7 +92,7 @@
             font-size: 13px;
             color: #707e94;
             font-weight: 600;
-            margin-top: 8px;
+            margin-top: 4px;
             letter-spacing: 0.5px;
         }
 
@@ -80,112 +101,97 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
-            margin-top: 10px;
+            margin-top: 6px;
         }
 
         .sidebar-category-header {
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.8px;
             color: #94a3b8;
-            padding: 14px 14px 4px 14px;
+            padding: 14px 12px 6px 12px;
             display: flex;
             align-items: center;
             user-select: none;
         }
 
         .sidebar-category-header:first-child {
-            padding-top: 4px;
+            padding-top: 0;
         }
 
-        .sidebar-menu li a {
+        .sidebar-menu li a, .sidebar-accordion-toggle {
             display: flex;
             align-items: center;
-            gap: 14px;
-            padding: 12px 16px;
+            gap: 12px;
+            padding: 10px 14px;
             border-radius: 12px;
-            color: #6b7a99;
+            color: #475569;
             text-decoration: none;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13.5px;
             transition: all 0.2s ease;
             position: relative;
         }
 
-        .sidebar-menu li.active a {
-            color: #2b43b9;
+        .sidebar-menu li a i, .sidebar-accordion-toggle i.menu-icon {
+            font-size: 17px;
+            width: 20px;
+            text-align: center;
+            color: #64748b;
+            transition: color 0.2s;
+        }
+
+        .sidebar-menu li.active > a {
+            color: #1d4ed8;
             background-color: #ffffff;
-            box-shadow: 0 4px 12px rgba(43, 67, 185, 0.08);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
             font-weight: 700;
         }
 
-        .sidebar-menu li.active a::before {
-            content: '';
-            position: absolute;
-            right: -20px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 24px;
-            background-color: #2b43b9;
-            border-radius: 4px 0 0 4px;
+        .sidebar-menu li.active > a i {
+            color: #1d4ed8;
         }
 
-        .sidebar-menu li a:hover:not(.active) {
-            background-color: #eaeff8;
-            color: #2b43b9;
+        .sidebar-menu li a:hover:not(.active), .sidebar-accordion-toggle:hover:not(.open) {
+            background-color: #f1f5f9;
+            color: #1e293b;
         }
 
-        .sidebar-menu li a i {
-            font-size: 18px;
-            width: 22px;
-            text-align: center;
+        .sidebar-menu li a:hover:not(.active) i, .sidebar-accordion-toggle:hover:not(.open) i {
+            color: #1e293b;
         }
 
         /* Accordion Sub-menu */
         .sidebar-accordion-toggle {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            padding: 12px 16px;
-            border-radius: 12px;
-            color: #6b7a99;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.2s ease;
-            cursor: pointer;
             width: 100%;
             background: none;
             border: none;
+            cursor: pointer;
             text-align: left;
         }
 
-        .sidebar-accordion-toggle:hover {
-            background-color: #eaeff8;
-            color: #2b43b9;
-        }
-
         .sidebar-accordion-toggle.open {
-            color: #2b43b9;
-            background-color: #eaeff8;
+            background-color: #f1f5f9;
+            color: #1d4ed8;
+            font-weight: 700;
         }
 
-        .sidebar-accordion-toggle i.menu-icon {
-            font-size: 18px;
-            width: 22px;
-            text-align: center;
+        .sidebar-accordion-toggle.open i.menu-icon {
+            color: #1d4ed8;
         }
 
         .sidebar-accordion-toggle .chevron {
             margin-left: auto;
-            font-size: 12px;
+            font-size: 11px;
             transition: transform 0.25s ease;
+            color: #94a3b8;
         }
 
         .sidebar-accordion-toggle.open .chevron {
             transform: rotate(180deg);
+            color: #1d4ed8;
         }
 
         .sidebar-submenu {
@@ -194,7 +200,7 @@
             flex-direction: column;
             gap: 2px;
             margin-top: 4px;
-            padding-left: 14px;
+            padding-left: 10px;
         }
 
         .sidebar-submenu.open {
@@ -202,184 +208,212 @@
         }
 
         .sidebar-submenu li a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 9px 14px;
+            padding: 8px 14px;
+            font-size: 12.5px;
             border-radius: 10px;
-            color: #6b7a99;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 13px;
-            transition: all 0.2s ease;
-            position: relative;
+            color: #64748b;
         }
 
         .sidebar-submenu li.active a {
-            color: #2b43b9;
             background-color: #ffffff;
-            box-shadow: 0 4px 12px rgba(43, 67, 185, 0.08);
+            border: 1px solid #e2e8f0;
+            color: #1d4ed8;
+            font-weight: 700;
         }
 
         .sidebar-submenu li a:hover {
-            background-color: #eaeff8;
-            color: #2b43b9;
-        }
-
-        .sidebar-submenu li a i {
-            font-size: 14px;
-            width: 18px;
-            text-align: center;
+            background-color: #f1f5f9;
+            color: #1e293b;
         }
 
         .sidebar-bottom {
-            border-top: 1px solid #e3e8f0;
-            padding-top: 20px;
+            border-top: 1px solid #e5e9f2;
+            padding-top: 16px;
             margin-top: auto;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 4px;
         }
 
         .sidebar-bottom a {
             display: flex;
             align-items: center;
-            gap: 14px;
-            padding: 10px 16px;
+            gap: 12px;
+            padding: 10px 14px;
             border-radius: 12px;
-            color: #6b7a99;
+            color: #64748b;
             text-decoration: none;
             font-weight: 600;
-            font-size: 14px;
+            font-size: 13.5px;
+            transition: all 0.15s ease;
         }
 
-        .sidebar-bottom a.logout {
-            color: #e63946;
+        .sidebar-bottom a i {
+            font-size: 17px;
+            width: 20px;
+            text-align: center;
         }
 
         .sidebar-bottom a:hover {
-            background-color: #eaeff8;
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .sidebar-bottom a.active {
+            background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #1d4ed8;
+            font-weight: 700;
+        }
+
+        .sidebar-bottom a.logout {
+            color: #ef4444;
+        }
+
+        .sidebar-bottom a.logout i {
+            color: #ef4444;
         }
 
         .sidebar-bottom a.logout:hover {
-            background-color: #ffeef0;
+            background-color: #fef2f2;
+            color: #dc2626;
         }
 
-        .sidebar-bottom a.help-link {
-            font-size: 11.5px;
-            font-weight: 600;
-            color: #94a3b8;
-            padding: 7px 16px;
-            gap: 10px;
-            line-height: 1.35;
-        }
-
-        .sidebar-bottom a.help-link i {
-            font-size: 13px;
-            color: #94a3b8;
-        }
-
-        .sidebar-bottom a.help-link:hover {
-            background-color: #f1f5f9;
-            color: #64748b;
-        }
-
-        .sidebar-bottom a.help-link:hover i {
-            color: #64748b;
-        }
-
-        .sidebar-bottom a.help-link.active {
-            color: #64748b;
-            background-color: #f1f5f9;
-        }
-
-        /* Main Content Wrapper */
+        /* ── Main Content Wrapper (ONLY THIS SCROLLS!) ── */
         .main-wrapper {
             flex: 1;
-            padding: 24px 32px;
+            height: 100vh;
+            padding: 24px 28px;
             overflow-y: auto;
+            overflow-x: hidden;
             min-width: 0;
+            -webkit-overflow-scrolling: touch;
         }
 
-        /* Header Card Banner */
+        .main-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+        .main-wrapper::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .main-wrapper::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .main-wrapper::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Top Header Card Banner (Image 2 Syle) */
         .top-header-banner {
-            background: linear-gradient(135deg, #3d56b2 0%, #2b3a8c 100%);
-            border-radius: 20px;
-            padding: 24px 32px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #2563eb 100%);
+            border-radius: 18px;
+            padding: 22px 28px;
             color: white;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 10px 24px rgba(43, 67, 185, 0.2);
+            box-shadow: 0 8px 24px rgba(30, 58, 138, 0.18);
             margin-bottom: 24px;
-            animation: fadeInSlideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
         }
 
         .header-title-box h1 {
-            font-size: 28px;
+            font-size: 22px;
             font-weight: 800;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.3px;
+            color: #ffffff;
             margin-bottom: 4px;
-            animation: fadeIn 0.5s ease-out;
         }
 
         .header-title-box p {
-            font-size: 14px;
-            opacity: 0.85;
+            font-size: 13.5px;
+            opacity: 0.9;
+            color: #e0e7ff;
             font-weight: 500;
         }
 
         .header-user-nav {
             display: flex;
             align-items: center;
-            gap: 20px;
+            gap: 14px;
+            z-index: 2;
         }
 
-        /* Notification Dropdown & Bell */
+        /* School Mini Card */
+        .header-badge-school {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            padding: 7px 16px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: white;
+            text-align: left;
+        }
+        .header-badge-school .badge-tag {
+            font-weight: 800;
+            font-size: 9.5px;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: #bfdbfe;
+        }
+        .header-badge-school .badge-name {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #ffffff;
+            white-space: nowrap;
+        }
+        .header-badge-school .badge-role {
+            font-size: 10px;
+            color: #dbeafe;
+            font-weight: 500;
+        }
+
+        /* Notification Dropdown & Bell (Translucent circle button like Image 2) */
         .notif-dropdown-wrap {
             position: relative;
         }
 
-        .notif-bell {
-            width: 44px;
-            height: 44px;
-            background: rgba(255, 255, 255, 0.95);
+        .header-bell-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            position: relative;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.2s ease;
+        }
+
+        .header-bell-btn:hover {
+            background: rgba(255, 255, 255, 0.24);
+            transform: scale(1.04);
+        }
+
+        .header-bell-btn .bell-badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            background: #ef4444;
+            color: white;
+            font-size: 10px;
+            font-weight: 800;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #1b2559;
-            position: relative;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-        }
-
-        .notif-bell:hover {
-            transform: scale(1.08);
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-            background: #ffffff;
-            color: #2b43b9;
-        }
-
-        .notif-badge {
-            position: absolute;
-            top: -3px;
-            right: -3px;
-            min-width: 19px;
-            height: 19px;
-            padding: 0 5px;
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: #ffffff;
-            font-size: 10px;
-            font-weight: 800;
-            border-radius: 10px;
-            border: 2px solid white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: pulseGlow 2s infinite;
-            box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+            border: 2px solid #1e3a8a;
         }
 
         .notif-dropdown {
@@ -577,39 +611,61 @@
         .user-profile-badge {
             display: flex;
             align-items: center;
-            gap: 12px;
-            padding-left: 16px;
-            border-left: 1px solid rgba(255, 255, 255, 0.2);
-            transition: opacity 0.2s ease;
+            gap: 10px;
+            padding: 6px 14px 6px 8px;
+            border-radius: 40px;
+            background: rgba(255, 255, 255, 0.18);
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            transition: all 0.2s ease;
+            user-select: none;
         }
 
-        .avatar-img {
-            width: 44px;
-            height: 44px;
+        .user-profile-badge:hover {
+            background: rgba(255, 255, 255, 0.26);
+        }
+
+        .avatar-circle {
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
-            object-fit: cover;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            transition: transform 0.2s ease;
+            background: #3b82f6;
+            color: white;
+            font-weight: 800;
+            font-size: 12.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+            overflow: hidden;
+            flex-shrink: 0;
         }
 
-        .user-profile-badge:hover .avatar-img {
-            transform: scale(1.06);
+        .avatar-circle img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .user-info-text {
             display: flex;
             flex-direction: column;
+            text-align: left;
         }
 
         .user-name {
             font-weight: 700;
-            font-size: 15px;
+            font-size: 12.5px;
             color: white;
+            line-height: 1.2;
+            white-space: nowrap;
         }
 
-        .user-email {
-            font-size: 12px;
-            opacity: 0.75;
+        .user-role-label {
+            font-size: 10.5px;
+            color: #bfdbfe;
+            font-weight: 600;
+            text-transform: capitalize;
         }
 
         /* Micro Animations */
@@ -632,17 +688,6 @@
         /* Profile Dropdown */
         .profile-dropdown-wrap {
             position: relative;
-        }
-
-        .user-profile-badge {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding-left: 16px;
-            border-left: 1px solid rgba(255, 255, 255, 0.2);
-            cursor: pointer;
-            transition: opacity 0.2s ease;
-            user-select: none;
         }
 
         .profile-dropdown {
@@ -933,7 +978,9 @@
         @media (max-width: 991px) {
             body {
                 flex-direction: column;
+                height: auto;
                 min-height: 100vh;
+                overflow: visible;
                 overflow-x: hidden;
             }
 
@@ -967,6 +1014,8 @@
             }
 
             .main-wrapper {
+                height: auto;
+                overflow: visible;
                 padding: 16px 14px;
                 width: 100%;
                 overflow-x: hidden;
@@ -1204,7 +1253,7 @@
                 </li>
                 <li class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
                     <a href="{{ route('admin.dashboard') }}">
-                        <i class="fa-solid fa-border-all"></i>
+                        <i class="fa-solid fa-table-cells-large"></i>
                         <span>Dashboard</span>
                     </a>
                 </li>
@@ -1295,12 +1344,12 @@
         </div>
 
         <div class="sidebar-bottom">
-            <a href="{{ route('admin.help') }}" class="help-link {{ request()->routeIs('admin.help') ? 'active' : '' }}">
-                <i class="fa-solid fa-circle-question"></i>
-                <span>Pusat Bantuan &amp; Panduan Resmi</span>
+            <a href="{{ route('admin.help') }}" class="{{ request()->routeIs('admin.help') ? 'active' : '' }}">
+                <i class="fa-regular fa-circle-question"></i>
+                <span>Help Centre</span>
             </a>
             <a href="#" class="logout" onclick="openLogoutModal(); return false;">
-                <i class="fa-solid fa-right-from-bracket"></i>
+                <i class="fa-solid fa-arrow-right-from-bracket"></i>
                 <span>Log out</span>
             </a>
         </div>
@@ -1315,11 +1364,18 @@
                 <p>@yield('header_subtitle', 'Jurnal Absensi Guru & Siswa SMKN 1 BOYOLANGU')</p>
             </div>
             <div class="header-user-nav">
+                {{-- School / Role Badge Card (Image 2 style) --}}
+                <div class="header-badge-school">
+                    <span class="badge-tag">ADMIN AKTIF HARI INI</span>
+                    <span class="badge-name">{{ Auth::user()->name ?? 'Administrator' }}</span>
+                    <span class="badge-role">Administrator Utama</span>
+                </div>
+
                 {{-- Interactive Notification Dropdown --}}
                 <div class="notif-dropdown-wrap" id="notifDropdownWrap">
-                    <div class="notif-bell" id="notifBellBtn" onclick="toggleNotifDropdown()">
-                        <i class="fa-solid fa-bell" style="font-size: 19px;"></i>
-                        <span class="notif-badge" id="notifBadge" style="display: none;">0</span>
+                    <div class="header-bell-btn" id="notifBellBtn" onclick="toggleNotifDropdown()" title="Notifikasi">
+                        <i class="fa-solid fa-bell"></i>
+                        <span class="bell-badge" id="notifBadge" style="display: none;">0</span>
                     </div>
 
                     <div class="notif-dropdown" id="notifDropdown">
@@ -1348,12 +1404,28 @@
                 </div>
 
                 {{-- User Profile Dropdown --}}
+                @php
+                    $authName = Auth::user()->name ?? 'Administrator';
+                    $words = preg_split('/\s+/', trim(preg_replace('/[^a-zA-Z\s]/', '', $authName)));
+                    $initials = 'AD';
+                    if (count($words) >= 2 && !empty($words[0]) && !empty($words[1])) {
+                        $initials = strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
+                    } elseif (count($words) == 1 && strlen($words[0]) >= 2) {
+                        $initials = strtoupper(substr($words[0], 0, 2));
+                    }
+                @endphp
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">
                     <div class="user-profile-badge" onclick="toggleProfileDropdown()">
-                        <img src="{{ Auth::user()->photo ? Storage::url(Auth::user()->photo) : 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->name ?? 'Admin').'&background=ffffff&color=2b43b9&bold=true' }}" alt="Avatar" class="avatar-img">
+                        <div class="avatar-circle">
+                            @if(Auth::user()->photo)
+                                <img src="{{ Storage::url(Auth::user()->photo) }}" alt="Avatar">
+                            @else
+                                {{ $initials }}
+                            @endif
+                        </div>
                         <div class="user-info-text">
-                            <span class="user-name">{{ Auth::user()->name ?? 'Admin' }}</span>
-                            <span class="user-email">{{ Auth::user()->email ?? 'admin@smkn1boyolangu.sch.id' }}</span>
+                            <span class="user-name">{{ $authName }}</span>
+                            <span class="user-role-label">{{ str_replace('_', ' ', Auth::user()->role ?? 'Administrator') }}</span>
                         </div>
                     </div>
 
