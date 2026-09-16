@@ -36,6 +36,10 @@ class IzinGuru extends Model
         'tahap_approval',
         'ditolak_oleh_role',
         'ditolak_catatan',
+        // Tugas mandiri
+        'menitipkan_tugas',
+        'keterangan_tugas',
+        'lampiran_tugas',
     ];
 
     protected $casts = [
@@ -43,7 +47,13 @@ class IzinGuru extends Model
         'waka_at'             => 'datetime',
         'kepsek_at'           => 'datetime',
         'tanggal_persetujuan' => 'datetime',
+        'menitipkan_tugas'    => 'boolean',
     ];
+
+    public function hasTugas(): bool
+    {
+        return (bool) $this->menitipkan_tugas;
+    }
 
     public function guru()
     {

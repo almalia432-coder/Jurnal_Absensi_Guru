@@ -393,6 +393,11 @@
                 </thead>
                 <tbody>
                     @forelse($jadwalTerdampak as $jt)
+                    @php
+                        $iz = $jt->izin_guru;
+                        $hasTugas = $iz && $iz->menitipkan_tugas;
+                        $isJurnalFilled = (bool) $jt->jurnal_terisi;
+                    @endphp
                     <tr>
                         <td>
                             <strong style="color: #1b2559; font-size: 13.5px;">{{ $jt->kelas->nama_kelas ?? '-' }}</strong>
@@ -406,7 +411,42 @@
                         </td>
                         <td>
                             <div style="color: #1b2559; font-weight: 700;">{{ $jt->guru->nama_lengkap ?? '-' }}</div>
-                            <span class="status-badge danger">Perlu Guru Pengganti / Tugas</span>
+                            <div style="margin-top: 4px;">
+                                @if($hasTugas)
+                                    <span class="status-badge" style="background: #dcfce7; color: #166534; border: 1px solid #86efac; font-size: 11px; padding: 4px 8px;">
+                                        <i class="fa-solid fa-circle-check"></i> Sudah Ada Tugas
+                                    </span>
+                                @else
+                                    <span class="status-badge" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-size: 11px; padding: 4px 8px;">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> Butuh Pantauan / Pengganti
+                                    </span>
+                                @endif
+                            </div>
+
+                            <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                                @if($hasTugas)
+                                    <button type="button" onclick="showTugasModal({{ json_encode([
+                                        'guru'       => $jt->guru->nama_lengkap ?? '-',
+                                        'kelas'      => $jt->kelas->nama_kelas ?? '-',
+                                        'mapel'      => $jt->mapel->nama_mapel ?? '-',
+                                        'jam'        => 'Jam ke-' . $jt->jam_ke,
+                                        'keterangan' => $iz->keterangan_tugas,
+                                        'file'       => $iz->lampiran_tugas ? Storage::url($iz->lampiran_tugas) : null
+                                    ]) }})" style="padding: 5px 10px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-file-lines"></i> Lihat Tugas
+                                    </button>
+                                @endif
+
+                                @if($isJurnalFilled)
+                                    <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 5px 10px; border-radius: 8px;">
+                                        <i class="fa-solid fa-clipboard-check"></i> Jurnal Terisi
+                                    </span>
+                                @else
+                                    <a href="{{ route('guru-piket.jurnal.pendampingan', ['id_jadwal' => $jt->id_jadwal, 'tanggal' => $tanggal]) }}" style="padding: 5px 10px; border-radius: 8px; background: #2b43b9; border: none; color: #ffffff; font-size: 11px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(43,67,185,0.25);">
+                                        <i class="fa-solid fa-clipboard-user"></i> Isi Jurnal Piket
+                                    </a>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                     @empty
@@ -464,7 +504,71 @@
     </div>
 </div>
 
+<!-- Modal Detail Tugas Mandiri untuk Piket -->
+<div id="modalTugasPiket" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 520px;">
+        <div class="modal-head">
+            <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">
+                <i class="fa-solid fa-book-open-reader" style="color: #2b43b9; margin-right: 6px;"></i> Detail Tugas Mandiri Siswa
+            </h4>
+            <button type="button" onclick="closeTugasModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #94a3b8;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding: 20px 24px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;">
+                <div style="font-size: 13.5px; color: #1e293b; font-weight: 800;" id="tugasModalKelasMapel"></div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 2px;" id="tugasModalGuru"></div>
+            </div>
+
+            <label style="display: block; font-size: 12.5px; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                Instruksi / Catatan Tugas untuk Siswa:
+            </label>
+            <div id="tugasModalKeterangan" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #334155; line-height: 1.5; white-space: pre-wrap; margin-bottom: 16px; max-height: 200px; overflow-y: auto;"></div>
+
+            <div id="tugasModalFileWrap" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px; margin-bottom: 12px;">
+                <div style="font-size: 12px; font-weight: 700; color: #1e40af; margin-bottom: 6px;">
+                    <i class="fa-solid fa-paperclip"></i> Dokumen / Soal Tugas Terlampir:
+                </div>
+                <a id="tugasModalFileLink" href="#" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: #ffffff; background: #2b43b9; padding: 7px 14px; border-radius: 8px; text-decoration: none;">
+                    <i class="fa-solid fa-download"></i> Unduh File Tugas
+                </a>
+            </div>
+        </div>
+        <div class="modal-foot" style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #f1f5f9; text-align: right;">
+            <button type="button" onclick="closeTugasModal()" style="padding: 8px 18px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; cursor: pointer;">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
+    function showTugasModal(data) {
+        document.getElementById('tugasModalKelasMapel').textContent = data.kelas + ' • ' + data.mapel + ' (' + data.jam + ')';
+        document.getElementById('tugasModalGuru').textContent = 'Guru Pengampu: ' + data.guru;
+        document.getElementById('tugasModalKeterangan').textContent = data.keterangan || 'Tidak ada catatan teks tambahan.';
+        const fileWrap = document.getElementById('tugasModalFileWrap');
+        const fileLink = document.getElementById('tugasModalFileLink');
+        if (data.file) {
+            fileWrap.style.display = 'block';
+            fileLink.href = data.file;
+        } else {
+            fileWrap.style.display = 'none';
+        }
+        document.getElementById('modalTugasPiket').classList.add('active');
+    }
+
+    function closeTugasModal() {
+        document.getElementById('modalTugasPiket').classList.remove('active');
+    }
+
+    document.getElementById('modalTugasPiket').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTugasModal();
+        }
+    });
+
     function openApprovalModal(id, namaGuru, status) {
         const form = document.getElementById('formApprovalPiket');
         form.action = `/guru-piket/izin-guru/${id}/status`;

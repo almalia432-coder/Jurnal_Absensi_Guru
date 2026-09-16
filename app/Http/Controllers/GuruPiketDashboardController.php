@@ -566,6 +566,17 @@ class GuruPiketDashboardController extends Controller
                 ->when($tahunAjaranAktif, fn($q) => $q->where('id_tahun_ajaran', $tahunAjaranAktif->id))
                 ->orderBy('jam_ke')
                 ->get();
+
+            // Petakan data izin dan status jurnal pendampingan hari ini
+            $existingJurnalsToday = JurnalMengajar::whereIn('id_jadwal', $jadwalTerdampak->pluck('id_jadwal'))
+                ->where('tanggal', $tanggal)
+                ->get()
+                ->keyBy('id_jadwal');
+
+            $jadwalTerdampak->each(function ($jt) use ($izinGuruList, $existingJurnalsToday) {
+                $jt->izin_guru = $izinGuruList->firstWhere('id_guru', $jt->id_guru);
+                $jt->jurnal_terisi = $existingJurnalsToday->get($jt->id_jadwal);
+            });
         }
 
         // 4. Semua riwayat izin untuk tab riwayat lengkap
@@ -649,6 +660,135 @@ class GuruPiketDashboardController extends Controller
 
             $guruNama = $izin->guru->nama_lengkap ?? 'Guru';
             return back()->with('warning', "Pengajuan izin guru {$guruNama} telah ditolak. Guru bersangkutan telah dinotifikasi untuk tetap melanjutkan KBM.");
+        }
+    }
+
+    /**
+     * Form Pengisian Jurnal & Presensi Pendampingan Piket
+     */
+    public function formJurnalPendampingan($id_jadwal, Request $request)
+    {
+        Carbon::setLocale('id');
+        $user = Auth::user();
+        $guruPiket = $user->role === 'guru_piket' ? $user->guruPiket : null;
+
+        $tanggal = $request->input('tanggal', Carbon::today()->format('Y-m-d'));
+        $jadwal = JadwalPelajaran::with(['guru', 'kelas', 'mapel'])->findOrFail($id_jadwal);
+
+        // Data izin aktif guru bersangkutan
+        $izinGuru = IzinGuru::where('id_guru', $jadwal->id_guru)
+            ->where('tanggal_mulai', '<=', $tanggal)
+            ->where('tanggal_selesai', '>=', $tanggal)
+            ->first();
+
+        // Cek jurnal yang sudah ada pada tanggal tersebut
+        $existingJurnal = JurnalMengajar::with('presensiSiswa')
+            ->where('id_jadwal', $id_jadwal)
+            ->where('tanggal', $tanggal)
+            ->first();
+
+        // Daftar siswa di kelas tersebut
+        $siswaList = Siswa::where('id_kelas', $jadwal->id_kelas)
+            ->where('status_aktif', true)
+            ->orderBy('nama_lengkap')
+            ->get();
+
+        $existingPresensi = $existingJurnal ? $existingJurnal->presensiSiswa->keyBy('id_siswa') : collect();
+
+        return view('guru_piket.jurnal.pendampingan', compact(
+            'user', 'guruPiket', 'tanggal', 'jadwal', 'izinGuru', 'existingJurnal', 'siswaList', 'existingPresensi'
+        ));
+    }
+
+    /**
+     * Simpan Jurnal & Presensi Pendampingan oleh Guru Piket
+     */
+    public function storeJurnalPendampingan(Request $request, $id_jadwal)
+    {
+        $user = Auth::user();
+        $guruPiket = $user->role === 'guru_piket' ? $user->guruPiket : null;
+        $piketName = $guruPiket ? ($guruPiket->guru->nama_lengkap ?? $user->name) : $user->name;
+
+        $jadwal = JadwalPelajaran::with(['kelas', 'guru', 'mapel'])->findOrFail($id_jadwal);
+        $tanggal = $request->input('tanggal', Carbon::today()->format('Y-m-d'));
+
+        $validated = $request->validate([
+            'tanggal'     => 'required|date',
+            'jam_ke'      => 'required|max:10',
+            'jam_mulai'   => 'nullable',
+            'jam_selesai' => 'nullable',
+            'materi'      => 'required|string',
+            'catatan'     => 'nullable|string',
+            'presensi'    => 'nullable|array',
+            'keterangan'  => 'nullable|array',
+        ]);
+
+        $presensiData = $request->input('presensi', []);
+        $keteranganData = $request->input('keterangan', []);
+
+        $hadirCount = 0;
+        $tidakHadirCount = 0;
+        foreach ($presensiData as $st) {
+            if ($st === 'Hadir') {
+                $hadirCount++;
+            } else {
+                $tidakHadirCount++;
+            }
+        }
+
+        // Status guru di jurnal: sinkronkan dengan status izin
+        $izin = IzinGuru::where('id_guru', $jadwal->id_guru)
+            ->where('tanggal_mulai', '<=', $tanggal)
+            ->where('tanggal_selesai', '>=', $tanggal)
+            ->first();
+        $statusGuru = ($izin && $izin->jenis_izin === 'Sakit') ? 'Sakit' : 'Izin';
+
+        DB::beginTransaction();
+        try {
+            $catatanPiket = "Didampingi oleh Guru Piket: {$piketName}";
+            if (!empty($validated['catatan'])) {
+                $catatanPiket = $validated['catatan'] . " | " . $catatanPiket;
+            }
+
+            $jurnal = JurnalMengajar::updateOrCreate(
+                [
+                    'id_jadwal' => $jadwal->id_jadwal,
+                    'tanggal'   => $tanggal,
+                ],
+                [
+                    'id_guru'                  => $jadwal->id_guru,
+                    'id_kelas'                 => $jadwal->id_kelas,
+                    'id_mapel'                 => $jadwal->id_mapel,
+                    'jam_ke'                   => $validated['jam_ke'],
+                    'jam_mulai'                => $validated['jam_mulai'] ?? $jadwal->jam_mulai,
+                    'jam_selesai'              => $validated['jam_selesai'] ?? $jadwal->jam_selesai,
+                    'materi'                   => $validated['materi'],
+                    'jumlah_siswa_hadir'       => $hadirCount,
+                    'jumlah_siswa_tidak_hadir' => $tidakHadirCount,
+                    'status_guru'              => $statusGuru,
+                    'catatan'                  => $catatanPiket,
+                ]
+            );
+
+            // Bersihkan presensi lama jika update
+            PresensiSiswa::where('id_jurnal', $jurnal->id_jurnal)->delete();
+
+            foreach ($presensiData as $idSiswa => $status) {
+                PresensiSiswa::create([
+                    'id_jurnal'   => $jurnal->id_jurnal,
+                    'id_siswa'    => $idSiswa,
+                    'status'      => $status,
+                    'keterangan'  => $keteranganData[$idSiswa] ?? null,
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('guru-piket.izin-guru', ['tanggal' => $tanggal])
+                ->with('success', "Jurnal & Presensi Pendampingan Piket kelas {$jadwal->kelas->nama_kelas} berhasil disimpan.");
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal menyimpan jurnal pendampingan: ' . $e->getMessage())->withInput();
         }
     }
 

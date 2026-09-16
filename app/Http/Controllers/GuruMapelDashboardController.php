@@ -545,16 +545,25 @@ class GuruMapelDashboardController extends Controller
         $guru = $this->resolveGuru();
 
         $validated = $request->validate([
-            'tanggal_mulai'   => 'required|date',
-            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'jenis_izin'      => 'required|in:Sakit,Izin,Cuti,Dinas_Luar,Lainnya',
-            'alasan'          => 'required|string',
-            'bukti_file'      => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'tanggal_mulai'    => 'required|date',
+            'tanggal_selesai'  => 'required|date|after_or_equal:tanggal_mulai',
+            'jenis_izin'       => 'required|in:Sakit,Izin,Cuti,Dinas_Luar,Lainnya',
+            'alasan'           => 'required|string',
+            'bukti_file'       => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+            'menitipkan_tugas' => 'nullable|in:0,1',
+            'keterangan_tugas' => 'nullable|string',
+            'lampiran_tugas'   => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:3072',
         ]);
 
         $filePath = null;
         if ($request->hasFile('bukti_file')) {
             $filePath = $request->file('bukti_file')->store('izin_guru', 'public');
+        }
+
+        $menitipkanTugas = $request->boolean('menitipkan_tugas');
+        $tugasFilePath = null;
+        if ($menitipkanTugas && $request->hasFile('lampiran_tugas')) {
+            $tugasFilePath = $request->file('lampiran_tugas')->store('tugas_izin', 'public');
         }
 
         $izin = IzinGuru::create([
@@ -564,6 +573,9 @@ class GuruMapelDashboardController extends Controller
             'jenis_izin'        => $validated['jenis_izin'],
             'alasan'            => $validated['alasan'],
             'bukti_file'        => $filePath,
+            'menitipkan_tugas'  => $menitipkanTugas,
+            'keterangan_tugas'  => $menitipkanTugas ? $request->input('keterangan_tugas') : null,
+            'lampiran_tugas'    => $tugasFilePath,
             'status'            => 'Menunggu',
             'tahap_approval'    => 'piket',
             'piket_status'      => 'Menunggu',
@@ -578,12 +590,13 @@ class GuruMapelDashboardController extends Controller
         if ($validated['tanggal_mulai'] !== $validated['tanggal_selesai']) {
             $tanggalStr .= ' s/d ' . Carbon::parse($validated['tanggal_selesai'])->translatedFormat('d M Y');
         }
+        $infoTugas = $menitipkanTugas ? ' (Disertai tugas mandiri untuk siswa)' : ' (Tanpa tugas mandiri - Butuh pantauan/pengganti)';
 
         foreach ($piketUsers as $pUser) {
             Notifikasi::create([
                 'user_id'        => $pUser->id,
                 'judul'          => 'Pengajuan Izin Guru Baru (Tahap 1 - Piket)',
-                'pesan'          => "Guru {$guru->nama_lengkap} mengajukan izin {$validated['jenis_izin']} ({$tanggalStr}). Menunggu peninjauan & persetujuan Anda sebagai Guru Piket.",
+                'pesan'          => "Guru {$guru->nama_lengkap} mengajukan izin {$validated['jenis_izin']} ({$tanggalStr}){$infoTugas}. Menunggu peninjauan & persetujuan Anda sebagai Guru Piket.",
                 'tipe'           => 'izin_guru',
                 'reference_id'   => $izin->id,
                 'reference_type' => IzinGuru::class,

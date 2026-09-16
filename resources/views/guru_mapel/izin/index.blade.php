@@ -369,12 +369,45 @@
             </div>
 
             <div class="form-group">
-                <label>Alasan & Titipan Tugas Siswa <span style="color:#ef4444;">*</span></label>
-                <textarea name="alasan" rows="5" class="form-control" placeholder="Tuliskan alasan izin serta instruksi materi/tugas mandiri untuk kelas yang ditinggalkan..." required></textarea>
+                <label>Alasan Izin Tidak Mengajar <span style="color:#ef4444;">*</span></label>
+                <textarea name="alasan" rows="3" class="form-control" placeholder="Tuliskan alasan jelas mengenai izin berhalangan hadir mengajar..." required></textarea>
+            </div>
+
+            <!-- Card Pilihan Penitipan Tugas Mandiri Siswa -->
+            <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px; padding: 16px; margin-bottom: 18px;">
+                <label style="display: block; font-weight: 800; font-size: 13px; color: #1e293b; margin-bottom: 10px;">
+                    <i class="fa-solid fa-list-check" style="color: #2b43b9; margin-right: 6px;"></i> Apakah Anda Menitipkan Tugas untuk Kelas yang Ditinggalkan? <span style="color:#ef4444;">*</span>
+                </label>
+                <div style="display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 700; color: #166534; background: #f0fdf4; border: 1.5px solid #bbf7d0; padding: 8px 14px; border-radius: 10px;">
+                        <input type="radio" name="menitipkan_tugas" value="1" id="tugasYa" onchange="toggleTugasSection(true)" checked>
+                        <span><i class="fa-solid fa-circle-check"></i> Ya, Menitipkan Tugas Mandiri</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 700; color: #9a3412; background: #fff7ed; border: 1.5px solid #fed7aa; padding: 8px 14px; border-radius: 10px;">
+                        <input type="radio" name="menitipkan_tugas" value="0" id="tugasTidak" onchange="toggleTugasSection(false)">
+                        <span><i class="fa-solid fa-circle-xmark"></i> Tidak Menitipkan Tugas (Butuh Pantauan Piket)</span>
+                    </label>
+                </div>
+
+                <div id="tugasMandiriFields" style="display: block; border-top: 1px dashed #cbd5e1; padding-top: 14px; margin-top: 10px;">
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label style="font-size: 12.5px; font-weight: 700; color: #334155;">
+                            Instruksi / Rincian Tugas Mandiri <span style="color:#ef4444;">*</span>
+                        </label>
+                        <textarea name="keterangan_tugas" id="keteranganTugasInput" rows="4" class="form-control" placeholder="Contoh: Kerjakan LKS Hal. 45 latihan 1-10 di buku tugas, kumpulkan ke ketua kelas / upload ke Google Classroom..." required></textarea>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="font-size: 12.5px; font-weight: 700; color: #334155;">
+                            Lampiran Dokumen Tugas (PDF / Word / Gambar - Opsional)
+                        </label>
+                        <input type="file" name="lampiran_tugas" class="form-control" accept=".pdf,.doc,.docx,image/*">
+                        <small style="color: #64748b; font-size: 11px;">Maksimal 3MB. File dapat diunduh oleh Guru Piket untuk diteruskan ke siswa.</small>
+                    </div>
+                </div>
             </div>
 
             <div class="form-group">
-                <label>Lampiran Bukti (Surat Dokter / Surat Tugas - Opsional)</label>
+                <label>Lampiran Bukti Izin (Surat Dokter / Surat Tugas - Opsional)</label>
                 <input type="file" name="bukti_file" class="form-control" accept="image/*,application/pdf">
             </div>
 
@@ -415,15 +448,27 @@
                                 <span class="status-badge" style="background: #f1f5f9; color: #334155; font-size: 10.5px;">{{ str_replace('_', ' ', $iz->jenis_izin) }}</span>
                             </div>
                         </td>
-                        <td style="max-width: 150px;">
+                        <td style="max-width: 170px;">
                             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px;" title="{{ $iz->alasan }}">
                                 {{ $iz->alasan }}
                             </div>
-                            @if($iz->bukti_file)
-                                <a href="{{ Storage::url($iz->bukti_file) }}" target="_blank" style="font-size: 11px; color: #2b43b9; font-weight: 700; text-decoration: none;">
-                                    <i class="fa-solid fa-paperclip"></i> Bukti
-                                </a>
-                            @endif
+                            <div style="margin-top: 5px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                @if($iz->menitipkan_tugas)
+                                    <span class="status-badge" style="background: #dcfce7; color: #166534; font-size: 10px; padding: 2px 6px;">
+                                        <i class="fa-solid fa-file-circle-check"></i> Ada Tugas
+                                    </span>
+                                @else
+                                    <span class="status-badge" style="background: #fff7ed; color: #c2410c; font-size: 10px; padding: 2px 6px;">
+                                        <i class="fa-solid fa-circle-question"></i> Tanpa Tugas
+                                    </span>
+                                @endif
+
+                                @if($iz->bukti_file)
+                                    <a href="{{ Storage::url($iz->bukti_file) }}" target="_blank" style="font-size: 11px; color: #2b43b9; font-weight: 700; text-decoration: none;">
+                                        <i class="fa-solid fa-paperclip"></i> Bukti
+                                    </a>
+                                @endif
+                            </div>
                         </td>
                         <td>
                             {{-- Visual Stepper Progress 3 Tingkat --}}
@@ -461,7 +506,7 @@
                             </div>
 
                             <button type="button" onclick="showDetailModal({{ $iz->toJson() }})" style="background:none; border:none; color:#2b43b9; font-size:11px; font-weight:700; cursor:pointer; padding:2px 0; margin-top:4px; display:inline-flex; align-items:center; gap:3px;">
-                                <i class="fa-solid fa-circle-info"></i> Detail Alur
+                                <i class="fa-solid fa-circle-info"></i> Detail Alur & Tugas
                             </button>
                         </td>
                         <td>
@@ -500,7 +545,7 @@
     <div class="modal-box-custom">
         <div class="modal-head-custom">
             <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">
-                <i class="fa-solid fa-diagram-project" style="color: #2b43b9; margin-right: 6px;"></i> Detail Status Alur Persetujuan
+                <i class="fa-solid fa-diagram-project" style="color: #2b43b9; margin-right: 6px;"></i> Detail Status Alur & Tugas Izin
             </h4>
             <button type="button" onclick="closeDetailModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #94a3b8;">
                 <i class="fa-solid fa-xmark"></i>
@@ -523,6 +568,19 @@
                 </div>
                 <div style="font-size: 12.5px; color: #15803d; margin-top: 2px;">
                     Pengajuan izin Anda telah disetujui resmi oleh Guru Piket, Waka SDM, dan Kepala Sekolah.
+                </div>
+            </div>
+
+            <!-- Detail Tugas Mandiri Siswa -->
+            <div id="detailTugasBox" style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 16px;">
+                <div style="font-size: 12.5px; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                    <i class="fa-solid fa-list-check" style="color: #2b43b9; margin-right: 4px;"></i> Status Tugas Mandiri Siswa:
+                </div>
+                <div id="detailTugasDesc" style="font-size: 12.5px; color: #475569; line-height: 1.5;"></div>
+                <div id="detailTugasAttachment" style="margin-top: 8px; display: none;">
+                    <a id="detailTugasLink" href="#" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; color: #2b43b9; background: #eef2ff; border: 1px solid #c7d2fe; padding: 5px 12px; border-radius: 6px; text-decoration: none;">
+                        <i class="fa-solid fa-download"></i> Unduh Lampiran Dokumen Tugas
+                    </a>
                 </div>
             </div>
 
@@ -565,6 +623,18 @@
 </div>
 
 <script>
+    function toggleTugasSection(show) {
+        const fields = document.getElementById('tugasMandiriFields');
+        const input = document.getElementById('keteranganTugasInput');
+        if (show) {
+            fields.style.display = 'block';
+            input.setAttribute('required', 'required');
+        } else {
+            fields.style.display = 'none';
+            input.removeAttribute('required');
+        }
+    }
+
     function showDetailModal(iz) {
         const modal = document.getElementById('modalDetailIzin');
         const rejectBanner = document.getElementById('detailRejectBanner');
@@ -583,6 +653,23 @@
         } else {
             rejectBanner.style.display = 'none';
             approveBanner.style.display = 'none';
+        }
+
+        // Tugas Mandiri Details
+        const tugasDesc = document.getElementById('detailTugasDesc');
+        const tugasAttach = document.getElementById('detailTugasAttachment');
+        const tugasLink = document.getElementById('detailTugasLink');
+        if (iz.menitipkan_tugas) {
+            tugasDesc.innerHTML = `<span style="color:#166534; font-weight:700;">✅ Menitipkan Tugas Mandiri:</span><br>${iz.keterangan_tugas || '-'}`;
+            if (iz.lampiran_tugas) {
+                tugasAttach.style.display = 'block';
+                tugasLink.href = `/storage/${iz.lampiran_tugas}`;
+            } else {
+                tugasAttach.style.display = 'none';
+            }
+        } else {
+            tugasDesc.innerHTML = `<span style="color:#c2410c; font-weight:700;">⚠️ Tidak Menitipkan Tugas</span><br><span style="font-size:11.5px; color:#64748b;">(Kelas membutuhkan pendampingan langsung oleh Guru Piket / Guru Pengganti).</span>`;
+            tugasAttach.style.display = 'none';
         }
 
         // Piket

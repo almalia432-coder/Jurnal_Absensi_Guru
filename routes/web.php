@@ -142,6 +142,8 @@ Route::prefix('guru-piket')->name('guru-piket.')->middleware('auth')->group(func
     // Izin Guru & Kelas Terdampak
     Route::get('/izin-guru', [GuruPiketDashboardController::class, 'izinGuru'])->name('izin-guru');
     Route::post('/izin-guru/{id}/status', [GuruPiketDashboardController::class, 'updateStatusIzin'])->name('izin-guru.status');
+    Route::get('/jurnal-pendampingan/{id_jadwal}', [GuruPiketDashboardController::class, 'formJurnalPendampingan'])->name('jurnal.pendampingan');
+    Route::post('/jurnal-pendampingan/{id_jadwal}', [GuruPiketDashboardController::class, 'storeJurnalPendampingan'])->name('jurnal.pendampingan.store');
     
     // Rekap Presensi Siswa Se-Sekolah
     Route::get('/rekap-presensi', [GuruPiketDashboardController::class, 'rekapPresensi'])->name('rekap');
