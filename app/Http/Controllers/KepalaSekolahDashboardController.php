@@ -10,6 +10,7 @@ use App\Models\Guru;
 use App\Models\Siswa;
 use App\Models\Notifikasi;
 use App\Models\User;
+use App\Models\LogAktivitas;
 use Carbon\Carbon;
 
 class KepalaSekolahDashboardController extends Controller
@@ -201,6 +202,13 @@ class KepalaSekolahDashboardController extends Controller
                 'catatan_persetujuan' => $request->catatan,
             ]);
 
+            LogAktivitas::catat(
+                'Approval Izin Final',
+                "Kepala Sekolah memberikan persetujuan resmi izin guru {$guruNama}",
+                $izin,
+                Auth::user()
+            );
+
             // Kirim notifikasi resmi ke Guru Mapel bahwa izin DISETUJUI PENUH
             $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;
             if ($targetUserId) {
@@ -228,6 +236,13 @@ class KepalaSekolahDashboardController extends Controller
                 'ditolak_oleh_role'   => 'kepala_sekolah',
                 'ditolak_catatan'     => $request->catatan,
             ]);
+
+            LogAktivitas::catat(
+                'Penolakan Izin Final',
+                "Kepala Sekolah menolak permohonan izin guru {$guruNama}",
+                $izin,
+                Auth::user()
+            );
 
             // Kirim notifikasi ke Guru Mapel: Ditolak oleh Kepsek dan WAJIB LANJUT KBM
             $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;

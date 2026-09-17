@@ -11,6 +11,7 @@ use App\Models\Kelas;
 use App\Models\IzinGuru;
 use App\Models\DispensasiSiswa;
 use App\Models\Notifikasi;
+use App\Models\LogAktivitas;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -275,6 +276,13 @@ class WakaSdmDashboardController extends Controller
                 'tahap_approval'   => 'kepsek',
             ]);
 
+            LogAktivitas::catat(
+                'Approval Izin Waka SDM',
+                "Waka SDM menyetujui izin guru {$guruNama} (diteruskan ke Kepala Sekolah)",
+                $izin,
+                Auth::user()
+            );
+
             // Kirim notifikasi ke Kepala Sekolah untuk persetujuan final (Tahap 3)
             $kepsekUsers = User::where('role', 'kepala_sekolah')->get();
             foreach ($kepsekUsers as $kUser) {
@@ -302,6 +310,13 @@ class WakaSdmDashboardController extends Controller
                 'ditolak_oleh_role' => 'waka_sdm',
                 'ditolak_catatan'   => $request->catatan,
             ]);
+
+            LogAktivitas::catat(
+                'Penolakan Izin Waka SDM',
+                "Waka SDM menolak permohonan izin guru {$guruNama} (" . ($request->catatan ?: 'Lanjut KBM') . ")",
+                $izin,
+                Auth::user()
+            );
 
             // Kirim notifikasi ke Guru Mapel: Ditolak dan WAJIB LANJUT KBM
             $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;

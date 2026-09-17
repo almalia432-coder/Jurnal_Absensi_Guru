@@ -13,6 +13,7 @@ use App\Models\KepalaSekolah;
 use App\Models\Waka;
 use App\Models\Satpam;
 use App\Models\Siswa;
+use App\Models\LogAktivitas;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -229,6 +230,13 @@ class MasterUserController extends Controller
             }
 
             DB::commit();
+
+            LogAktivitas::catat(
+                'Tambah User',
+                "Admin menambahkan akun pengguna baru: {$user->name} (" . ucfirst(str_replace('_', ' ', $user->role)) . ")",
+                $user
+            );
+
             return redirect()->route('admin.master.user')->with('success', "Pengguna {$validated['name']} berhasil ditambahkan ke database.");
         } catch (\Exception $e) {
             DB::rollBack();
@@ -298,6 +306,12 @@ class MasterUserController extends Controller
             $user->guruPiket->update(['nama_lengkap' => $cleanName]);
         }
 
+        LogAktivitas::catat(
+            'Update User',
+            "Admin memperbarui data akun pengguna: {$user->name} (" . ucfirst(str_replace('_', ' ', $user->role)) . ")",
+            $user
+        );
+
         return redirect()->route('admin.master.user')->with('success', "Data pengguna {$user->name} berhasil diperbarui.");
     }
 
@@ -313,6 +327,13 @@ class MasterUserController extends Controller
         $user->save();
 
         $statusText = $user->is_active ? 'diaktifkan' : 'dinonaktifkan';
+
+        LogAktivitas::catat(
+            'Status User',
+            "Admin mengubah status akun {$user->name} menjadi " . ($user->is_active ? 'Aktif' : 'Nonaktif'),
+            $user
+        );
+
         return redirect()->back()->with('success', "Akun {$user->name} berhasil {$statusText}.");
     }
 
@@ -325,7 +346,14 @@ class MasterUserController extends Controller
         }
 
         $name = $user->name;
+        $role = $user->role;
         $user->delete();
+
+        LogAktivitas::catat(
+            'Hapus User',
+            "Admin menghapus akun pengguna: {$name} (" . ucfirst(str_replace('_', ' ', $role)) . ")",
+            'User'
+        );
 
         return redirect()->route('admin.master.user')->with('success', "Pengguna {$name} berhasil dihapus dari database.");
     }

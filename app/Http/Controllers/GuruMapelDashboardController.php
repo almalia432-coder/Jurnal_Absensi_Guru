@@ -14,6 +14,7 @@ use App\Models\TahunAjaran;
 use App\Models\IzinGuru;
 use App\Models\Notifikasi;
 use App\Models\User;
+use App\Models\LogAktivitas;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -332,6 +333,13 @@ class GuruMapelDashboardController extends Controller
 
             DB::commit();
 
+            LogAktivitas::catat(
+                'Input Jurnal',
+                "Guru {$guru->nama_lengkap} menginput jurnal & presensi KBM kelas " . ($jurnal->kelas->nama_kelas ?? 'Kelas'),
+                $jurnal,
+                Auth::user()
+            );
+
             return redirect()->route('guru-mapel.jurnal.riwayat')
                 ->with('success', "Jurnal mengajar dan presensi {$hadirCount} siswa hadir berhasil disimpan.");
         } catch (\Exception $e) {
@@ -583,6 +591,13 @@ class GuruMapelDashboardController extends Controller
             'kepsek_status'     => 'Menunggu',
             'diinput_oleh'      => Auth::id(),
         ]);
+
+        LogAktivitas::catat(
+            'Pengajuan Izin',
+            "Guru {$guru->nama_lengkap} mengajukan permohonan izin {$validated['jenis_izin']}",
+            $izin,
+            Auth::user()
+        );
 
         // Notifikasi ke seluruh Guru Piket yang sedang aktif/terdaftar
         $piketUsers = User::where('role', 'guru_piket')->get();

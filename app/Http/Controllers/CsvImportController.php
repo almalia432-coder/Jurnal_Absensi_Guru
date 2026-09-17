@@ -15,6 +15,7 @@ use App\Models\TahunAjaran;
 use App\Models\WaliKelas;
 use App\Models\GuruMapel;
 use App\Models\GuruPiket;
+use App\Models\LogAktivitas;
 
 class CsvImportController extends Controller
 {
@@ -195,6 +196,12 @@ class CsvImportController extends Controller
 
             DB::commit();
 
+            LogAktivitas::catat(
+                'Impor Guru',
+                "Admin mengimpor data guru via CSV: {$imported} baru, {$updated} diperbarui",
+                'Guru'
+            );
+
             $msg = "Impor CSV Guru berhasil! {$imported} data baru ditambahkan, {$updated} diperbarui.";
             if ($skipped > 0) {
                 $msg .= " ({$skipped} baris dilewati karena format tidak lengkap).";
@@ -368,6 +375,12 @@ class CsvImportController extends Controller
 
             DB::commit();
 
+            LogAktivitas::catat(
+                'Impor Siswa',
+                "Admin mengimpor data siswa via CSV: {$imported} baru, {$updated} diperbarui",
+                'Siswa'
+            );
+
             $msg = "Impor data siswa berhasil! {$imported} data siswa baru ditambahkan, {$updated} diperbarui.";
             if ($skipped > 0) {
                 $msg .= " ({$skipped} baris dilewati).";
@@ -451,6 +464,12 @@ class CsvImportController extends Controller
             }
 
             DB::commit();
+
+            LogAktivitas::catat(
+                'Impor Mapel',
+                "Admin mengimpor data mata pelajaran via CSV: {$imported} baru, {$updated} diperbarui",
+                'Mapel'
+            );
 
             $msg = "Impor CSV Mata Pelajaran berhasil! {$imported} mapel baru ditambahkan, {$updated} diperbarui.";
             if ($skipped > 0) {
@@ -620,6 +639,12 @@ class CsvImportController extends Controller
             }
 
             DB::commit();
+
+            LogAktivitas::catat(
+                'Impor Jadwal',
+                "Admin mengimpor jadwal pelajaran via CSV: {$importedSlots} sesi jadwal KBM dibuat",
+                'JadwalPelajaran'
+            );
 
             $msg = "Impor Jadwal Pelajaran selesai! {$importedSlots} slot jam KBM berhasil dibuat.";
             if (!empty($bentrokErrors)) {

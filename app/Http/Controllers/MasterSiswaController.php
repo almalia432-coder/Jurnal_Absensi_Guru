@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Siswa;
 use App\Models\Kelas;
+use App\Models\LogAktivitas;
 use Carbon\Carbon;
 
 class MasterSiswaController extends Controller
@@ -61,7 +62,13 @@ class MasterSiswaController extends Controller
         if (empty($validated['nis']) && !empty($validated['nisn'])) {
             $validated['nis'] = $validated['nisn'];
         }
-        Siswa::create($validated);
+        $siswa = Siswa::create($validated);
+
+        LogAktivitas::catat(
+            'Tambah Siswa',
+            "Admin menambahkan data siswa baru: {$siswa->nama_lengkap} (" . ($siswa->kelas->nama_kelas ?? 'Siswa') . ")",
+            $siswa
+        );
 
         return redirect()->route('admin.master.siswa')->with('success', "Siswa {$validated['nama_lengkap']} berhasil ditambahkan.");
     }
@@ -88,6 +95,12 @@ class MasterSiswaController extends Controller
         }
         $siswa->update($validated);
 
+        LogAktivitas::catat(
+            'Update Siswa',
+            "Admin memperbarui data siswa: {$siswa->nama_lengkap} (" . ($siswa->kelas->nama_kelas ?? 'Siswa') . ")",
+            $siswa
+        );
+
         return redirect()->route('admin.master.siswa')->with('success', "Data siswa {$siswa->nama_lengkap} berhasil diperbarui.");
     }
 
@@ -96,6 +109,12 @@ class MasterSiswaController extends Controller
         $siswa = Siswa::findOrFail($id);
         $nama = $siswa->nama_lengkap;
         $siswa->delete();
+
+        LogAktivitas::catat(
+            'Hapus Siswa',
+            "Admin menghapus data siswa: {$nama}",
+            'Siswa'
+        );
 
         return redirect()->route('admin.master.siswa')->with('success', "Siswa {$nama} berhasil dihapus (soft delete).");
     }

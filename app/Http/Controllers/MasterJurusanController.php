@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Jurusan;
 use App\Models\Kelas;
+use App\Models\LogAktivitas;
 
 class MasterJurusanController extends Controller
 {
@@ -48,7 +49,13 @@ class MasterJurusanController extends Controller
         ]);
 
         $validated['status_aktif'] = $request->boolean('status_aktif', true);
-        Jurusan::create($validated);
+        $jurusan = Jurusan::create($validated);
+
+        LogAktivitas::catat(
+            'Tambah Jurusan',
+            "Admin menambahkan kompetensi keahlian/jurusan baru: {$jurusan->nama_jurusan} ({$jurusan->kode_jurusan})",
+            $jurusan
+        );
 
         return redirect()->route('admin.master.jurusan')->with('success', "Jurusan {$validated['kode_jurusan']} berhasil ditambahkan.");
     }
@@ -70,6 +77,12 @@ class MasterJurusanController extends Controller
         Kelas::where('id_jurusan', $jurusan->id_jurusan)
             ->update(['jurusan' => $jurusan->kode_jurusan]);
 
+        LogAktivitas::catat(
+            'Update Jurusan',
+            "Admin memperbarui data jurusan: {$jurusan->nama_jurusan} ({$jurusan->kode_jurusan})",
+            $jurusan
+        );
+
         return redirect()->route('admin.master.jurusan')->with('success', "Data jurusan {$jurusan->kode_jurusan} berhasil diperbarui.");
     }
 
@@ -84,6 +97,12 @@ class MasterJurusanController extends Controller
 
         $kode = $jurusan->kode_jurusan;
         $jurusan->delete();
+
+        LogAktivitas::catat(
+            'Hapus Jurusan',
+            "Admin menghapus jurusan: {$kode}",
+            'Jurusan'
+        );
 
         return redirect()->route('admin.master.jurusan')->with('success', "Jurusan {$kode} berhasil dihapus.");
     }

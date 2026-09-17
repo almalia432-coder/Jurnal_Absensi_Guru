@@ -7,6 +7,7 @@ use App\Models\Kelas;
 use App\Models\Jurusan;
 use App\Models\WaliKelas;
 use App\Models\Siswa;
+use App\Models\LogAktivitas;
 
 class MasterKelasController extends Controller
 {
@@ -51,7 +52,7 @@ class MasterKelasController extends Controller
 
         $jurusan = Jurusan::findOrFail($validated['id_jurusan']);
 
-        Kelas::create([
+        $kelas = Kelas::create([
             'nama_kelas'    => $validated['nama_kelas'],
             'tingkat'       => $validated['tingkat'],
             'id_jurusan'    => $validated['id_jurusan'],
@@ -59,6 +60,12 @@ class MasterKelasController extends Controller
             'wali_kelas_id' => $validated['wali_kelas_id'] ?? null,
             'jumlah_siswa'  => 0,
         ]);
+
+        LogAktivitas::catat(
+            'Tambah Kelas',
+            "Admin menambahkan rombel kelas baru: {$kelas->nama_kelas}",
+            $kelas
+        );
 
         return redirect()->route('admin.master.kelas')->with('success', "Kelas {$validated['nama_kelas']} berhasil ditambahkan.");
     }
@@ -85,6 +92,12 @@ class MasterKelasController extends Controller
             'jumlah_siswa'  => Siswa::where('id_kelas', $kelas->id_kelas)->count(),
         ]);
 
+        LogAktivitas::catat(
+            'Update Kelas',
+            "Admin memperbarui data rombel kelas: {$kelas->nama_kelas}",
+            $kelas
+        );
+
         return redirect()->route('admin.master.kelas')->with('success', "Data kelas {$kelas->nama_kelas} berhasil diperbarui.");
     }
 
@@ -99,6 +112,12 @@ class MasterKelasController extends Controller
 
         $nama = $kelas->nama_kelas;
         $kelas->delete();
+
+        LogAktivitas::catat(
+            'Hapus Kelas',
+            "Admin menghapus rombel kelas: {$nama}",
+            'Kelas'
+        );
 
         return redirect()->route('admin.master.kelas')->with('success', "Kelas {$nama} berhasil dihapus.");
     }

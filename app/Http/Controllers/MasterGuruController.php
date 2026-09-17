@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\WaliKelas;
 use App\Models\GuruPiket;
 use App\Models\GuruMapel;
+use App\Models\LogAktivitas;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -112,6 +113,12 @@ class MasterGuruController extends Controller
 
             DB::commit();
 
+            LogAktivitas::catat(
+                'Tambah Guru',
+                "Admin menambahkan master guru baru: {$validated['nama_lengkap']} (NIP: {$validated['nip']})",
+                $guru
+            );
+
             $roleLabel = $this->getRoleLabel($validated['role']);
             return redirect()->route('admin.master.guru')
                 ->with('success', "Guru {$validated['nama_lengkap']} berhasil ditambahkan dengan jabatan {$roleLabel}.");
@@ -187,6 +194,12 @@ class MasterGuruController extends Controller
 
             DB::commit();
 
+            LogAktivitas::catat(
+                'Update Guru',
+                "Admin memperbarui data master guru: {$guru->nama_lengkap} (NIP: {$guru->nip})",
+                $guru
+            );
+
             $roleLabel = $this->getRoleLabel($validated['role']);
             return redirect()->route('admin.master.guru')
                 ->with('success', "Data guru {$guru->nama_lengkap} (Jabatan: {$roleLabel}) berhasil diperbarui.");
@@ -201,11 +214,18 @@ class MasterGuruController extends Controller
     {
         $guru = Guru::findOrFail($id);
         $nama = $guru->nama_lengkap;
+        $nip  = $guru->nip;
 
         if ($guru->user) {
             $guru->user->delete();
         }
         $guru->delete();
+
+        LogAktivitas::catat(
+            'Hapus Guru',
+            "Admin menghapus data guru: {$nama} (NIP: {$nip})",
+            'Guru'
+        );
 
         return redirect()->route('admin.master.guru')
             ->with('success', "Guru {$nama} berhasil dihapus (soft delete).");

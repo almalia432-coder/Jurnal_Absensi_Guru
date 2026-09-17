@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Mapel;
 use App\Models\JurnalMengajar;
 use App\Models\JadwalPelajaran;
+use App\Models\LogAktivitas;
 
 class MasterMapelController extends Controller
 {
@@ -17,6 +18,7 @@ class MasterMapelController extends Controller
         $query = Mapel::withCount(['jadwalPelajaran', 'jurnalMengajar'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($q2) use ($search) {
+                    $kode_mapel = $search;
                     $q2->where('kode_mapel', 'LIKE', "%{$search}%")
                        ->orWhere('nama_mapel', 'LIKE', "%{$search}%");
                 });
@@ -58,7 +60,13 @@ class MasterMapelController extends Controller
             'kelompok'   => 'required|in:Normatif,Adaptif,Produktif,Muatan_Lokal',
         ]);
 
-        Mapel::create($validated);
+        $mapel = Mapel::create($validated);
+
+        LogAktivitas::catat(
+            'Tambah Mapel',
+            "Admin menambahkan mata pelajaran baru: {$mapel->nama_mapel} ({$mapel->kode_mapel})",
+            $mapel
+        );
 
         return redirect()->route('admin.master.mapel')
             ->with('success', "Mata Pelajaran {$validated['nama_mapel']} ({$validated['kode_mapel']}) berhasil ditambahkan ke database.");
@@ -75,6 +83,12 @@ class MasterMapelController extends Controller
         ]);
 
         $mapel->update($validated);
+
+        LogAktivitas::catat(
+            'Update Mapel',
+            "Admin memperbarui data mata pelajaran: {$mapel->nama_mapel}",
+            $mapel
+        );
 
         return redirect()->route('admin.master.mapel')
             ->with('success', "Data mata pelajaran {$mapel->nama_mapel} berhasil diperbarui.");
@@ -96,6 +110,12 @@ class MasterMapelController extends Controller
 
         $nama = $mapel->nama_mapel;
         $mapel->delete();
+
+        LogAktivitas::catat(
+            'Hapus Mapel',
+            "Admin menghapus mata pelajaran: {$nama}",
+            'Mapel'
+        );
 
         return redirect()->route('admin.master.mapel')
             ->with('success', "Mata pelajaran {$nama} berhasil dihapus dari database.");

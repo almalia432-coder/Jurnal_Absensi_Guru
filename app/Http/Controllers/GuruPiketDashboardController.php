@@ -18,6 +18,7 @@ use App\Models\Jurusan;
 use App\Models\KepalaSekolah;
 use App\Models\Notifikasi;
 use App\Models\User;
+use App\Models\LogAktivitas;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -463,7 +464,7 @@ class GuruPiketDashboardController extends Controller
             $buktiPath = $request->file('bukti_file')->store('dispensasi', 'public');
         }
 
-        DispensasiSiswa::create([
+        $disp = DispensasiSiswa::with('siswa')->create([
             'id_siswa'            => $request->id_siswa,
             'tanggal'             => $request->tanggal,
             'jam_keluar'          => $request->jam_keluar,
@@ -475,6 +476,14 @@ class GuruPiketDashboardController extends Controller
             'tanggal_persetujuan' => now(),
             'diinput_oleh'        => Auth::id(),
         ]);
+
+        $namaSiswa = $disp->siswa->nama_lengkap ?? 'Siswa';
+        LogAktivitas::catat(
+            'Dispensasi Siswa',
+            "Guru Piket menerbitkan surat izin dispensasi untuk {$namaSiswa}",
+            $disp,
+            Auth::user()
+        );
 
         return back()->with('success', 'Surat dispensasi siswa berhasil diterbitkan.');
     }
@@ -783,6 +792,13 @@ class GuruPiketDashboardController extends Controller
             }
 
             DB::commit();
+
+            LogAktivitas::catat(
+                'Jurnal Pendampingan',
+                "Guru Piket mengisi jurnal pendampingan di kelas {$jadwal->kelas->nama_kelas} ({$jadwal->mapel->nama_mapel})",
+                $jurnal,
+                Auth::user()
+            );
 
             return redirect()->route('guru-piket.izin-guru', ['tanggal' => $tanggal])
                 ->with('success', "Jurnal & Presensi Pendampingan Piket kelas {$jadwal->kelas->nama_kelas} berhasil disimpan.");

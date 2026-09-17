@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use App\Models\Siswa;
 use App\Models\Guru;
 use App\Models\Kelas;
+use App\Models\Mapel;
+use App\Models\User;
+use App\Models\LogAktivitas;
 use App\Models\JurnalMengajar;
 use App\Models\PresensiSiswa;
 use App\Models\JadwalPelajaran;
@@ -78,74 +81,63 @@ class AdminDashboardController extends Controller
             'data'   => $trendData,
         ];
 
-        // ── Aktivitas Terbaru (Real Multi-Source Feed) ──────────
+        // ── Aktivitas Terbaru (Khusus Aktivitas Administrator & Sistem) ──────────
         $activityFeed = collect();
 
-        // 1. Jurnal Mengajar Terbaru yang diinput guru
-        $recentJurnal = JurnalMengajar::with(['guru', 'kelas', 'mapel'])
-            ->orderByDesc('id_jurnal')
-            ->take(8)
+        // 1. Log dari tabel log_aktivitas (Aktivitas Admin / Master Data / Sistem)
+        $adminLogs = LogAktivitas::with('user')
+            ->adminActivities()
+            ->orderByDesc('created_at')
+            ->take(10)
             ->get();
 
-        foreach ($recentJurnal as $j) {
-            $guruName  = $j->guru->nama_lengkap ?? 'Guru';
-            $mapelName = $j->mapel->nama_mapel ?? 'Mata Pelajaran';
-            $kelasName = $j->kelas->nama_kelas ?? 'Kelas';
-            $jamKe     = $j->jam_ke ? " (Jam ke-{$j->jam_ke})" : "";
-            $tglTime   = $j->created_at ?? Carbon::parse($j->tanggal);
+        foreach ($adminLogs as $l) {
+            $tglTime = $l->created_at ? Carbon::parse($l->created_at) : now();
+            $aksiLower = strtolower($l->aksi ?? '');
+            $modelLower = strtolower($l->model_type ?? '');
+
+            // Tentukan tag, icon, dan styling berdasarkan aksi & model administratif
+            if ($modelLower === 'user' || str_contains($aksiLower, 'user') || str_contains($aksiLower, 'akun')) {
+                $tag       = 'User';
+                $icon      = 'fa-solid fa-user-gear';
+                $iconBg    = '#eff6ff';
+                $iconColor = '#2563eb';
+            } elseif ($modelLower === 'guru' || str_contains($aksiLower, 'guru')) {
+                $tag       = 'Master Guru';
+                $icon      = 'fa-solid fa-chalkboard-user';
+                $iconBg    = '#ecfdf5';
+                $iconColor = '#059669';
+            } elseif ($modelLower === 'siswa' || str_contains($aksiLower, 'siswa')) {
+                $tag       = 'Master Siswa';
+                $icon      = 'fa-solid fa-user-graduate';
+                $iconBg    = '#f5f3ff';
+                $iconColor = '#7c3aed';
+            } elseif ($modelLower === 'kelas' || str_contains($aksiLower, 'kelas')) {
+                $tag       = 'Master Kelas';
+                $icon      = 'fa-solid fa-school';
+                $iconBg    = '#fffbeb';
+                $iconColor = '#d97706';
+            } elseif ($modelLower === 'mapel' || str_contains($aksiLower, 'mapel')) {
+                $tag       = 'Master Mapel';
+                $icon      = 'fa-solid fa-book';
+                $iconBg    = '#f0fdfa';
+                $iconColor = '#0d9488';
+            } elseif (str_contains($aksiLower, 'import')) {
+                $tag       = 'Impor Data';
+                $icon      = 'fa-solid fa-file-import';
+                $iconBg    = '#fdf4ff';
+                $iconColor = '#c026d3';
+            } else {
+                $tag       = 'Sistem';
+                $icon      = 'fa-solid fa-sliders';
+                $iconBg    = '#f1f5f9';
+                $iconColor = '#475569';
+            }
 
             $activityFeed->push([
-                'deskripsi'  => "{$guruName} menginput jurnal {$mapelName} di {$kelasName}{$jamKe}",
+                'deskripsi'  => $l->deskripsi,
                 'waktu'      => $tglTime->diffForHumans(),
-                'tag'        => 'Jurnal',
-                'icon'       => 'fa-solid fa-book-open-reader',
-                'icon_bg'    => 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)',
-                'icon_color' => '#3730a3',
-                'timestamp'  => $tglTime->timestamp,
-            ]);
-        }
-
-        // 2. Presensi Siswa Non-Hadir (Alpha, Sakit, Izin, Dispensasi)
-        $recentPresensi = PresensiSiswa::with(['siswa.kelas', 'jurnal.mapel'])
-            ->whereIn('status', ['Alpha', 'Sakit', 'Izin', 'Dispensasi'])
-            ->orderByDesc('id')
-            ->take(6)
-            ->get();
-
-        foreach ($recentPresensi as $p) {
-            $siswaName = $p->siswa->nama_lengkap ?? 'Siswa';
-            $kelasName = $p->siswa->kelas->nama_kelas ?? '-';
-            $ket       = $p->keterangan ? " — \"{$p->keterangan}\"" : "";
-            $tglTime   = $p->created_at ?? ($p->jurnal ? Carbon::parse($p->jurnal->tanggal) : now());
-
-            $icon = match($p->status) {
-                'Alpha'       => 'fa-solid fa-user-xmark',
-                'Sakit'       => 'fa-solid fa-notes-medical',
-                'Izin'        => 'fa-solid fa-envelope-open-text',
-                'Dispensasi'  => 'fa-solid fa-id-badge',
-                default       => 'fa-solid fa-clipboard-user',
-            };
-
-            $iconBg = match($p->status) {
-                'Alpha'       => '#fee2e2',
-                'Sakit'       => '#fef3c7',
-                'Izin'        => '#e0f2fe',
-                'Dispensasi'  => '#ede9fe',
-                default       => '#f1f5f9',
-            };
-
-            $iconColor = match($p->status) {
-                'Alpha'       => '#ef4444',
-                'Sakit'       => '#d97706',
-                'Izin'        => '#0284c7',
-                'Dispensasi'  => '#7c3aed',
-                default       => '#475569',
-            };
-
-            $activityFeed->push([
-                'deskripsi'  => "{$siswaName} ({$kelasName}) tercatat {$p->status}{$ket}",
-                'waktu'      => $tglTime->diffForHumans(),
-                'tag'        => $p->status,
+                'tag'        => $tag,
                 'icon'       => $icon,
                 'icon_bg'    => $iconBg,
                 'icon_color' => $iconColor,
@@ -153,45 +145,74 @@ class AdminDashboardController extends Controller
             ]);
         }
 
-        // 3. Jadwal Pelajaran Terbaru
-        $recentJadwal = JadwalPelajaran::with(['mapel', 'kelas', 'guru'])
-            ->orderByDesc('id_jadwal')
-            ->take(4)
+        // 2. Data administratif terbaru (User, Master Guru, Master Siswa, Kelas) untuk melengkapi feed
+        $recentUsers = User::where('role', '!=', 'siswa')
+            ->orderByDesc('updated_at')
+            ->take(3)
             ->get();
 
-        foreach ($recentJadwal as $jadwal) {
-            $mapelName = $jadwal->mapel->nama_mapel ?? 'Mapel';
-            $kelasName = $jadwal->kelas->nama_kelas ?? 'Kelas';
-            $tglTime   = $jadwal->created_at ?? now();
+        foreach ($recentUsers as $u) {
+            $tglTime = $u->updated_at ?? now();
+            $roleLabel = match($u->role) {
+                'admin' => 'Admin',
+                'guru_mapel' => 'Guru Mapel',
+                'guru_piket' => 'Guru Piket',
+                'wali_kelas' => 'Wali Kelas',
+                'waka_kurikulum' => 'Waka Kurikulum',
+                'waka_sdm' => 'Waka SDM',
+                'kepala_sekolah' => 'Kepala Sekolah',
+                'satpam' => 'Satpam',
+                'wali_murid' => 'Wali Murid',
+                default => ucfirst($u->role),
+            };
+
+            $isNew = $u->created_at && $u->created_at->diffInHours(now()) < 48;
+            $desc = $isNew
+                ? "Akun pengguna baru {$u->name} ({$roleLabel}) berhasil didaftarkan"
+                : "Data akun pengguna {$u->name} ({$roleLabel}) diperbarui";
 
             $activityFeed->push([
-                'deskripsi'  => "Jadwal {$mapelName} ({$kelasName}) — {$jadwal->hari} jam ke-{$jadwal->jam_ke} diperbarui",
+                'deskripsi'  => $desc,
                 'waktu'      => $tglTime->diffForHumans(),
-                'tag'        => 'Jadwal',
-                'icon'       => 'fa-solid fa-calendar-check',
-                'icon_bg'    => '#dcfce7',
-                'icon_color' => '#15803d',
+                'tag'        => 'User',
+                'icon'       => 'fa-solid fa-user-gear',
+                'icon_bg'    => '#eff6ff',
+                'icon_color' => '#2563eb',
                 'timestamp'  => $tglTime->timestamp,
             ]);
         }
 
-        // 4. Log dari log_aktivitas jika ada
-        $logs = DB::table('log_aktivitas')->orderByDesc('created_at')->take(4)->get();
-        foreach ($logs as $l) {
-            $tglTime = Carbon::parse($l->created_at);
+        $recentGurus = Guru::orderByDesc('updated_at')->take(2)->get();
+        foreach ($recentGurus as $g) {
+            $tglTime = $g->updated_at ?? now();
             $activityFeed->push([
-                'deskripsi'  => $l->deskripsi,
+                'deskripsi'  => "Master data guru {$g->nama_lengkap} diperbarui",
                 'waktu'      => $tglTime->diffForHumans(),
-                'tag'        => $l->aksi,
-                'icon'       => 'fa-solid fa-bolt',
-                'icon_bg'    => '#f1f5f9',
-                'icon_color' => '#475569',
+                'tag'        => 'Master Guru',
+                'icon'       => 'fa-solid fa-chalkboard-user',
+                'icon_bg'    => '#ecfdf5',
+                'icon_color' => '#059669',
                 'timestamp'  => $tglTime->timestamp,
             ]);
         }
 
-        // Sort descending by timestamp and take top 6
-        $aktivitasTerbaru = $activityFeed->sortByDesc('timestamp')->take(6)->values()->all();
+        $recentSiswas = Siswa::with('kelas')->orderByDesc('updated_at')->take(2)->get();
+        foreach ($recentSiswas as $s) {
+            $tglTime = $s->updated_at ?? now();
+            $kelasName = $s->kelas->nama_kelas ?? 'Kelas';
+            $activityFeed->push([
+                'deskripsi'  => "Data siswa {$s->nama_lengkap} ({$kelasName}) diperbarui",
+                'waktu'      => $tglTime->diffForHumans(),
+                'tag'        => 'Master Siswa',
+                'icon'       => 'fa-solid fa-user-graduate',
+                'icon_bg'    => '#f5f3ff',
+                'icon_color' => '#7c3aed',
+                'timestamp'  => $tglTime->timestamp,
+            ]);
+        }
+
+        // Urutkan berdasarkan timestamp terbaru dan ambil 6 teratas (tanpa duplikasi deskripsi)
+        $aktivitasTerbaru = $activityFeed->unique('deskripsi')->sortByDesc('timestamp')->take(6)->values()->all();
 
         // ── Perlu Perhatian (100% Real Dynamic Alerts) ──────────
         $perluPerhatian = [];
