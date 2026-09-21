@@ -375,10 +375,13 @@
 
     <!-- Right: Jadwal & Kelas Terdampak -->
     <div class="section-card" style="margin-bottom: 0;">
-        <div class="section-header">
+        <div class="section-header" style="justify-content: space-between; align-items: center;">
             <div class="section-title">
-                <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
-                <span>Jadwal Kelas Terdampak (Perlu Ditindaklanjuti)</span>
+                <i class="fa-solid fa-shield-halved" style="color: #2b43b9;"></i>
+                <span>Jadwal Kelas Terdampak (Pengawasan Piket & Penyampaian Tugas)</span>
+            </div>
+            <div style="font-size: 11px; color: #64748b;">
+                <i class="fa-solid fa-info-circle" style="color: #2b43b9;"></i> Jurnal KBM diisi oleh guru pengampu
             </div>
         </div>
 
@@ -386,9 +389,10 @@
             <table class="custom-table">
                 <thead>
                     <tr>
-                        <th>Kelas & Waktu</th>
-                        <th>Mata Pelajaran</th>
-                        <th>Guru Berhalangan</th>
+                        <th style="width: 22%;">Kelas & Waktu</th>
+                        <th style="width: 20%;">Mata Pelajaran</th>
+                        <th style="width: 25%;">Guru Pengampu & Izin</th>
+                        <th style="width: 33%;">Tugas Mandiri & Status Jurnal</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -401,7 +405,7 @@
                     <tr>
                         <td>
                             <strong style="color: #1b2559; font-size: 13.5px;">{{ $jt->kelas->nama_kelas ?? '-' }}</strong>
-                            <div style="font-size: 11.5px; color: #ef4444; font-weight: 700;">
+                            <div style="font-size: 11.5px; color: #ef4444; font-weight: 700; margin-top: 2px;">
                                 <i class="fa-solid fa-clock"></i> Jam ke-{{ $jt->jam_ke }} ({{ Carbon\Carbon::parse($jt->jam_mulai)->format('H:i') }} - {{ Carbon\Carbon::parse($jt->jam_selesai)->format('H:i') }})
                             </div>
                         </td>
@@ -411,47 +415,74 @@
                         </td>
                         <td>
                             <div style="color: #1b2559; font-weight: 700;">{{ $jt->guru->nama_lengkap ?? '-' }}</div>
-                            <div style="margin-top: 4px;">
+                            <div style="margin-top: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <span class="status-badge" style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-size: 11px; padding: 3px 8px;">
+                                    <i class="fa-solid fa-user-xmark"></i> {{ $iz ? str_replace('_', ' ', $iz->jenis_izin) : 'Izin' }}
+                                </span>
+                                <span style="font-size: 11px; color: #64748b;">(Guru Pengampu)</span>
+                            </div>
+                        </td>
+                        <td>
+                            <!-- Informasi Tugas Mandiri Siswa -->
+                            <div style="margin-bottom: 8px;">
                                 @if($hasTugas)
-                                    <span class="status-badge" style="background: #dcfce7; color: #166534; border: 1px solid #86efac; font-size: 11px; padding: 4px 8px;">
-                                        <i class="fa-solid fa-circle-check"></i> Sudah Ada Tugas
-                                    </span>
+                                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                        <span class="status-badge" style="background: #dcfce7; color: #166534; border: 1px solid #86efac; font-size: 11px; padding: 4px 8px;">
+                                            <i class="fa-solid fa-circle-check"></i> Ada Titipan Tugas
+                                        </span>
+                                        <button type="button" onclick="showTugasModal({{ json_encode([
+                                            'guru'       => $jt->guru->nama_lengkap ?? '-',
+                                            'kelas'      => $jt->kelas->nama_kelas ?? '-',
+                                            'mapel'      => $jt->mapel->nama_mapel ?? '-',
+                                            'jam'        => 'Jam ke-' . $jt->jam_ke,
+                                            'keterangan' => $iz->keterangan_tugas,
+                                            'file'       => $iz->lampiran_tugas ? Storage::url($iz->lampiran_tugas) : null
+                                        ]) }})" style="padding: 5px 10px; border-radius: 8px; background: #2b43b9; border: none; color: #ffffff; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(43,67,185,0.25);">
+                                            <i class="fa-solid fa-bullhorn"></i> Sampaikan Tugas
+                                        </button>
+                                    </div>
                                 @else
-                                    <span class="status-badge" style="background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; font-size: 11px; padding: 4px 8px;">
-                                        <i class="fa-solid fa-triangle-exclamation"></i> Butuh Pantauan / Pengganti
-                                    </span>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <span class="status-badge" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 11px; padding: 3px 8px;">
+                                            <i class="fa-solid fa-circle-info"></i> Tanpa Titipan Tugas
+                                        </span>
+                                        <span style="font-size: 11px; color: #64748b;">(Belajar Mandiri/Literasi)</span>
+                                    </div>
                                 @endif
                             </div>
 
-                            <div style="margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
-                                @if($hasTugas)
-                                    <button type="button" onclick="showTugasModal({{ json_encode([
-                                        'guru'       => $jt->guru->nama_lengkap ?? '-',
-                                        'kelas'      => $jt->kelas->nama_kelas ?? '-',
-                                        'mapel'      => $jt->mapel->nama_mapel ?? '-',
-                                        'jam'        => 'Jam ke-' . $jt->jam_ke,
-                                        'keterangan' => $iz->keterangan_tugas,
-                                        'file'       => $iz->lampiran_tugas ? Storage::url($iz->lampiran_tugas) : null
-                                    ]) }})" style="padding: 5px 10px; border-radius: 8px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
-                                        <i class="fa-solid fa-file-lines"></i> Lihat Tugas
-                                    </button>
-                                @endif
-
-                                @if($isJurnalFilled)
-                                    <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 5px 10px; border-radius: 8px;">
-                                        <i class="fa-solid fa-clipboard-check"></i> Jurnal Terisi
-                                    </span>
-                                @else
-                                    <a href="{{ route('guru-piket.jurnal.pendampingan', ['id_jadwal' => $jt->id_jadwal, 'tanggal' => $tanggal]) }}" style="padding: 5px 10px; border-radius: 8px; background: #2b43b9; border: none; color: #ffffff; font-size: 11px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 6px rgba(43,67,185,0.25);">
-                                        <i class="fa-solid fa-clipboard-user"></i> Isi Jurnal Piket
-                                    </a>
-                                @endif
+                            <!-- Status Jurnal Guru Pengampu & Pengawasan Piket -->
+                            <div style="padding-top: 6px; border-top: 1px dashed #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                                <div>
+                                    @if($isJurnalFilled)
+                                        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 4px 8px; border-radius: 6px;">
+                                            <i class="fa-solid fa-clipboard-check"></i> Jurnal Diisi Guru ({{ $jt->jurnal_terisi->status_guru }})
+                                        </span>
+                                        <button type="button" onclick="showJurnalModal({{ json_encode([
+                                            'guru'    => $jt->guru->nama_lengkap ?? '-',
+                                            'kelas'   => $jt->kelas->nama_kelas ?? '-',
+                                            'mapel'   => $jt->mapel->nama_mapel ?? '-',
+                                            'materi'  => $jt->jurnal_terisi->materi,
+                                            'catatan' => $jt->jurnal_terisi->catatan ?? '-',
+                                            'status'  => $jt->jurnal_terisi->status_guru,
+                                        ]) }})" style="border: none; background: none; color: #2563eb; font-size: 11px; font-weight: 700; text-decoration: underline; cursor: pointer; padding: 0; margin-left: 6px;">
+                                            Lihat Isi Jurnal
+                                        </button>
+                                    @else
+                                        <span style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: #b45309; background: #fffbeb; border: 1px solid #fde68a; padding: 4px 8px; border-radius: 6px;">
+                                            <i class="fa-solid fa-hourglass-half"></i> Menunggu Jurnal Guru
+                                        </span>
+                                    @endif
+                                </div>
+                                <span style="font-size: 11px; font-weight: 700; color: #475569; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid fa-eye" style="color: #2b43b9;"></i> Pengawasan Piket
+                                </span>
                             </div>
                         </td>
                     </tr>
                     @empty
                     <tr>
-                        <td colspan="3" style="text-align: center; color: #6b7a99; padding: 28px;">
+                        <td colspan="4" style="text-align: center; color: #6b7a99; padding: 28px;">
                             <i class="fa-solid fa-circle-check" style="font-size: 26px; color: #10b981; margin-bottom: 6px; display: block;"></i>
                             <div>Tidak ada jadwal kelas yang berhalangan hadir pada hari ini.</div>
                         </td>
@@ -543,6 +574,44 @@
     </div>
 </div>
 
+<!-- Modal Detail Jurnal KBM Guru Pengampu -->
+<div id="modalJurnalGuru" class="modal-backdrop">
+    <div class="modal-box" style="max-width: 520px;">
+        <div class="modal-head">
+            <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">
+                <i class="fa-solid fa-clipboard-check" style="color: #10b981; margin-right: 6px;"></i> Detail Jurnal KBM Guru Pengampu
+            </h4>
+            <button type="button" onclick="closeJurnalModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #94a3b8;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="modal-body" style="padding: 20px 24px;">
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;">
+                <div style="font-size: 13.5px; color: #1e293b; font-weight: 800;" id="jurnalModalKelasMapel"></div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 2px;" id="jurnalModalGuru"></div>
+                <div style="margin-top: 8px;">
+                    <span style="display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: #dcfce7; color: #166534;" id="jurnalModalStatus"></span>
+                </div>
+            </div>
+
+            <label style="display: block; font-size: 12.5px; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                Materi / Capaian Pembelajaran Siswa:
+            </label>
+            <div id="jurnalModalMateri" style="background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #334155; line-height: 1.5; white-space: pre-wrap; margin-bottom: 14px; max-height: 200px; overflow-y: auto;"></div>
+
+            <label style="display: block; font-size: 12.5px; font-weight: 800; color: #1e293b; margin-bottom: 6px;">
+                Catatan Khusus KBM:
+            </label>
+            <div id="jurnalModalCatatan" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 12.5px; color: #64748b; line-height: 1.5;"></div>
+        </div>
+        <div class="modal-foot" style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #f1f5f9; text-align: right;">
+            <button type="button" onclick="closeJurnalModal()" style="padding: 8px 18px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; cursor: pointer;">
+                Tutup
+            </button>
+        </div>
+    </div>
+</div>
+
 <script>
     function showTugasModal(data) {
         document.getElementById('tugasModalKelasMapel').textContent = data.kelas + ' • ' + data.mapel + ' (' + data.jam + ')';
@@ -566,6 +635,25 @@
     document.getElementById('modalTugasPiket').addEventListener('click', function(e) {
         if (e.target === this) {
             closeTugasModal();
+        }
+    });
+
+    function showJurnalModal(data) {
+        document.getElementById('jurnalModalKelasMapel').textContent = data.kelas + ' • ' + data.mapel;
+        document.getElementById('jurnalModalGuru').textContent = 'Guru Pengampu: ' + data.guru;
+        document.getElementById('jurnalModalStatus').textContent = 'Status Kehadiran Guru: ' + data.status;
+        document.getElementById('jurnalModalMateri').textContent = data.materi || 'Tidak ada materi tersimpan.';
+        document.getElementById('jurnalModalCatatan').textContent = data.catatan || 'Tidak ada catatan khusus.';
+        document.getElementById('modalJurnalGuru').classList.add('active');
+    }
+
+    function closeJurnalModal() {
+        document.getElementById('modalJurnalGuru').classList.remove('active');
+    }
+
+    document.getElementById('modalJurnalGuru').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeJurnalModal();
         }
     });
 

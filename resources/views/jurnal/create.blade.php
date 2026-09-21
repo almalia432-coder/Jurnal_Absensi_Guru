@@ -218,6 +218,12 @@
                 <div class="status-text">Sakit</div>
                 <div class="status-sub">Tidak dapat hadir</div>
               </label>
+              <label class="status-card" id="sc-dinas">
+                <input type="radio" name="status_guru" value="Dinas" onchange="selectStatus('dinas')">
+                <span class="status-icon">🏛️</span>
+                <div class="status-text">Dinas</div>
+                <div class="status-sub">Tugas dinas luar</div>
+              </label>
             </div>
           </div>
 

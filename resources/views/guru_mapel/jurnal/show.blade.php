@@ -112,6 +112,7 @@
     .status-badge.hadir      { background: #e6f9f0; color: #10b981; }
     .status-badge.sakit      { background: #e0f2fe; color: #0369a1; }
     .status-badge.izin       { background: #fff7ed; color: #f97316; }
+    .status-badge.dinas      { background: #f3e8ff; color: #7e22ce; }
     .status-badge.alpha      { background: #fef2f2; color: #ef4444; }
     .status-badge.dispensasi { background: #eef2ff; color: #2b43b9; }
 
@@ -149,7 +150,7 @@
             </div>
             <div class="info-item">
                 <span class="label">Status Kehadiran Guru</span>
-                <span class="val"><span class="status-badge hadir">{{ $jurnal->status_guru }}</span></span>
+                <span class="val"><span class="status-badge {{ strtolower($jurnal->status_guru) }}">{{ $jurnal->status_guru }}</span></span>
             </div>
             <div class="info-item">
                 <span class="label">Statistik Siswa</span>

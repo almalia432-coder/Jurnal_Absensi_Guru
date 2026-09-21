@@ -515,6 +515,11 @@
                     <div>
                         <i class="fa-solid fa-hourglass-half" style="color: #6b7a99; width: 16px;"></i>
                         <strong>Jam ke-{{ $jd->jam_ke }}</strong> ({{ Carbon\Carbon::parse($jd->jam_mulai)->format('H:i') }} - {{ Carbon\Carbon::parse($jd->jam_selesai)->format('H:i') }} WIB)
+                        @if(isset($jd->total_jp) && $jd->total_jp > 1)
+                            <span style="background: #eef2ff; color: #2b43b9; font-size: 10.5px; font-weight: 800; padding: 2px 6px; border-radius: 6px; margin-left: 6px; border: 1px solid #dbeafe;">
+                                {{ $jd->total_jp }} JP
+                            </span>
+                        @endif
                     </div>
                     <div>
                         <i class="fa-solid fa-layer-group" style="color: #6b7a99; width: 16px;"></i>

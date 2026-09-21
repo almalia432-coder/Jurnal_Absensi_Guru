@@ -190,6 +190,36 @@
                 <h3>Identitas Pembelajaran & Materi</h3>
             </div>
 
+            <!-- Active Izin Notification Banner -->
+            @if(isset($activeIzinHariIni) && $activeIzinHariIni)
+            <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1.5px solid #93c5fd; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;">
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                    <i class="fa-solid fa-circle-info" style="color: #2563eb; font-size: 18px; margin-top: 2px;"></i>
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+                            <strong style="color: #1e40af; font-size: 13.5px;">
+                                Anda Sedang Izin Hari Ini ({{ str_replace('_', ' ', $activeIzinHariIni->jenis_izin) }})
+                            </strong>
+                            <span style="background: #2563eb; color: #ffffff; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 6px;">
+                                {{ $activeIzinHariIni->status }}
+                            </span>
+                        </div>
+                        <p style="font-size: 12px; color: #1e3a8a; margin: 0; line-height: 1.5;">
+                            Anda tetap mengisi jurnal mengajar & penugasan mandiri siswa di kelas yang Anda ampu. Guru Piket akan mengawasi kelas dan menyampaikan tugas yang telah Anda titipkan.
+                        </p>
+                        @if($activeIzinHariIni->menitipkan_tugas && $activeIzinHariIni->keterangan_tugas)
+                        <div style="margin-top: 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                            <button type="button" onclick="isiMateriDariTugas({{ json_encode($activeIzinHariIni->keterangan_tugas) }})" style="padding: 6px 12px; font-size: 11.5px; font-weight: 700; background: #2563eb; color: #ffffff; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                                <i class="fa-solid fa-copy"></i> Salin Instruksi Tugas ke Kolom Materi
+                            </button>
+                            <span style="font-size: 11px; color: #2563eb;">(Tugas telah dititipkan kepada Guru Piket)</span>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <!-- Shortcut Jadwal Hari Ini -->
             @if($jadwalHariIniOptions->isNotEmpty())
             <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
@@ -199,8 +229,11 @@
                 <select class="form-control" onchange="if(this.value) window.location.href='{{ route('guru-mapel.jurnal.create') }}?id_jadwal='+this.value">
                     <option value="">-- Pilih Sesi Terjadwal Hari Ini --</option>
                     @foreach($jadwalHariIniOptions as $jho)
-                        <option value="{{ $jho->id_jadwal }}" {{ ($selectedJadwal && $selectedJadwal->id_jadwal == $jho->id_jadwal) ? 'selected' : '' }}>
+                        <option value="{{ $jho->id_jadwal }}" {{ ($selectedJadwal && in_array($selectedJadwal->id_jadwal, $jho->jadwal_ids ?? [$jho->id_jadwal])) ? 'selected' : '' }}>
                             Jam ke-{{ $jho->jam_ke }} &bull; {{ $jho->kelas->nama_kelas }} &bull; {{ $jho->mapel->nama_mapel }}
+                            @if(isset($jho->total_jp) && $jho->total_jp > 1)
+                                ({{ $jho->total_jp }} JP)
+                            @endif
                         </option>
                     @endforeach
                 </select>
@@ -252,28 +285,48 @@
 
                 <div class="form-group">
                     <label>Jam Pelajaran Ke- <span style="color:#ef4444;">*</span></label>
-                    <input type="text" name="jam_ke" value="{{ $selectedJadwal->jam_ke ?? '1-2' }}" class="form-control" placeholder="Contoh: 1-2 atau 3" required>
+                    <input type="text" name="jam_ke" value="{{ old('jam_ke', $jamKeSuggestion ?? ($selectedJadwal->jam_ke ?? '1-2')) }}" class="form-control" placeholder="Contoh: 1-2 atau 5-6" required>
+                    @if(isset($jamKeSuggestion) && str_contains($jamKeSuggestion, '-'))
+                        <small style="font-size: 11px; color: #2b43b9; margin-top: 3px; display: block;">
+                            <i class="fa-solid fa-circle-check"></i> Otomatis mencakup jam pembelajaran berurutan ({{ $jamKeSuggestion }}).
+                        </small>
+                    @endif
                 </div>
             </div>
 
             <div class="form-row">
                 <div class="form-group">
                     <label>Jam Mulai (WIB)</label>
-                    <input type="time" name="jam_mulai" value="{{ $selectedJadwal ? Carbon\Carbon::parse($selectedJadwal->jam_mulai)->format('H:i') : now()->format('H:i') }}" class="form-control">
+                    <input type="time" name="jam_mulai" value="{{ old('jam_mulai', $jamMulaiSuggestion ? Carbon\Carbon::parse($jamMulaiSuggestion)->format('H:i') : ($selectedJadwal ? Carbon\Carbon::parse($selectedJadwal->jam_mulai)->format('H:i') : now()->format('H:i'))) }}" class="form-control">
                 </div>
 
                 <div class="form-group">
                     <label>Jam Selesai (WIB)</label>
-                    <input type="time" name="jam_selesai" value="{{ $selectedJadwal ? Carbon\Carbon::parse($selectedJadwal->jam_selesai)->format('H:i') : now()->addHours(2)->format('H:i') }}" class="form-control">
+                    <input type="time" name="jam_selesai" value="{{ old('jam_selesai', $jamSelesaiSuggestion ? Carbon\Carbon::parse($jamSelesaiSuggestion)->format('H:i') : ($selectedJadwal ? Carbon\Carbon::parse($selectedJadwal->jam_selesai)->format('H:i') : now()->addHours(2)->format('H:i'))) }}" class="form-control">
                 </div>
             </div>
+
+            @php
+                $defaultStatus = 'Hadir';
+                if (isset($activeIzinHariIni) && $activeIzinHariIni) {
+                    if ($activeIzinHariIni->jenis_izin === 'Sakit') {
+                        $defaultStatus = 'Sakit';
+                    } elseif ($activeIzinHariIni->jenis_izin === 'Dinas_Luar') {
+                        $defaultStatus = 'Dinas';
+                    } else {
+                        $defaultStatus = 'Izin';
+                    }
+                }
+                $selectedStatus = old('status_guru', $defaultStatus);
+            @endphp
 
             <div class="form-group">
                 <label>Status Kehadiran Guru <span style="color:#ef4444;">*</span></label>
                 <select name="status_guru" class="form-control" required>
-                    <option value="Hadir" selected>Hadir Mengajar di Kelas</option>
-                    <option value="Izin">Izin (Penugasan Mandiri)</option>
-                    <option value="Sakit">Sakit (Penugasan Mandiri)</option>
+                    <option value="Hadir" {{ $selectedStatus === 'Hadir' ? 'selected' : '' }}>Hadir Mengajar di Kelas</option>
+                    <option value="Izin" {{ $selectedStatus === 'Izin' ? 'selected' : '' }}>Izin (Penugasan Mandiri)</option>
+                    <option value="Sakit" {{ $selectedStatus === 'Sakit' ? 'selected' : '' }}>Sakit (Penugasan Mandiri)</option>
+                    <option value="Dinas" {{ $selectedStatus === 'Dinas' ? 'selected' : '' }}>Dinas Luar (Tugas Kedinasan)</option>
                 </select>
             </div>
 
@@ -393,6 +446,14 @@
                 radio.closest('.radio-pill').classList.add('checked');
             }
         });
+    }
+
+    function isiMateriDariTugas(tugasText) {
+        const materiArea = document.querySelector('textarea[name="materi"]');
+        if (materiArea) {
+            materiArea.value = tugasText;
+            materiArea.focus();
+        }
     }
 </script>
 @endsection

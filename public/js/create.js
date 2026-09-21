@@ -40,10 +40,12 @@ function changeCount(type, d) {
 }
 
 function selectStatus(type) {
-  ['hadir','izin','sakit'].forEach(s => {
-    document.getElementById('sc-' + s).classList.remove('selected-hadir','selected-izin','selected-sakit');
+  ['hadir','izin','sakit','dinas'].forEach(s => {
+    const el = document.getElementById('sc-' + s);
+    if (el) el.classList.remove('selected-hadir','selected-izin','selected-sakit','selected-dinas');
   });
-  document.getElementById('sc-' + type).classList.add('selected-' + type);
+  const target = document.getElementById('sc-' + type);
+  if (target) target.classList.add('selected-' + type);
 }
 
 // Set today's date

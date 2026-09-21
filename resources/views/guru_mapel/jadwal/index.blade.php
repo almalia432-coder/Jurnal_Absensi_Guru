@@ -249,6 +249,11 @@
                         <span class="time-badge">
                             <i class="fa-solid fa-clock"></i> Jam ke-{{ $j->jam_ke }} ({{ Carbon\Carbon::parse($j->jam_mulai)->format('H:i') }} - {{ Carbon\Carbon::parse($j->jam_selesai)->format('H:i') }} WIB)
                         </span>
+                        @if(isset($j->total_jp) && $j->total_jp > 1)
+                            <span style="background: #eef2ff; color: #2b43b9; font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; border: 1px solid #dbeafe;">
+                                {{ $j->total_jp }} JP
+                            </span>
+                        @endif
                     </div>
 
                     <div class="class-title">{{ $j->kelas->nama_kelas ?? '-' }}</div>

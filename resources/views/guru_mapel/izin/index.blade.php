@@ -668,7 +668,7 @@
                 tugasAttach.style.display = 'none';
             }
         } else {
-            tugasDesc.innerHTML = `<span style="color:#c2410c; font-weight:700;">⚠️ Tidak Menitipkan Tugas</span><br><span style="font-size:11.5px; color:#64748b;">(Kelas membutuhkan pendampingan langsung oleh Guru Piket / Guru Pengganti).</span>`;
+            tugasDesc.innerHTML = `<span style="color:#c2410c; font-weight:700;">⚠️ Tidak Menitipkan Tugas</span><br><span style="font-size:11.5px; color:#64748b;">(Siswa belajar mandiri/literasi di kelas dalam pengawasan Guru Piket. Anda tetap mengisi jurnal KBM mandiri).</span>`;
             tugasAttach.style.display = 'none';
         }
 

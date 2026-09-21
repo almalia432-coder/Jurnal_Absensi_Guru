@@ -42,6 +42,112 @@ class GuruMapelDashboardController extends Controller
     }
 
     /**
+     * Helper to group consecutive schedules into continuous teaching blocks.
+     * Only merges schedules if:
+     * - Same day (hari)
+     * - Same class (id_kelas)
+     * - Same subject (id_mapel)
+     * - Consecutive jam_ke ($next->jam_ke == $last->jam_ke + 1)
+     */
+    private function groupConsecutiveSchedules($schedules)
+    {
+        if ($schedules->isEmpty()) {
+            return collect();
+        }
+
+        $sorted = $schedules->sortBy('jam_ke')->values();
+        $groups = collect();
+        $currentGroup = null;
+
+        foreach ($sorted as $item) {
+            if ($currentGroup === null) {
+                $currentGroup = [
+                    'id_jadwal'   => $item->id_jadwal,
+                    'jadwal_ids'  => [$item->id_jadwal],
+                    'id_guru'     => $item->id_guru,
+                    'id_kelas'    => $item->id_kelas,
+                    'id_mapel'    => $item->id_mapel,
+                    'hari'        => $item->hari,
+                    'jam_ke_list' => [(int)$item->jam_ke],
+                    'jam_mulai'   => $item->jam_mulai,
+                    'jam_selesai' => $item->jam_selesai,
+                    'kelas'       => $item->kelas,
+                    'mapel'       => $item->mapel,
+                    'items'       => collect([$item]),
+                ];
+                continue;
+            }
+
+            $lastJamKe = end($currentGroup['jam_ke_list']);
+            $isSameClass = $currentGroup['id_kelas'] == $item->id_kelas;
+            $isSameMapel = $currentGroup['id_mapel'] == $item->id_mapel;
+            $isSameHari  = $currentGroup['hari'] == $item->hari;
+            $isConsecutiveJam = ((int)$item->jam_ke == $lastJamKe + 1);
+
+            if ($isSameClass && $isSameMapel && $isSameHari && $isConsecutiveJam) {
+                $currentGroup['jadwal_ids'][] = $item->id_jadwal;
+                $currentGroup['jam_ke_list'][] = (int)$item->jam_ke;
+                $currentGroup['jam_selesai'] = $item->jam_selesai;
+                $currentGroup['items']->push($item);
+            } else {
+                $groups->push($this->formatGroupedSchedule($currentGroup));
+                $currentGroup = [
+                    'id_jadwal'   => $item->id_jadwal,
+                    'jadwal_ids'  => [$item->id_jadwal],
+                    'id_guru'     => $item->id_guru,
+                    'id_kelas'    => $item->id_kelas,
+                    'id_mapel'    => $item->id_mapel,
+                    'hari'        => $item->hari,
+                    'jam_ke_list' => [(int)$item->jam_ke],
+                    'jam_mulai'   => $item->jam_mulai,
+                    'jam_selesai' => $item->jam_selesai,
+                    'kelas'       => $item->kelas,
+                    'mapel'       => $item->mapel,
+                    'items'       => collect([$item]),
+                ];
+            }
+        }
+
+        if ($currentGroup !== null) {
+            $groups->push($this->formatGroupedSchedule($currentGroup));
+        }
+
+        return $groups;
+    }
+
+    private function formatGroupedSchedule(array $group)
+    {
+        $count = count($group['jam_ke_list']);
+        $firstJam = reset($group['jam_ke_list']);
+        $lastJam = end($group['jam_ke_list']);
+
+        $jamLabel = ($count > 1) ? "{$firstJam} - {$lastJam}" : (string)$firstJam;
+        $jamKeRaw = ($count > 1) ? "{$firstJam}-{$lastJam}" : (string)$firstJam;
+
+        $obj = new \stdClass();
+        $obj->id_jadwal = $group['id_jadwal'];
+        $obj->jadwal_ids = $group['jadwal_ids'];
+        $obj->id_guru = $group['id_guru'];
+        $obj->id_kelas = $group['id_kelas'];
+        $obj->id_mapel = $group['id_mapel'];
+        $obj->hari = $group['hari'];
+        $obj->jam_ke = $jamLabel;
+        $obj->jam_ke_display = $jamLabel;
+        $obj->jam_ke_raw = $jamKeRaw;
+        $obj->jam_ke_list = $group['jam_ke_list'];
+        $obj->jam_mulai = $group['jam_mulai'];
+        $obj->jam_selesai = $group['jam_selesai'];
+        $obj->kelas = $group['kelas'];
+        $obj->mapel = $group['mapel'];
+        $obj->items = $group['items'];
+        $obj->total_jp = $count;
+        $obj->is_filled = false;
+        $obj->jurnal = null;
+
+        return $obj;
+    }
+
+    /**
      * Dashboard Utama Guru Mata Pelajaran
      */
     public function index(Request $request)
@@ -73,36 +179,60 @@ class GuruMapelDashboardController extends Controller
 
         $tahunAjaranAktif = TahunAjaran::where('is_aktif', true)->first();
 
-        // 1. Jadwal Hari Ini
-        $jadwalHariIni = JadwalPelajaran::with(['kelas.jurusanRelation', 'mapel'])
+        // 1. Jadwal Hari Ini (Raw)
+        $rawJadwalHariIni = JadwalPelajaran::with(['kelas.jurusanRelation', 'mapel'])
             ->where('id_guru', $guru->id_guru)
             ->where('hari', $hariIni)
             ->when($tahunAjaranAktif, fn($q) => $q->where('id_tahun_ajaran', $tahunAjaranAktif->id))
             ->orderBy('jam_ke')
             ->get();
 
+        // Kelompokkan jadwal jam berurutan pada kelas & mapel yang sama (jam blok)
+        $groupedJadwalHariIni = $this->groupConsecutiveSchedules($rawJadwalHariIni);
+
         // 2. Jurnal Hari Ini
         $jurnalHariIni = JurnalMengajar::where('id_guru', $guru->id_guru)
             ->where('tanggal', $today)
             ->get();
 
-        $jurnalByJadwal = $jurnalHariIni->keyBy('id_jadwal');
-        $jurnalByKelasMapel = $jurnalHariIni->groupBy(fn($j) => "{$j->id_kelas}_{$j->id_mapel}_{$j->jam_ke}");
-
         // Attach status to Jadwal Hari Ini
-        $jadwalCards = $jadwalHariIni->map(function ($jd) use ($jurnalByJadwal, $jurnalByKelasMapel) {
-            $jurnal = $jurnalByJadwal->get($jd->id_jadwal) 
-                ?? ($jurnalByKelasMapel->get("{$jd->id_kelas}_{$jd->id_mapel}_{$jd->jam_ke}")?->first());
+        $jadwalCards = $groupedJadwalHariIni->map(function ($jd) use ($jurnalHariIni) {
+            $matchingJurnal = $jurnalHariIni->first(function ($j) use ($jd) {
+                // Cocokkan berdasarkan ID Jadwal (jika ada pada salah satu ID dalam blok jadwal)
+                if ($j->id_jadwal && in_array($j->id_jadwal, $jd->jadwal_ids)) {
+                    return true;
+                }
 
-            $jd->is_filled = !is_null($jurnal);
-            $jd->jurnal = $jurnal;
+                // Cocokkan berdasarkan kesamaan Kelas dan Mapel
+                if ($j->id_kelas == $jd->id_kelas && $j->id_mapel == $jd->id_mapel) {
+                    // Cek kesamaan string jam_ke
+                    if ($j->jam_ke == $jd->jam_ke || $j->jam_ke == $jd->jam_ke_raw) {
+                        return true;
+                    }
+
+                    // Cek apakah angka jam_ke jurnal berada dalam rentang jam_ke sesi blok ini
+                    preg_match_all('/\d+/', (string)$j->jam_ke, $matches);
+                    $jurnalJams = array_map('intval', $matches[0] ?? []);
+                    if (!empty($jurnalJams) && !empty(array_intersect($jurnalJams, $jd->jam_ke_list))) {
+                        return true;
+                    }
+                }
+
+                return false;
+            });
+
+            $jd->is_filled = !is_null($matchingJurnal);
+            $jd->jurnal = $matchingJurnal;
             return $jd;
         });
 
         // 3. KPI Metrics
-        $totalJadwalHariIni = $jadwalHariIni->count();
-        $totalJurnalHariIni = $jurnalHariIni->count();
+        // Total sesi mengajar yang harus diisi hari ini (berdasarkan sesi blok pembelajaran)
+        $totalJadwalHariIni = $jadwalCards->count();
+        // Total sesi yang jurnalnya sudah terisi hari ini
+        $totalJurnalHariIni = $jadwalCards->where('is_filled', true)->count();
 
+        // Total jam mengajar (JP beban mengajar mingguan)
         $totalJamMingguan = JadwalPelajaran::where('id_guru', $guru->id_guru)
             ->when($tahunAjaranAktif, fn($q) => $q->where('id_tahun_ajaran', $tahunAjaranAktif->id))
             ->count();
@@ -129,7 +259,6 @@ class GuruMapelDashboardController extends Controller
             ->get();
 
         // 5. Cek Notifikasi Status Izin Terakhir (Persetujuan / Penolakan Lanjut KBM)
-        // Hanya tampil jika tanggal selesai izin belum terlewati (>= hari ini)
         $latestIzinNotice = IzinGuru::with(['piketApprover', 'wakaApprover', 'kepsekApprover'])
             ->where('id_guru', $guru->id_guru)
             ->whereDate('tanggal_selesai', '>=', $today)
@@ -166,24 +295,30 @@ class GuruMapelDashboardController extends Controller
         $guru = $this->resolveGuru();
         $tahunAjaranAktif = TahunAjaran::where('is_aktif', true)->first();
 
-        $allJadwal = JadwalPelajaran::with(['kelas.jurusanRelation', 'kelas.waliKelas', 'mapel'])
+        $rawAllJadwal = JadwalPelajaran::with(['kelas.jurusanRelation', 'kelas.waliKelas', 'mapel'])
             ->where('id_guru', $guru->id_guru ?? 0)
             ->when($tahunAjaranAktif, fn($q) => $q->where('id_tahun_ajaran', $tahunAjaranAktif->id))
             ->orderBy('jam_ke')
-            ->get()
-            ->groupBy('hari');
+            ->get();
 
         $hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
-        $totalSesiMingguan = $allJadwal->flatten()->count();
-        $totalKelasDiajar = $allJadwal->flatten()->pluck('id_kelas')->unique()->count();
-        $totalMapelDiajar = $allJadwal->flatten()->pluck('id_mapel')->unique()->count();
+        $totalJamMingguan = $rawAllJadwal->count();
+        $totalKelasDiajar = $rawAllJadwal->pluck('id_kelas')->unique()->count();
+        $totalMapelDiajar = $rawAllJadwal->pluck('id_mapel')->unique()->count();
+
+        // Kelompokkan jadwal berturut-turut per hari
+        $allJadwal = collect();
+        foreach ($hariList as $h) {
+            $daySchedules = $rawAllJadwal->where('hari', $h);
+            $allJadwal->put($h, $this->groupConsecutiveSchedules($daySchedules));
+        }
 
         return view('guru_mapel.jadwal.index', [
             'guru' => $guru,
             'allJadwal' => $allJadwal,
             'hariList' => $hariList,
-            'totalSesiMingguan' => $totalSesiMingguan,
+            'totalSesiMingguan' => $totalJamMingguan,
             'totalKelasDiajar' => $totalKelasDiajar,
             'totalMapelDiajar' => $totalMapelDiajar,
             'tahunAjaranAktif' => $tahunAjaranAktif,
@@ -206,11 +341,34 @@ class GuruMapelDashboardController extends Controller
         $tanggal = $today; // Tanggal mengajar terkunci otomatis ke hari ini
 
         $selectedJadwal = null;
+        $jamKeSuggestion = null;
+        $jamMulaiSuggestion = null;
+        $jamSelesaiSuggestion = null;
+
         if ($idJadwal) {
             $selectedJadwal = JadwalPelajaran::with(['kelas', 'mapel'])->find($idJadwal);
             if ($selectedJadwal) {
                 $idKelas = $selectedJadwal->id_kelas;
                 $idMapel = $selectedJadwal->id_mapel;
+
+                // Cari blok jam berurutan yang memuat jadwal terpilih
+                $blockSchedules = JadwalPelajaran::where('id_guru', $selectedJadwal->id_guru)
+                    ->where('hari', $selectedJadwal->hari)
+                    ->where('id_kelas', $selectedJadwal->id_kelas)
+                    ->where('id_mapel', $selectedJadwal->id_mapel)
+                    ->orderBy('jam_ke')
+                    ->get();
+
+                $grouped = $this->groupConsecutiveSchedules($blockSchedules);
+                $activeGroup = $grouped->first(function ($g) use ($idJadwal) {
+                    return in_array($idJadwal, $g->jadwal_ids);
+                });
+
+                if ($activeGroup) {
+                    $jamKeSuggestion = $activeGroup->jam_ke;
+                    $jamMulaiSuggestion = $activeGroup->jam_mulai;
+                    $jamSelesaiSuggestion = $activeGroup->jam_selesai;
+                }
             }
         }
 
@@ -245,24 +403,37 @@ class GuruMapelDashboardController extends Controller
                 ->get();
         }
 
-        // Jadwal Hari Ini options
-        $jadwalHariIniOptions = JadwalPelajaran::with(['kelas', 'mapel'])
+        // Jadwal Hari Ini options (dikelompokkan per sesi blok)
+        $rawJadwalHariIniOptions = JadwalPelajaran::with(['kelas', 'mapel'])
             ->where('id_guru', $guru->id_guru ?? 0)
             ->where('hari', $hariIni)
             ->orderBy('jam_ke')
             ->get();
+
+        $jadwalHariIniOptions = $this->groupConsecutiveSchedules($rawJadwalHariIniOptions);
+
+        // Cek apakah guru memiliki izin aktif hari ini
+        $activeIzinHariIni = IzinGuru::where('id_guru', $guru->id_guru ?? 0)
+            ->where('tanggal_mulai', '<=', $today)
+            ->where('tanggal_selesai', '>=', $today)
+            ->where('status', '!=', 'Ditolak')
+            ->first();
 
         return view('guru_mapel.jurnal.create', [
             'guru' => $guru,
             'today' => $today,
             'tanggal' => $tanggal,
             'selectedJadwal' => $selectedJadwal,
+            'jamKeSuggestion' => $jamKeSuggestion,
+            'jamMulaiSuggestion' => $jamMulaiSuggestion,
+            'jamSelesaiSuggestion' => $jamSelesaiSuggestion,
             'idKelas' => $idKelas,
             'idMapel' => $idMapel,
             'kelasList' => $kelasList,
             'mapelList' => $mapelList,
             'siswaList' => $siswaList,
             'jadwalHariIniOptions' => $jadwalHariIniOptions,
+            'activeIzinHariIni' => $activeIzinHariIni,
         ]);
     }
 
@@ -277,11 +448,11 @@ class GuruMapelDashboardController extends Controller
             'id_kelas'     => 'required|exists:kelas,id_kelas',
             'id_mapel'     => 'required|exists:mapel,id_mapel',
             'tanggal'      => 'nullable|date',
-            'jam_ke'       => 'required|string|max:10',
+            'jam_ke'       => 'required|string|max:20',
             'jam_mulai'    => 'nullable',
             'jam_selesai'  => 'nullable',
             'materi'       => 'required|string',
-            'status_guru'  => 'required|in:Hadir,Izin,Sakit',
+            'status_guru'  => 'required|in:Hadir,Izin,Sakit,Dinas',
             'catatan'      => 'nullable|string',
             'id_jadwal'    => 'nullable|exists:jadwal_pelajaran,id_jadwal',
             'presensi'     => 'nullable|array',
