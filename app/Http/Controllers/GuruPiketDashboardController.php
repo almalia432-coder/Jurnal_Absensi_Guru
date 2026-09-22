@@ -13,6 +13,7 @@ use App\Models\JadwalPelajaran;
 use App\Models\TahunAjaran;
 use App\Models\IzinGuru;
 use App\Models\DispensasiSiswa;
+use App\Models\IzinSiswa;
 use App\Models\LaporanPiket;
 use App\Models\Jurusan;
 use App\Models\KepalaSekolah;
@@ -22,6 +23,7 @@ use App\Models\LogAktivitas;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class GuruPiketDashboardController extends Controller
 {
@@ -542,6 +544,132 @@ class GuruPiketDashboardController extends Controller
         $dispensasi = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser', 'disetujuiOlehUser'])->findOrFail($id);
 
         return view('guru_piket.dispensasi.cetak', compact('dispensasi'));
+    }
+
+    /**
+     * Halaman Manajemen Perizinan & Sakit Siswa
+     */
+    public function izinSiswa(Request $request)
+    {
+        Carbon::setLocale('id');
+        $user = Auth::user();
+        $guruPiket = $user->role === 'guru_piket' ? $user->guruPiket : null;
+
+        $tanggal = $request->input('tanggal', Carbon::today()->format('Y-m-d'));
+        $search  = $request->input('search');
+        $jenis   = $request->input('jenis_izin');
+        $idKelas = $request->input('id_kelas');
+
+        $izinSiswaList = IzinSiswa::with(['siswa.kelas', 'diinputOlehUser'])
+            ->when($tanggal, function ($q) use ($tanggal) {
+                $q->whereDate('tanggal_mulai', '<=', $tanggal)
+                  ->whereDate('tanggal_selesai', '>=', $tanggal);
+            })
+            ->when($jenis, fn($q) => $q->where('jenis_izin', $jenis))
+            ->when($idKelas, function ($q) use ($idKelas) {
+                $q->whereHas('siswa', fn($qs) => $qs->where('id_kelas', $idKelas));
+            })
+            ->when($search, function ($q) use ($search) {
+                $q->whereHas('siswa', function ($qs) use ($search) {
+                    $qs->where('nama_lengkap', 'LIKE', "%{$search}%")
+                       ->orWhere('nisn', 'LIKE', "%{$search}%");
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate(15)
+            ->withQueryString();
+
+        // Rekap KPI pada tanggal yang dipilih
+        $allIzinToday = IzinSiswa::whereDate('tanggal_mulai', '<=', $tanggal)
+            ->whereDate('tanggal_selesai', '>=', $tanggal)
+            ->where('status', '!=', 'Ditolak')
+            ->get();
+
+        $kpi = [
+            'total'      => $allIzinToday->count(),
+            'sakit'      => $allIzinToday->where('jenis_izin', 'Sakit')->count(),
+            'izin'       => $allIzinToday->where('jenis_izin', 'Izin')->count(),
+            'dispensasi' => $allIzinToday->where('jenis_izin', 'Dispensasi')->count(),
+        ];
+
+        $kelasList = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get(['id_kelas', 'nama_kelas', 'tingkat', 'jurusan']);
+
+        $siswaSelectOption = Siswa::with('kelas')
+            ->where('status_aktif', true)
+            ->orderBy('nama_lengkap')
+            ->get(['id_siswa', 'nama_lengkap', 'nisn', 'id_kelas']);
+
+        return view('guru_piket.izin_siswa.index', compact(
+            'user', 'guruPiket', 'izinSiswaList', 'tanggal', 'search', 'jenis', 'idKelas',
+            'kpi', 'kelasList', 'siswaSelectOption'
+        ));
+    }
+
+    /**
+     * Simpan Pencatatan Izin / Sakit Siswa
+     */
+    public function storeIzinSiswa(Request $request)
+    {
+        $request->validate([
+            'id_siswa'        => 'required|exists:siswa,id_siswa',
+            'jenis_izin'      => 'required|in:Sakit,Izin,Dispensasi',
+            'tanggal_mulai'   => 'required|date',
+            'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
+            'alasan'          => 'required|string|max:500',
+            'bukti_file'      => 'nullable|file|mimes:jpeg,png,jpg,pdf|max:2048',
+        ]);
+
+        $buktiPath = null;
+        if ($request->hasFile('bukti_file')) {
+            $buktiPath = $request->file('bukti_file')->store('izin_siswa', 'public');
+        }
+
+        $izin = IzinSiswa::create([
+            'id_siswa'        => $request->id_siswa,
+            'jenis_izin'      => $request->jenis_izin,
+            'tanggal_mulai'   => $request->tanggal_mulai,
+            'tanggal_selesai' => $request->tanggal_selesai,
+            'alasan'          => $request->alasan,
+            'bukti_file'      => $buktiPath,
+            'status'          => 'Disetujui',
+            'diinput_oleh'    => Auth::id(),
+            'catatan'         => $request->catatan,
+        ]);
+
+        $siswa = Siswa::find($request->id_siswa);
+        $namaSiswa = $siswa->nama_lengkap ?? 'Siswa';
+
+        LogAktivitas::catat(
+            'Izin Siswa Piket',
+            "Guru Piket mencatat perizinan {$request->jenis_izin} untuk {$namaSiswa} ({$request->tanggal_mulai} s/d {$request->tanggal_selesai})",
+            $izin,
+            Auth::user()
+        );
+
+        return back()->with('success', "Data perizinan {$request->jenis_izin} untuk {$namaSiswa} berhasil dicatat. Presensi siswa di jurnal guru mapel akan terisi otomatis.");
+    }
+
+    /**
+     * Hapus Catatan Izin Siswa
+     */
+    public function destroyIzinSiswa($id)
+    {
+        $izin = IzinSiswa::with('siswa')->findOrFail($id);
+        $namaSiswa = $izin->siswa->nama_lengkap ?? 'Siswa';
+        if ($izin->bukti_file && Storage::disk('public')->exists($izin->bukti_file)) {
+            Storage::disk('public')->delete($izin->bukti_file);
+        }
+
+        $izin->delete();
+
+        LogAktivitas::catat(
+            'Hapus Izin Siswa',
+            "Guru Piket menghapus catatan perizinan {$jenis} untuk {$namaSiswa}",
+            null,
+            Auth::user()
+        );
+
+        return back()->with('success', "Catatan perizinan {$namaSiswa} berhasil dihapus.");
     }
 
     /**

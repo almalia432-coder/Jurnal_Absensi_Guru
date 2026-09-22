@@ -934,6 +934,12 @@
                 </li>
 
                 <li class="sidebar-category-header">Layanan Siswa & Guru</li>
+                <li class="{{ request()->routeIs('guru-piket.izin-siswa*') ? 'active' : '' }}">
+                    <a href="{{ route('guru-piket.izin-siswa') }}">
+                        <i class="fa-solid fa-hospital-user"></i>
+                        <span>Izin & Sakit Siswa</span>
+                    </a>
+                </li>
                 <li class="{{ request()->routeIs('guru-piket.dispensasi*') ? 'active' : '' }}">
                     <a href="{{ route('guru-piket.dispensasi') }}">
                         <i class="fa-solid fa-ticket-simple"></i>

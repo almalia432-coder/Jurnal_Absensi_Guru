@@ -139,6 +139,11 @@ Route::prefix('guru-piket')->name('guru-piket.')->middleware('auth')->group(func
     Route::post('/dispensasi/{id}/status', [GuruPiketDashboardController::class, 'updateDispensasiStatus'])->name('dispensasi.status');
     Route::get('/dispensasi/{id}/cetak', [GuruPiketDashboardController::class, 'cetakDispensasi'])->name('dispensasi.cetak');
     
+    // Perizinan Siswa (Sakit, Izin, Dispen)
+    Route::get('/izin-siswa', [GuruPiketDashboardController::class, 'izinSiswa'])->name('izin-siswa');
+    Route::post('/izin-siswa', [GuruPiketDashboardController::class, 'storeIzinSiswa'])->name('izin-siswa.store');
+    Route::delete('/izin-siswa/{id}', [GuruPiketDashboardController::class, 'destroyIzinSiswa'])->name('izin-siswa.destroy');
+    
     // Izin Guru & Kelas Terdampak
     Route::get('/izin-guru', [GuruPiketDashboardController::class, 'izinGuru'])->name('izin-guru');
     Route::post('/izin-guru/{id}/status', [GuruPiketDashboardController::class, 'updateStatusIzin'])->name('izin-guru.status');

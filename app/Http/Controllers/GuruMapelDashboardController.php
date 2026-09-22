@@ -12,6 +12,8 @@ use App\Models\PresensiSiswa;
 use App\Models\JadwalPelajaran;
 use App\Models\TahunAjaran;
 use App\Models\IzinGuru;
+use App\Models\IzinSiswa;
+use App\Models\DispensasiSiswa;
 use App\Models\Notifikasi;
 use App\Models\User;
 use App\Models\LogAktivitas;
@@ -396,11 +398,63 @@ class GuruMapelDashboardController extends Controller
 
         // Siswa di kelas terpilih
         $siswaList = collect();
+        $piketAbsenceCount = 0;
+        $piketDetails = [
+            'sakit' => 0,
+            'izin' => 0,
+            'dispensasi' => 0,
+        ];
+
         if ($idKelas) {
             $siswaList = Siswa::where('id_kelas', $idKelas)
                 ->where('status_aktif', true)
                 ->orderBy('nama_lengkap')
                 ->get();
+
+            $siswaIds = $siswaList->pluck('id_siswa')->toArray();
+
+            if (!empty($siswaIds)) {
+                // Ambil perizinan siswa dari Guru Piket yang aktif pada tanggal ini
+                $izinSiswaMap = IzinSiswa::whereIn('id_siswa', $siswaIds)
+                    ->whereDate('tanggal_mulai', '<=', $tanggal)
+                    ->whereDate('tanggal_selesai', '>=', $tanggal)
+                    ->where('status', '!=', 'Ditolak')
+                    ->get()
+                    ->keyBy('id_siswa');
+
+                // Ambil dispensasi siswa yang disetujui pada tanggal ini
+                $dispensasiSiswaMap = DispensasiSiswa::whereIn('id_siswa', $siswaIds)
+                    ->whereDate('tanggal', $tanggal)
+                    ->whereIn('status', ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai'])
+                    ->get()
+                    ->keyBy('id_siswa');
+
+                // Pasangkan ke data setiap siswa untuk otomatisasi presensi di jurnal
+                $siswaList->transform(function ($s) use ($izinSiswaMap, $dispensasiSiswaMap, &$piketAbsenceCount, &$piketDetails) {
+                    $s->piket_status = null;
+                    $s->piket_keterangan = null;
+
+                    if ($izin = $izinSiswaMap->get($s->id_siswa)) {
+                        $s->piket_status = $izin->jenis_izin; // 'Sakit', 'Izin', 'Dispensasi'
+                        $s->piket_keterangan = $izin->alasan;
+                        $piketAbsenceCount++;
+                        if ($izin->jenis_izin === 'Sakit') {
+                            $piketDetails['sakit']++;
+                        } elseif ($izin->jenis_izin === 'Izin') {
+                            $piketDetails['izin']++;
+                        } else {
+                            $piketDetails['dispensasi']++;
+                        }
+                    } elseif ($disp = $dispensasiSiswaMap->get($s->id_siswa)) {
+                        $s->piket_status = 'Dispensasi';
+                        $s->piket_keterangan = $disp->alasan;
+                        $piketAbsenceCount++;
+                        $piketDetails['dispensasi']++;
+                    }
+
+                    return $s;
+                });
+            }
         }
 
         // Jadwal Hari Ini options (dikelompokkan per sesi blok)
@@ -434,6 +488,8 @@ class GuruMapelDashboardController extends Controller
             'siswaList' => $siswaList,
             'jadwalHariIniOptions' => $jadwalHariIniOptions,
             'activeIzinHariIni' => $activeIzinHariIni,
+            'piketAbsenceCount' => $piketAbsenceCount,
+            'piketDetails' => $piketDetails,
         ]);
     }
 

@@ -128,6 +128,31 @@
     .radio-pill.alpha.checked { background: #fef2f2; color: #ef4444; border-color: #ef4444; }
     .radio-pill.disp.checked  { background: #eef2ff; color: #2b43b9; border-color: #2b43b9; }
 
+    .badge-piket {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 6px;
+        margin-top: 4px;
+    }
+    .badge-piket.status-saki { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-piket.status-izin { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .badge-piket.status-disp { background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; }
+
+    .piket-alert-box {
+        background: #f0fdf4;
+        border: 1.5px solid #86efac;
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
     .btn-quick {
         padding: 6px 12px;
         border-radius: 8px;
@@ -358,6 +383,15 @@
                 </div>
             </div>
 
+            @if(isset($piketAbsenceCount) && $piketAbsenceCount > 0)
+            <div class="piket-alert-box">
+                <i class="fa-solid fa-bell-concierge" style="font-size: 20px; color: #16a34a; flex-shrink: 0;"></i>
+                <div style="font-size: 12.5px; color: #166534; line-height: 1.45;">
+                    <strong>Informasi Guru Piket:</strong> Terdapat <strong>{{ $piketAbsenceCount }} siswa</strong> di kelas ini yang berhalangan hadir dan telah dicatat oleh Guru Piket ({{ !empty($piketDetails['sakit']) ? $piketDetails['sakit'] . ' Sakit' : '' }}{{ !empty($piketDetails['sakit']) && (!empty($piketDetails['izin']) || !empty($piketDetails['dispensasi'])) ? ', ' : '' }}{{ !empty($piketDetails['izin']) ? $piketDetails['izin'] . ' Izin' : '' }}{{ !empty($piketDetails['izin']) && !empty($piketDetails['dispensasi']) ? ', ' : '' }}{{ !empty($piketDetails['dispensasi']) ? $piketDetails['dispensasi'] . ' Dispen' : '' }}). Status kehadiran mereka telah otomatis disetel. Anda tinggal menandai siswa yang <strong>Alpha</strong> jika ada.
+                </div>
+            </div>
+            @endif
+
             <div class="table-responsive">
                 <table class="attendance-table">
                     <thead>
@@ -370,38 +404,65 @@
                     </thead>
                     <tbody>
                         @forelse($siswaList as $idx => $s)
-                        <tr>
+                        @php
+                            $currStatus = $s->piket_status ?? 'Hadir';
+                        @endphp
+                        <tr data-from-piket="{{ !empty($s->piket_status) ? 'true' : 'false' }}">
                             <td>{{ $idx + 1 }}</td>
                             <td>
                                 <strong style="color: #1b2559; font-size: 13px;">{{ $s->nama_lengkap }}</strong>
                                 <div style="font-size: 11px; color: #707e94;">NISN: {{ $s->nisn ?? '-' }}</div>
+                                @if(!empty($s->piket_status))
+                                    @php
+                                        $badgeClass = match($s->piket_status) {
+                                            'Sakit' => 'status-saki',
+                                            'Izin' => 'status-izin',
+                                            default => 'status-disp'
+                                        };
+                                        $badgeIcon = match($s->piket_status) {
+                                            'Sakit' => 'fa-notes-medical',
+                                            'Izin' => 'fa-envelope-open-text',
+                                            default => 'fa-ticket-simple'
+                                        };
+                                    @endphp
+                                    <div>
+                                        <span class="badge-piket {{ $badgeClass }}">
+                                            <i class="fa-solid {{ $badgeIcon }}"></i> Piket: {{ $s->piket_status }}
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 <div class="radio-group">
-                                    <label class="radio-pill hadir checked" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Hadir" checked>
+                                    <label class="radio-pill hadir {{ $currStatus === 'Hadir' ? 'checked' : '' }}" onclick="selectRadio(this)">
+                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Hadir" {{ $currStatus === 'Hadir' ? 'checked' : '' }}>
                                         <span>H</span>
                                     </label>
-                                    <label class="radio-pill sakit" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Sakit">
+                                    <label class="radio-pill sakit {{ $currStatus === 'Sakit' ? 'checked' : '' }}" onclick="selectRadio(this)">
+                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Sakit" {{ $currStatus === 'Sakit' ? 'checked' : '' }}>
                                         <span>S</span>
                                     </label>
-                                    <label class="radio-pill izin" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Izin">
+                                    <label class="radio-pill izin {{ $currStatus === 'Izin' ? 'checked' : '' }}" onclick="selectRadio(this)">
+                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Izin" {{ $currStatus === 'Izin' ? 'checked' : '' }}>
                                         <span>I</span>
                                     </label>
-                                    <label class="radio-pill alpha" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Alpha">
+                                    <label class="radio-pill alpha {{ $currStatus === 'Alpha' ? 'checked' : '' }}" onclick="selectRadio(this)">
+                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Alpha" {{ $currStatus === 'Alpha' ? 'checked' : '' }}>
                                         <span>A</span>
                                     </label>
-                                    <label class="radio-pill disp" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Dispensasi">
+                                    <label class="radio-pill disp {{ $currStatus === 'Dispensasi' ? 'checked' : '' }}" onclick="selectRadio(this)">
+                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Dispensasi" {{ $currStatus === 'Dispensasi' ? 'checked' : '' }}>
                                         <span>D</span>
                                     </label>
                                 </div>
                             </td>
                             <td>
-                                <input type="text" name="keterangan[{{ $s->id_siswa }}]" placeholder="Catatan..." class="form-control" style="padding: 4px 8px; font-size: 12px; border-radius: 8px;">
+                                <input type="text" 
+                                       name="keterangan[{{ $s->id_siswa }}]" 
+                                       placeholder="Catatan..." 
+                                       value="{{ !empty($s->piket_keterangan) ? '(Piket: ' . $s->piket_status . ') ' . $s->piket_keterangan : '' }}"
+                                       class="form-control" 
+                                       style="padding: 4px 8px; font-size: 12px; border-radius: 8px;">
                             </td>
                         </tr>
                         @empty
@@ -438,6 +499,11 @@
 
     function setAllAttendance(status) {
         document.querySelectorAll('.attendance-table tbody tr').forEach(row => {
+            // Jangan timpa siswa yang sudah tercatat izin dari piket saat menekan tombol Semua Hadir
+            if (status === 'Hadir' && row.getAttribute('data-from-piket') === 'true') {
+                return;
+            }
+
             const radio = row.querySelector(`input[value="${status}"]`);
             if (radio) {
                 radio.checked = true;
