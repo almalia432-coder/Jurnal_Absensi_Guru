@@ -14,43 +14,11 @@ class JadwalPelajaranController extends Controller
 {
     /**
      * Standard slot time mapping for SMKN 1 Boyolangu
+     * Otomatis terintegrasi dengan status upacara & pembiasaan KBM harian
      */
-    public static function getDefaultTimeSlot(string $hari, int $jam_ke): array
+    public static function getDefaultTimeSlot(string $hari, int $jam_ke, ?string $tanggal = null): array
     {
-        $isJumat = strtolower($hari) === 'jumat';
-
-        if ($isJumat) {
-            $jumatSlots = [
-                1  => ['jam_mulai' => '07:00', 'jam_selesai' => '07:30'],
-                2  => ['jam_mulai' => '07:30', 'jam_selesai' => '08:00'],
-                3  => ['jam_mulai' => '08:00', 'jam_selesai' => '08:30'],
-                4  => ['jam_mulai' => '08:30', 'jam_selesai' => '09:00'],
-                5  => ['jam_mulai' => '09:00', 'jam_selesai' => '09:30'],
-                6  => ['jam_mulai' => '09:45', 'jam_selesai' => '10:15'],
-                7  => ['jam_mulai' => '10:15', 'jam_selesai' => '10:45'],
-                8  => ['jam_mulai' => '10:45', 'jam_selesai' => '11:15'],
-                9  => ['jam_mulai' => '11:15', 'jam_selesai' => '11:45'],
-                10 => ['jam_mulai' => '13:00', 'jam_selesai' => '13:30'],
-            ];
-            return $jumatSlots[$jam_ke] ?? ['jam_mulai' => '07:00', 'jam_selesai' => '07:30'];
-        }
-
-        $regularSlots = [
-            1  => ['jam_mulai' => '07:00', 'jam_selesai' => '07:40'],
-            2  => ['jam_mulai' => '07:40', 'jam_selesai' => '08:20'],
-            3  => ['jam_mulai' => '08:20', 'jam_selesai' => '09:00'],
-            4  => ['jam_mulai' => '09:00', 'jam_selesai' => '09:40'],
-            5  => ['jam_mulai' => '09:55', 'jam_selesai' => '10:35'],
-            6  => ['jam_mulai' => '10:35', 'jam_selesai' => '11:15'],
-            7  => ['jam_mulai' => '11:15', 'jam_selesai' => '11:55'],
-            8  => ['jam_mulai' => '12:35', 'jam_selesai' => '13:15'],
-            9  => ['jam_mulai' => '13:15', 'jam_selesai' => '13:55'],
-            10 => ['jam_mulai' => '13:55', 'jam_selesai' => '14:35'],
-            11 => ['jam_mulai' => '14:35', 'jam_selesai' => '15:15'],
-            12 => ['jam_mulai' => '15:15', 'jam_selesai' => '15:55'],
-        ];
-
-        return $regularSlots[$jam_ke] ?? ['jam_mulai' => '07:00', 'jam_selesai' => '07:40'];
+        return \App\Models\StatusHarianKbm::getTimeSlot($hari, $jam_ke, $tanggal);
     }
 
     public function index(Request $request)

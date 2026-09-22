@@ -17,6 +17,7 @@ use App\Models\DispensasiSiswa;
 use App\Models\Notifikasi;
 use App\Models\User;
 use App\Models\LogAktivitas;
+use App\Models\StatusHarianKbm;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +52,7 @@ class GuruMapelDashboardController extends Controller
      * - Same subject (id_mapel)
      * - Consecutive jam_ke ($next->jam_ke == $last->jam_ke + 1)
      */
-    private function groupConsecutiveSchedules($schedules)
+    private function groupConsecutiveSchedules($schedules, ?string $forDate = null)
     {
         if ($schedules->isEmpty()) {
             return collect();
@@ -92,7 +93,7 @@ class GuruMapelDashboardController extends Controller
                 $currentGroup['jam_selesai'] = $item->jam_selesai;
                 $currentGroup['items']->push($item);
             } else {
-                $groups->push($this->formatGroupedSchedule($currentGroup));
+                $groups->push($this->formatGroupedSchedule($currentGroup, $forDate));
                 $currentGroup = [
                     'id_jadwal'   => $item->id_jadwal,
                     'jadwal_ids'  => [$item->id_jadwal],
@@ -111,13 +112,13 @@ class GuruMapelDashboardController extends Controller
         }
 
         if ($currentGroup !== null) {
-            $groups->push($this->formatGroupedSchedule($currentGroup));
+            $groups->push($this->formatGroupedSchedule($currentGroup, $forDate));
         }
 
         return $groups;
     }
 
-    private function formatGroupedSchedule(array $group)
+    private function formatGroupedSchedule(array $group, ?string $forDate = null)
     {
         $count = count($group['jam_ke_list']);
         $firstJam = reset($group['jam_ke_list']);
@@ -125,6 +126,17 @@ class GuruMapelDashboardController extends Controller
 
         $jamLabel = ($count > 1) ? "{$firstJam} - {$lastJam}" : (string)$firstJam;
         $jamKeRaw = ($count > 1) ? "{$firstJam}-{$lastJam}" : (string)$firstJam;
+
+        $jamMulai = $group['jam_mulai'];
+        $jamSelesai = $group['jam_selesai'];
+
+        // Jika tanggal disertakan, sesuaikan waktu slot dengan kondisi KBM hari tersebut (Upacara/Pembiasaan)
+        if ($forDate) {
+            $slotStart = StatusHarianKbm::getTimeSlot($group['hari'], $firstJam, $forDate);
+            $slotEnd   = StatusHarianKbm::getTimeSlot($group['hari'], $lastJam, $forDate);
+            $jamMulai   = $slotStart['jam_mulai'];
+            $jamSelesai = $slotEnd['jam_selesai'];
+        }
 
         $obj = new \stdClass();
         $obj->id_jadwal = $group['id_jadwal'];
@@ -137,8 +149,8 @@ class GuruMapelDashboardController extends Controller
         $obj->jam_ke_display = $jamLabel;
         $obj->jam_ke_raw = $jamKeRaw;
         $obj->jam_ke_list = $group['jam_ke_list'];
-        $obj->jam_mulai = $group['jam_mulai'];
-        $obj->jam_selesai = $group['jam_selesai'];
+        $obj->jam_mulai = $jamMulai;
+        $obj->jam_selesai = $jamSelesai;
         $obj->kelas = $group['kelas'];
         $obj->mapel = $group['mapel'];
         $obj->items = $group['items'];
@@ -189,8 +201,8 @@ class GuruMapelDashboardController extends Controller
             ->orderBy('jam_ke')
             ->get();
 
-        // Kelompokkan jadwal jam berurutan pada kelas & mapel yang sama (jam blok)
-        $groupedJadwalHariIni = $this->groupConsecutiveSchedules($rawJadwalHariIni);
+        // Kelompokkan jadwal jam berurutan pada kelas & mapel yang sama (jam blok) dengan slot waktu hari ini
+        $groupedJadwalHariIni = $this->groupConsecutiveSchedules($rawJadwalHariIni, $today);
 
         // 2. Jurnal Hari Ini
         $jurnalHariIni = JurnalMengajar::where('id_guru', $guru->id_guru)
@@ -268,6 +280,10 @@ class GuruMapelDashboardController extends Controller
             ->latest('updated_at')
             ->first();
 
+        // Status KBM Hari Ini (Upacara / Pembiasaan Ditiadakan)
+        $statusKbmHariIni = StatusHarianKbm::getEffectiveStatus($today);
+        $isMaju = StatusHarianKbm::isMaju($today);
+
         return view('guru_mapel.dashboard.index', [
             'guru' => $guru,
             'user' => $user,
@@ -277,6 +293,8 @@ class GuruMapelDashboardController extends Controller
             'jadwalCards' => $jadwalCards,
             'riwayatJurnal' => $riwayatJurnal,
             'latestIzinNotice' => $latestIzinNotice,
+            'statusKbmHariIni' => $statusKbmHariIni,
+            'isMaju' => $isMaju,
             'metrics' => [
                 'jadwal_hari_ini' => $totalJadwalHariIni,
                 'jurnal_terisi_hari_ini' => $totalJurnalHariIni,
@@ -361,7 +379,7 @@ class GuruMapelDashboardController extends Controller
                     ->orderBy('jam_ke')
                     ->get();
 
-                $grouped = $this->groupConsecutiveSchedules($blockSchedules);
+                $grouped = $this->groupConsecutiveSchedules($blockSchedules, $tanggal);
                 $activeGroup = $grouped->first(function ($g) use ($idJadwal) {
                     return in_array($idJadwal, $g->jadwal_ids);
                 });
@@ -370,6 +388,10 @@ class GuruMapelDashboardController extends Controller
                     $jamKeSuggestion = $activeGroup->jam_ke;
                     $jamMulaiSuggestion = $activeGroup->jam_mulai;
                     $jamSelesaiSuggestion = $activeGroup->jam_selesai;
+                } else {
+                    $slot = StatusHarianKbm::getTimeSlot($selectedJadwal->hari, $selectedJadwal->jam_ke, $tanggal);
+                    $jamMulaiSuggestion = $slot['jam_mulai'];
+                    $jamSelesaiSuggestion = $slot['jam_selesai'];
                 }
             }
         }
@@ -464,7 +486,7 @@ class GuruMapelDashboardController extends Controller
             ->orderBy('jam_ke')
             ->get();
 
-        $jadwalHariIniOptions = $this->groupConsecutiveSchedules($rawJadwalHariIniOptions);
+        $jadwalHariIniOptions = $this->groupConsecutiveSchedules($rawJadwalHariIniOptions, $tanggal);
 
         // Cek apakah guru memiliki izin aktif hari ini
         $activeIzinHariIni = IzinGuru::where('id_guru', $guru->id_guru ?? 0)
@@ -472,6 +494,10 @@ class GuruMapelDashboardController extends Controller
             ->where('tanggal_selesai', '>=', $today)
             ->where('status', '!=', 'Ditolak')
             ->first();
+
+        // Status KBM Hari Ini (Upacara / Pembiasaan Ditiadakan)
+        $statusKbmHariIni = StatusHarianKbm::getEffectiveStatus($tanggal);
+        $isMaju = StatusHarianKbm::isMaju($tanggal);
 
         return view('guru_mapel.jurnal.create', [
             'guru' => $guru,
@@ -490,6 +516,8 @@ class GuruMapelDashboardController extends Controller
             'activeIzinHariIni' => $activeIzinHariIni,
             'piketAbsenceCount' => $piketAbsenceCount,
             'piketDetails' => $piketDetails,
+            'statusKbmHariIni' => $statusKbmHariIni,
+            'isMaju' => $isMaju,
         ]);
     }
 

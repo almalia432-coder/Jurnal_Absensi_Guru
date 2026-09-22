@@ -20,6 +20,7 @@ use App\Models\KepalaSekolah;
 use App\Models\Notifikasi;
 use App\Models\User;
 use App\Models\LogAktivitas;
+use App\Models\StatusHarianKbm;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -285,6 +286,10 @@ class GuruPiketDashboardController extends Controller
 
         $kelasList = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get(['id_kelas', 'nama_kelas', 'tingkat', 'jurusan']);
 
+        // Status KBM Harian (Upacara / Pembiasaan Ditiadakan)
+        $statusKbmHariIni = StatusHarianKbm::getEffectiveStatus($today);
+        $isMaju = StatusHarianKbm::isMaju($today);
+
         return view('guru_piket.dashboard.index', compact(
             'user', 'guruPiket', 'allGuruPiketList', 'tahunAjaranAktif',
             'today', 'todayFormatted', 'hariIni',
@@ -296,7 +301,7 @@ class GuruPiketDashboardController extends Controller
             'totalTidakMasuk', 'totalPresensi', 'pctHadirSekolah',
             'kelasMonitoring', 'recentJurnal', 'laporanPiketToday',
             'jurusanLabels', 'jurusanAbsen', 'piePresensi', 'trendLabels', 'trendHadir', 'trendAbsen',
-            'siswaSelectOption', 'kelasList'
+            'siswaSelectOption', 'kelasList', 'statusKbmHariIni', 'isMaju'
         ));
     }
 
@@ -986,6 +991,66 @@ class GuruPiketDashboardController extends Controller
             'guruIzinList', 'dispensasiList', 'jurnalList', 'piketStaff', 'kepalaSekolah',
             'namaKepalaSekolah', 'nipKepalaSekolah'
         ));
+    }
+
+    /**
+     * Toggle status Upacara (Senin) atau Pembiasaan (Jumat)
+     */
+    public function toggleStatusKbm(Request $request)
+    {
+        $user = Auth::user();
+        $tanggal = $request->input('tanggal', Carbon::today()->format('Y-m-d'));
+        $targetDate = Carbon::parse($tanggal);
+        $hariIni = $targetDate->translatedFormat('l');
+        $catatan = $request->input('catatan');
+
+        $status = StatusHarianKbm::firstOrNew(['tanggal' => $tanggal]);
+
+        // Hubungkan ke data guru jika ada
+        $idGuru = null;
+        if ($user->role === 'guru_piket' && $user->guruPiket) {
+            $idGuru = Guru::where('nip', $user->guruPiket->nip)->first()?->id_guru;
+        } elseif ($user->role === 'guru' && $user->guru) {
+            $idGuru = $user->guru->id_guru;
+        }
+
+        $hariLower = strtolower($hariIni);
+        if ($hariLower === 'senin') {
+            if ($request->has('ada_upacara')) {
+                $status->ada_upacara = (bool)$request->input('ada_upacara');
+            } else {
+                $status->ada_upacara = !$status->ada_upacara;
+            }
+            $msg = $status->ada_upacara 
+                ? 'Status KBM hari Senin diatur: Upacara Dilaksanakan (KBM mulai 07.40).' 
+                : 'Status KBM hari Senin diatur: Upacara Ditiadakan (KBM Maju ke 07.00).';
+        } elseif ($hariLower === 'jumat') {
+            if ($request->has('ada_pembiasaan_jumat')) {
+                $status->ada_pembiasaan_jumat = (bool)$request->input('ada_pembiasaan_jumat');
+            } else {
+                $status->ada_pembiasaan_jumat = !$status->ada_pembiasaan_jumat;
+            }
+            $msg = $status->ada_pembiasaan_jumat 
+                ? 'Status KBM hari Jumat diatur: Pembiasaan Dilaksanakan (KBM mulai 07.30).' 
+                : 'Status KBM hari Jumat diatur: Pembiasaan Ditiadakan (KBM Maju ke 07.00).';
+        } else {
+            return redirect()->back()->with('info', 'Penyesuaian jam pembiasaan otomatis hanya berlaku untuk hari Senin dan Jumat.');
+        }
+
+        if ($catatan !== null) {
+            $status->catatan = $catatan;
+        }
+        $status->id_guru_piket = $idGuru;
+        $status->save();
+
+        LogAktivitas::catat(
+            'Ubah Status KBM',
+            $msg . ($status->catatan ? " (Catatan: {$status->catatan})" : ''),
+            $status,
+            $user
+        );
+
+        return redirect()->back()->with('success', $msg);
     }
 
     /**

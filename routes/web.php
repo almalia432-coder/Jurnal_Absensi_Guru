@@ -153,6 +153,9 @@ Route::prefix('guru-piket')->name('guru-piket.')->middleware('auth')->group(func
     // Rekap Presensi Siswa Se-Sekolah
     Route::get('/rekap-presensi', [GuruPiketDashboardController::class, 'rekapPresensi'])->name('rekap');
     
+    // Status KBM Harian (Upacara / Pembiasaan Ditiadakan)
+    Route::post('/status-kbm/toggle', [GuruPiketDashboardController::class, 'toggleStatusKbm'])->name('status-kbm.toggle');
+
     // Catatan & Laporan Harian Piket
     Route::get('/laporan', [GuruPiketDashboardController::class, 'laporan'])->name('laporan');
     Route::post('/laporan', [GuruPiketDashboardController::class, 'storeLaporan'])->name('laporan.store');

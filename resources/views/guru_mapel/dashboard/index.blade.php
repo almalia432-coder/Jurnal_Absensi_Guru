@@ -483,6 +483,34 @@
     </div>
 </div>
 
+@if($isMaju)
+@php
+    $hariLower = strtolower($hariIni);
+    $jenisPembiasaan = $hariLower === 'senin' ? 'Upacara Bendera' : 'Pembiasaan Pagi';
+@endphp
+<div style="background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fde68a; border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.08);">
+    <div style="width: 44px; height: 44px; border-radius: 12px; background: #fef08a; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+        <i class="fa-solid fa-forward-fast"></i>
+    </div>
+    <div style="flex: 1;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 3px;">
+            <span style="font-size: 14.5px; font-weight: 800; color: #92400e;">
+                Pemberitahuan Guru Piket: {{ $jenisPembiasaan }} Ditiadakan
+            </span>
+            <span style="background: #fef08a; color: #854d0e; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; border: 1px solid #facc15;">
+                Jam KBM Maju ke 07:00
+            </span>
+        </div>
+        <p style="font-size: 13px; color: #475569; margin: 0; line-height: 1.4;">
+            Karena {{ strtolower($jenisPembiasaan) }} ditiadakan, jam pelajaran KBM langsung dimulai pukul <strong>07:00 WIB</strong> (Mapel jam ke-2 maju 1 slot). Jam istirahat tetap sama. Waktu pada kartu jadwal Anda di bawah telah otomatis disesuaikan.
+            @if(!empty($statusKbmHariIni->catatan))
+                <br><span style="color: #64748b; font-style: italic;">Catatan piket: "{{ $statusKbmHariIni->catatan }}"</span>
+            @endif
+        </p>
+    </div>
+</div>
+@endif
+
 <!-- 3. Jadwal Mengajar Hari Ini (Actionable Cards) -->
 <div class="section-card">
     <div class="section-card-header">

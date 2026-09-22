@@ -437,6 +437,73 @@
     </div>
 </div>
 
+<!-- Widget Kontrol Status KBM (Upacara / Pembiasaan) -->
+@php
+    $hariLower = strtolower($hariIni);
+    $isSenin = $hariLower === 'senin';
+    $isJumat = $hariLower === 'jumat';
+@endphp
+
+@if($isSenin || $isJumat)
+<div style="background: {{ $isMaju ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' : 'linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)' }}; border: 1.5px solid {{ $isMaju ? '#fde68a' : '#bbf7d0' }}; border-radius: 16px; padding: 18px 22px; margin-bottom: 24px; box-shadow: 0 4px 14px rgba(0,0,0,0.03); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 48px; height: 48px; border-radius: 14px; background: {{ $isMaju ? '#fef08a' : '#dcfce7' }}; color: {{ $isMaju ? '#b45309' : '#15803d' }}; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            <i class="fa-solid {{ $isMaju ? 'fa-forward-fast' : ($isSenin ? 'fa-flag' : 'fa-hands-praying') }}"></i>
+        </div>
+        <div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px;">
+                <span style="font-size: 15px; font-weight: 800; color: #1b2559;">
+                    {{ $isSenin ? 'Status Upacara Hari Senin' : 'Status Pembiasaan Hari Jumat' }}
+                </span>
+                @if($isMaju)
+                    <span style="background: #fef08a; color: #854d0e; font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 8px; border: 1px solid #facc15; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fa-solid fa-clock"></i> KBM Maju ke 07:00 ({{ $isSenin ? 'Upacara Ditiadakan' : 'Pembiasaan Ditiadakan' }})
+                    </span>
+                @else
+                    <span style="background: #dcfce7; color: #166534; font-size: 11.5px; font-weight: 800; padding: 3px 10px; border-radius: 8px; border: 1px solid #86efac; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fa-solid fa-check-circle"></i> Normal (KBM Mulai {{ $isSenin ? '07:40' : '07:30' }})
+                    </span>
+                @endif
+            </div>
+            <p style="font-size: 13px; color: #475569; margin: 0;">
+                @if($isMaju)
+                    <i class="fa-solid fa-circle-info" style="color: #b45309;"></i> 
+                    <strong>Mapel Jam ke-2 maju ke 07:00</strong>. Jam istirahat tetap sama ({{ $isSenin ? '09:40 & 11:55' : '09:30 & 11:45' }}). Jadwal di Guru Mapel otomatis disesuaikan.
+                @else
+                    <i class="fa-solid fa-circle-info" style="color: #166534;"></i> 
+                    KBM dimulai setelah {{ $isSenin ? 'Upacara Bendera (07:40 WIB)' : 'Pembiasaan (07:30 WIB)' }}. Jam istirahat tetap sama ({{ $isSenin ? '09:40' : '09:30' }}).
+                @endif
+                @if(!empty($statusKbmHariIni->catatan))
+                    <span style="color: #64748b; font-style: italic;">— Catatan: "{{ $statusKbmHariIni->catatan }}"</span>
+                @endif
+            </p>
+        </div>
+    </div>
+
+    <div>
+        <form method="POST" action="{{ route('guru-piket.status-kbm.toggle') }}" style="display: inline-flex; align-items: center; gap: 10px;">
+            @csrf
+            <input type="hidden" name="tanggal" value="{{ $today }}">
+            @if($isSenin)
+                <input type="hidden" name="ada_upacara" value="{{ $statusKbmHariIni->ada_upacara ? '0' : '1' }}">
+            @else
+                <input type="hidden" name="ada_pembiasaan_jumat" value="{{ $statusKbmHariIni->ada_pembiasaan_jumat ? '0' : '1' }}">
+            @endif
+
+            @if(!$isMaju)
+                <button type="submit" class="btn-action-secondary" style="background: #ffffff; border-color: #f59e0b; color: #b45309; font-weight: 700; gap: 8px; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.15);" onclick="return confirm('Apakah Anda yakin ingin menandai {{ $isSenin ? 'Upacara' : 'Pembiasaan' }} ditiadakan hari ini? Jam KBM di seluruh guru mapel akan otomatis maju ke 07:00.')">
+                    <i class="fa-solid fa-forward"></i> Tandai {{ $isSenin ? 'Upacara' : 'Pembiasaan' }} Ditiadakan (KBM Maju)
+                </button>
+            @else
+                <button type="submit" class="btn-action-secondary" style="background: #ffffff; border-color: #10b981; color: #047857; font-weight: 700; gap: 8px; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.15);" onclick="return confirm('Kembalikan status KBM hari ini ke Normal?')">
+                    <i class="fa-solid fa-rotate-left"></i> Kembalikan ke Normal
+                </button>
+            @endif
+        </form>
+    </div>
+</div>
+@endif
+
 <!-- 2. Top 5 Stat Cards Grid (Matches Admin Dashboard) -->
 <div class="stats-grid">
     <!-- Card 1: Kelas Berjalan -->

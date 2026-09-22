@@ -245,6 +245,21 @@
             </div>
             @endif
 
+            @if(isset($isMaju) && $isMaju)
+            @php
+                $hariIniIndo = \Carbon\Carbon::parse($tanggal)->translatedFormat('l');
+                $pembiasaanNama = strtolower($hariIniIndo) === 'senin' ? 'Upacara' : 'Pembiasaan';
+            @endphp
+            <div style="background: #fffbeb; border: 1.5px solid #fde68a; border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                <div style="width: 32px; height: 32px; border-radius: 8px; background: #fef08a; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0;">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <div style="font-size: 12.5px; color: #92400e;">
+                    <strong>Penyesuaian Jam KBM Aktif:</strong> Hari ini {{ $pembiasaanNama }} ditiadakan sehingga KBM dimulai pukul <strong>07:00 WIB</strong> (Jam istirahat tetap sama). Kolom Jam Mulai & Selesai di bawah otomatis menggunakan waktu yang disesuaikan.
+                </div>
+            </div>
+            @endif
+
             <!-- Shortcut Jadwal Hari Ini -->
             @if($jadwalHariIniOptions->isNotEmpty())
             <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid #e2e8f0;">
