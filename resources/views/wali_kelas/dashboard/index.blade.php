@@ -430,6 +430,12 @@
                 <div class="greeting-meta">
                     <span class="meta-pill"><i class="fa-solid fa-graduation-cap"></i> {{ $tahunAjaranAktif->nama ?? '2024/2025' }} ({{ $tahunAjaranAktif->semester ?? 'Ganjil' }})</span>
                     <span class="meta-pill date"><i class="fa-regular fa-calendar"></i> {{ $todayFormatted }}</span>
+                    <a href="{{ route('guru-mapel.jurnal.create') }}" class="meta-pill" style="background:#eff6ff;color:#2563eb;text-decoration:none;border:1px solid #bfdbfe;transition:all 0.2s;" title="Isi Jurnal Mengajar Mapel Saya">
+                        <i class="fa-solid fa-pen-to-square"></i> + Isi Jurnal Mapel
+                    </a>
+                    <a href="{{ route('guru-mapel.jadwal') }}" class="meta-pill" style="background:#f8fafc;color:#475569;text-decoration:none;border:1px solid #e2e8f0;transition:all 0.2s;" title="Lihat Jadwal Mengajar Saya">
+                        <i class="fa-solid fa-calendar-week"></i> Jadwal Mengajar
+                    </a>
                 </div>
             </div>
         </div>

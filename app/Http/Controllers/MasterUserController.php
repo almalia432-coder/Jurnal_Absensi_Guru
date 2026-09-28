@@ -326,6 +326,16 @@ class MasterUserController extends Controller
         $user->is_active = !$user->is_active;
         $user->save();
 
+        if ($user->guru) {
+            $user->guru->update(['status_aktif' => $user->is_active]);
+        }
+        if ($user->guruPiket) {
+            $user->guruPiket->update(['status_aktif' => $user->is_active]);
+        }
+        if ($user->satpam) {
+            $user->satpam->update(['status_aktif' => $user->is_active]);
+        }
+
         $statusText = $user->is_active ? 'diaktifkan' : 'dinonaktifkan';
 
         LogAktivitas::catat(

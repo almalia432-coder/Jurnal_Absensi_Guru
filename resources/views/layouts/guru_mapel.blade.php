@@ -900,6 +900,41 @@
                 gap: 6px !important;
             }
         }
+        /* Portal Switch Button */
+        .btn-portal-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 15px;
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            color: #4338ca;
+            border: 1px solid #c7d2fe;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 1px 3px rgba(67, 56, 202, 0.08);
+            white-space: nowrap;
+        }
+        .btn-portal-switch:hover {
+            background: #4338ca;
+            color: #ffffff;
+            border-color: #4338ca;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(67, 56, 202, 0.25);
+        }
+        .btn-portal-switch i {
+            font-size: 13px;
+        }
+        @media (max-width: 640px) {
+            .btn-portal-switch span {
+                display: none;
+            }
+            .btn-portal-switch {
+                padding: 7px 10px;
+            }
+        }
     </style>
     @yield('styles')
 </head>
@@ -986,6 +1021,28 @@
                     </a>
                 </li>
 
+                @if(Auth::user()->isWaliKelas())
+                <li class="sidebar-category-header">Tugas Tambahan (Wali Kelas)</li>
+                <li class="{{ request()->routeIs('wali-kelas.dashboard') ? 'active' : '' }}">
+                    <a href="{{ route('wali-kelas.dashboard') }}">
+                        <i class="fa-solid fa-chalkboard-user"></i>
+                        <span>Dashboard Kelas Binaan</span>
+                    </a>
+                </li>
+                <li class="{{ request()->routeIs('wali-kelas.jurnal') ? 'active' : '' }}">
+                    <a href="{{ route('wali-kelas.jurnal') }}">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                        <span>Jurnal &amp; Presensi Kelas</span>
+                    </a>
+                </li>
+                <li class="{{ request()->routeIs('wali-kelas.siswa') ? 'active' : '' }}">
+                    <a href="{{ route('wali-kelas.siswa') }}">
+                        <i class="fa-solid fa-users"></i>
+                        <span>Data Siswa Kelas</span>
+                    </a>
+                </li>
+                @endif
+
                 @if(Auth::user()->role === 'admin')
                 <li class="sidebar-category-header">Akses Administrator</li>
                 <li>
@@ -1020,6 +1077,14 @@
             </div>
             <div class="header-user-nav">
                 @yield('header_extra')
+
+                @if(Auth::user()->isWaliKelas())
+                {{-- Switch Portal to Wali Kelas --}}
+                <a href="{{ route('wali-kelas.dashboard') }}" class="btn-portal-switch" title="Beralih ke Portal Wali Kelas">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <span>Portal Wali Kelas</span>
+                </a>
+                @endif
 
                 {{-- Interactive Notification Dropdown --}}
                 <div class="notif-dropdown-wrap" id="notifDropdownWrap">
@@ -1073,6 +1138,12 @@
                         <a href="{{ route('admin.profil') }}" class="dropdown-item">
                             <i class="fa-solid fa-user-pen"></i> Profil Saya
                         </a>
+
+                        @if(Auth::user()->isWaliKelas())
+                        <a href="{{ route('wali-kelas.dashboard') }}" class="dropdown-item" style="color: #4338ca; font-weight: 600;">
+                            <i class="fa-solid fa-chalkboard-user"></i> Beralih ke Portal Wali Kelas
+                        </a>
+                        @endif
 
                         <div class="dropdown-divider"></div>
 

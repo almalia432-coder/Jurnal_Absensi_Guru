@@ -797,6 +797,41 @@
                 gap: 6px !important;
             }
         }
+        /* Portal Switch Button */
+        .btn-portal-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 15px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+            white-space: nowrap;
+        }
+        .btn-portal-switch:hover {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .btn-portal-switch i {
+            font-size: 13px;
+        }
+        @media (max-width: 640px) {
+            .btn-portal-switch span {
+                display: none;
+            }
+            .btn-portal-switch {
+                padding: 7px 10px;
+            }
+        }
     </style>
     @yield('styles')
 </head>
@@ -889,6 +924,47 @@
                     </a>
                 </li>
 
+                {{-- Tugas Pokok Mengajar (Guru Mapel) --}}
+                <li class="sidebar-category-header">
+                    <span>Tugas Pokok Mengajar</span>
+                </li>
+                <li class="{{ request()->routeIs('guru-mapel.dashboard') ? 'active' : '' }}">
+                    <a href="{{ route('guru-mapel.dashboard') }}">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                        <span>Dashboard Guru Mapel</span>
+                    </a>
+                </li>
+                <li class="{{ request()->routeIs('guru-mapel.jadwal*') ? 'active' : '' }}">
+                    <a href="{{ route('guru-mapel.jadwal') }}">
+                        <i class="fa-solid fa-calendar-week"></i>
+                        <span>Jadwal Mengajar</span>
+                    </a>
+                </li>
+                <li class="{{ request()->routeIs('guru-mapel.jurnal.create') ? 'active' : '' }}">
+                    <a href="{{ route('guru-mapel.jurnal.create') }}">
+                        <i class="fa-solid fa-pen-to-square"></i>
+                        <span>Isi Jurnal &amp; Presensi</span>
+                    </a>
+                </li>
+                <li class="{{ request()->routeIs('guru-mapel.jurnal.riwayat') || request()->routeIs('guru-mapel.jurnal.show') ? 'active' : '' }}">
+                    <a href="{{ route('guru-mapel.jurnal.riwayat') }}">
+                        <i class="fa-solid fa-book-bookmark"></i>
+                        <span>Riwayat Jurnal Mapel</span>
+                    </a>
+                </li>
+                <li class="{{ request()->routeIs('guru-mapel.rekap*') ? 'active' : '' }}">
+                    <a href="{{ route('guru-mapel.rekap') }}">
+                        <i class="fa-solid fa-chart-simple"></i>
+                        <span>Rekap Presensi Siswa</span>
+                    </a>
+                </li>
+                <li class="{{ request()->routeIs('guru-mapel.izin*') ? 'active' : '' }}">
+                    <a href="{{ route('guru-mapel.izin') }}">
+                        <i class="fa-solid fa-user-clock"></i>
+                        <span>Pengajuan Izin Mengajar</span>
+                    </a>
+                </li>
+
                 @if(Auth::user()->role === 'admin')
                 <li class="sidebar-category-header">
                     <span>Akses Administrator</span>
@@ -925,6 +1001,12 @@
             </div>
             <div class="header-user-nav">
                 @yield('header_extra')
+
+                {{-- Switch Role to Guru Mapel --}}
+                <a href="{{ route('guru-mapel.dashboard') }}" class="btn-portal-switch" title="Beralih ke Portal Guru Mapel">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Portal Guru Mapel</span>
+                </a>
 
                 {{-- Notification Bell --}}
                 <div class="notif-dropdown-wrap" id="notifDropdownWrap">
@@ -977,6 +1059,10 @@
 
                         <a href="{{ route('admin.profil') }}" class="dropdown-item">
                             <i class="fa-solid fa-user-pen"></i> Profil Saya
+                        </a>
+
+                        <a href="{{ route('guru-mapel.dashboard') }}" class="dropdown-item" style="color: #1d4ed8; font-weight: 600;">
+                            <i class="fa-solid fa-graduation-cap"></i> Beralih ke Portal Guru Mapel
                         </a>
 
                         <div class="dropdown-divider"></div>

@@ -25,28 +25,7 @@ class WaliKelasDashboardController extends Controller
         $hariIni = Carbon::today()->translatedFormat('l');
 
         // Identify Wali Kelas and assigned Kelas
-        $waliKelas = null;
-        $kelas = null;
-
-        if ($user->role === 'wali_kelas') {
-            $waliKelas = $user->waliKelas;
-            if ($waliKelas) {
-                $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->where('wali_kelas_id', $waliKelas->id)->first();
-            }
-        }
-
-        // If user is admin or requested specific class
-        if (!$kelas && ($user->role === 'admin' || $request->has('kelas_id'))) {
-            $targetKelasId = $request->input('kelas_id');
-            if ($targetKelasId) {
-                $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->find($targetKelasId);
-            } else {
-                $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->first();
-            }
-            if ($kelas && $kelas->waliKelas) {
-                $waliKelas = $kelas->waliKelas;
-            }
-        }
+        [$waliKelas, $kelas] = $this->resolveWaliKelasAndKelas($user, $request);
 
         $allKelasList = Kelas::orderBy('tingkat')->orderBy('nama_kelas')->get();
         $tahunAjaranAktif = TahunAjaran::where('is_aktif', true)->first();
@@ -181,19 +160,7 @@ class WaliKelasDashboardController extends Controller
     public function siswa(Request $request)
     {
         Carbon::setLocale('id');
-        $user = Auth::user();
-        $waliKelas = $user->role === 'wali_kelas' ? $user->waliKelas : null;
-        $kelas = null;
-
-        if ($waliKelas) {
-            $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->where('wali_kelas_id', $waliKelas->id)->first();
-        }
-
-        if (!$kelas && ($user->role === 'admin' || $request->has('kelas_id'))) {
-            $targetKelasId = $request->input('kelas_id', Kelas::value('id_kelas'));
-            $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->find($targetKelasId);
-            if ($kelas) $waliKelas = $kelas->waliKelas;
-        }
+        [$waliKelas, $kelas] = $this->resolveWaliKelasAndKelas($user, $request);
 
         $allKelasList = Kelas::orderBy('nama_kelas')->get();
         $search = $request->input('search');
@@ -222,19 +189,7 @@ class WaliKelasDashboardController extends Controller
     public function jurnal(Request $request)
     {
         Carbon::setLocale('id');
-        $user = Auth::user();
-        $waliKelas = $user->role === 'wali_kelas' ? $user->waliKelas : null;
-        $kelas = null;
-
-        if ($waliKelas) {
-            $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->where('wali_kelas_id', $waliKelas->id)->first();
-        }
-
-        if (!$kelas && ($user->role === 'admin' || $request->has('kelas_id'))) {
-            $targetKelasId = $request->input('kelas_id', Kelas::value('id_kelas'));
-            $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->find($targetKelasId);
-            if ($kelas) $waliKelas = $kelas->waliKelas;
-        }
+        [$waliKelas, $kelas] = $this->resolveWaliKelasAndKelas($user, $request);
 
         $allKelasList = Kelas::orderBy('nama_kelas')->get();
         $tanggal = $request->input('tanggal', Carbon::today()->format('Y-m-d'));
@@ -249,5 +204,42 @@ class WaliKelasDashboardController extends Controller
         }
 
         return view('wali_kelas.jurnal.index', compact('user', 'waliKelas', 'kelas', 'allKelasList', 'jurnalList', 'tanggal'));
+    }
+
+    /**
+     * Helper to resolve Wali Kelas and Kelas Binaan for current user
+     */
+    private function resolveWaliKelasAndKelas($user, Request $request): array
+    {
+        $waliKelas = null;
+        $kelas = null;
+
+        if ($user->isWaliKelas()) {
+            $waliKelas = $user->waliKelas;
+            if (!$waliKelas && $user->guru) {
+                $waliKelas = WaliKelas::where('nip', $user->guru->nip)->first();
+            }
+            if ($waliKelas) {
+                $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->where('wali_kelas_id', $waliKelas->id)->first();
+            } elseif ($user->kelas_binaan) {
+                $kelas = $user->kelas_binaan;
+                $waliKelas = $kelas->waliKelas;
+            }
+        }
+
+        // If user is admin or requested specific class
+        if (!$kelas && ($user->role === 'admin' || $request->has('kelas_id'))) {
+            $targetKelasId = $request->input('kelas_id');
+            if ($targetKelasId) {
+                $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->find($targetKelasId);
+            } else {
+                $kelas = Kelas::with(['jurusanRelation', 'waliKelas'])->first();
+            }
+            if ($kelas && $kelas->waliKelas) {
+                $waliKelas = $kelas->waliKelas;
+            }
+        }
+
+        return [$waliKelas, $kelas];
     }
 }

@@ -932,6 +932,12 @@
                         <span>Monitoring Kelas</span>
                     </a>
                 </li>
+                <li class="{{ request()->routeIs('guru-piket.jadwal*') ? 'active' : '' }}">
+                    <a href="{{ route('guru-piket.jadwal') }}">
+                        <i class="fa-solid fa-calendar-days"></i>
+                        <span>Jadwal Piket KBM</span>
+                    </a>
+                </li>
 
                 <li class="sidebar-category-header">Layanan Siswa & Guru</li>
                 <li class="{{ request()->routeIs('guru-piket.izin-siswa*') ? 'active' : '' }}">

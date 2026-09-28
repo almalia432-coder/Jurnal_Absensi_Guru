@@ -397,6 +397,11 @@
         <a href="{{ route('guru-mapel.izin') }}" class="btn-action-secondary">
             <i class="fa-solid fa-user-clock"></i> Ajukan Izin
         </a>
+        @if(Auth::user()->isWaliKelas())
+        <a href="{{ route('wali-kelas.dashboard') }}" class="btn-action-secondary" style="border-color:#c7d2fe;background:#eef2ff;color:#4338ca;font-weight:700;">
+            <i class="fa-solid fa-chalkboard-user"></i> Kelas Binaan {{ Auth::user()->kelas_binaan ? '('.Auth::user()->kelas_binaan->nama_kelas.')' : '' }}
+        </a>
+        @endif
     </div>
 </div>
 

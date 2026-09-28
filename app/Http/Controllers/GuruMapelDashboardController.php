@@ -40,6 +40,14 @@ class GuruMapelDashboardController extends Controller
             return $guru;
         }
 
+        // If user is registered via wali_kelas, try finding guru by NIP
+        if ($user->waliKelas && $user->waliKelas->nip) {
+            $guru = Guru::where('nip', $user->waliKelas->nip)->first();
+            if ($guru) {
+                return $guru;
+            }
+        }
+
         // Fallback for admin or unlinked account
         return Guru::where('status_aktif', true)->first() ?? Guru::first();
     }

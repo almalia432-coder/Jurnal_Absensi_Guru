@@ -46,6 +46,10 @@ class MasterSiswaController extends Controller
 
     public function store(Request $request)
     {
+        if (!$request->filled('nis') && $request->filled('nisn')) {
+            $request->merge(['nis' => $request->input('nisn')]);
+        }
+
         $validated = $request->validate([
             'nis'           => 'nullable|string|max:30|unique:siswa,nis',
             'nisn'          => 'nullable|string|max:30|unique:siswa,nisn',
@@ -56,6 +60,9 @@ class MasterSiswaController extends Controller
             'no_hp_ortu'    => 'nullable|string|max:20',
             'alamat'        => 'nullable|string',
             'status_aktif'  => 'boolean',
+        ], [
+            'nis.unique'    => 'NIS / NISN (:input) sudah terdaftar untuk siswa lain.',
+            'nisn.unique'   => 'NISN (:input) sudah terdaftar untuk siswa lain.',
         ]);
 
         $validated['status_aktif'] = $request->boolean('status_aktif', true);
@@ -77,6 +84,10 @@ class MasterSiswaController extends Controller
     {
         $siswa = Siswa::findOrFail($id);
 
+        if (!$request->filled('nis') && $request->filled('nisn')) {
+            $request->merge(['nis' => $request->input('nisn')]);
+        }
+
         $validated = $request->validate([
             'nis'           => "nullable|string|max:30|unique:siswa,nis,{$siswa->id_siswa},id_siswa",
             'nisn'          => "nullable|string|max:30|unique:siswa,nisn,{$siswa->id_siswa},id_siswa",
@@ -87,6 +98,9 @@ class MasterSiswaController extends Controller
             'no_hp_ortu'    => 'nullable|string|max:20',
             'alamat'        => 'nullable|string',
             'status_aktif'  => 'boolean',
+        ], [
+            'nis.unique'    => 'NIS / NISN (:input) sudah terdaftar untuk siswa lain.',
+            'nisn.unique'   => 'NISN (:input) sudah terdaftar untuk siswa lain.',
         ]);
 
         $validated['status_aktif'] = $request->boolean('status_aktif', true);

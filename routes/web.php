@@ -161,6 +161,10 @@ Route::prefix('guru-piket')->name('guru-piket.')->middleware('auth')->group(func
     Route::post('/laporan', [GuruPiketDashboardController::class, 'storeLaporan'])->name('laporan.store');
     Route::get('/laporan/cetak', [GuruPiketDashboardController::class, 'cetakLaporan'])->name('laporan.cetak');
     
+    // Jadwal Petugas Guru Piket
+    Route::get('/jadwal', [GuruPiketDashboardController::class, 'jadwalPiket'])->name('jadwal');
+    Route::get('/jadwal/cetak', [GuruPiketDashboardController::class, 'cetakJadwalPiket'])->name('jadwal.cetak');
+
     // Panduan Piket
     Route::get('/help', [GuruPiketDashboardController::class, 'help'])->name('help');
 });

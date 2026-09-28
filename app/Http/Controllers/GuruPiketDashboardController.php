@@ -21,6 +21,7 @@ use App\Models\Notifikasi;
 use App\Models\User;
 use App\Models\LogAktivitas;
 use App\Models\StatusHarianKbm;
+use App\Models\JadwalPiketKbm;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -290,6 +291,9 @@ class GuruPiketDashboardController extends Controller
         $statusKbmHariIni = StatusHarianKbm::getEffectiveStatus($today);
         $isMaju = StatusHarianKbm::isMaju($today);
 
+        // Petugas Piket KBM Hari Ini (Siklus A / B)
+        $rosterToday = JadwalPiketKbm::getRosterForDate($targetDate);
+
         return view('guru_piket.dashboard.index', compact(
             'user', 'guruPiket', 'allGuruPiketList', 'tahunAjaranAktif',
             'today', 'todayFormatted', 'hariIni',
@@ -301,7 +305,7 @@ class GuruPiketDashboardController extends Controller
             'totalTidakMasuk', 'totalPresensi', 'pctHadirSekolah',
             'kelasMonitoring', 'recentJurnal', 'laporanPiketToday',
             'jurusanLabels', 'jurusanAbsen', 'piePresensi', 'trendLabels', 'trendHadir', 'trendAbsen',
-            'siswaSelectOption', 'kelasList', 'statusKbmHariIni', 'isMaju'
+            'siswaSelectOption', 'kelasList', 'statusKbmHariIni', 'isMaju', 'rosterToday'
         ));
     }
 
@@ -1051,6 +1055,94 @@ class GuruPiketDashboardController extends Controller
         );
 
         return redirect()->back()->with('success', $msg);
+    }
+
+    /**
+     * Halaman Jadwal Petugas Guru Piket KBM (Siklus A & B)
+     */
+    public function jadwalPiket(Request $request)
+    {
+        Carbon::setLocale('id');
+        $user = Auth::user();
+        $guruPiket = $user->role === 'guru_piket' ? $user->guruPiket : null;
+
+        $tanggalInput = $request->input('tanggal', Carbon::today()->format('Y-m-d'));
+        $targetDate   = Carbon::parse($tanggalInput);
+        $todayFormatted = $targetDate->translatedFormat('l, j F Y');
+        $selectedHari = $targetDate->translatedFormat('l');
+
+        $activeTab = $request->input('tab', 'hari_ini'); // 'hari_ini', 'siklus_a', 'siklus_b'
+
+        // Roster for the target date
+        $rosterTarget = JadwalPiketKbm::getRosterForDate($targetDate);
+
+        // Schedule matrices for Siklus A & B grouped by day
+        $hariOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+
+        $siklusAData = [];
+        $siklusBData = [];
+
+        foreach ($hariOrder as $h) {
+            $siklusAData[$h] = [
+                'waka' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->first(),
+                'pagi_koordinator' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->where('shift', 'Pagi')->where('peran', 'koordinator')->first(),
+                'pagi_petugas' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->where('shift', 'Pagi')->where('peran', 'petugas')->orderBy('urutan')->get(),
+                'siang_koordinator' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->where('shift', 'Siang')->where('peran', 'koordinator')->first(),
+                'siang_petugas' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->where('shift', 'Siang')->where('peran', 'petugas')->orderBy('urutan')->get(),
+            ];
+
+            $siklusBData[$h] = [
+                'waka' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->first(),
+                'pagi_koordinator' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->where('shift', 'Pagi')->where('peran', 'koordinator')->first(),
+                'pagi_petugas' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->where('shift', 'Pagi')->where('peran', 'petugas')->orderBy('urutan')->get(),
+                'siang_koordinator' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->where('shift', 'Siang')->where('peran', 'koordinator')->first(),
+                'siang_petugas' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->where('shift', 'Siang')->where('peran', 'petugas')->orderBy('urutan')->get(),
+            ];
+        }
+
+        return view('guru_piket.jadwal.index', compact(
+            'user', 'guruPiket', 'tanggalInput', 'todayFormatted', 'selectedHari',
+            'activeTab', 'rosterTarget', 'siklusAData', 'siklusBData', 'hariOrder'
+        ));
+    }
+
+    /**
+     * Cetak Laporan Jadwal Piket Semester Ganjil 2026/2027
+     */
+    public function cetakJadwalPiket(Request $request)
+    {
+        Carbon::setLocale('id');
+        $hariOrder = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+        $siklusAData = [];
+        $siklusBData = [];
+        foreach ($hariOrder as $h) {
+            $siklusAData[$h] = [
+                'waka' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->first(),
+                'pagi_koordinator' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->where('shift', 'Pagi')->where('peran', 'koordinator')->first(),
+                'pagi_petugas' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->where('shift', 'Pagi')->where('peran', 'petugas')->orderBy('urutan')->get(),
+                'siang_koordinator' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->where('shift', 'Siang')->where('peran', 'koordinator')->first(),
+                'siang_petugas' => JadwalPiketKbm::where('siklus', 'A')->where('hari', $h)->where('shift', 'Siang')->where('peran', 'petugas')->orderBy('urutan')->get(),
+            ];
+
+            $siklusBData[$h] = [
+                'waka' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->first(),
+                'pagi_koordinator' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->where('shift', 'Pagi')->where('peran', 'koordinator')->first(),
+                'pagi_petugas' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->where('shift', 'Pagi')->where('peran', 'petugas')->orderBy('urutan')->get(),
+                'siang_koordinator' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->where('shift', 'Siang')->where('peran', 'koordinator')->first(),
+                'siang_petugas' => JadwalPiketKbm::where('siklus', 'B')->where('hari', $h)->where('shift', 'Siang')->where('peran', 'petugas')->orderBy('urutan')->get(),
+            ];
+        }
+
+        $userKepsek = User::where('role', 'kepala_sekolah')->first();
+        $kepalaSekolah = KepalaSekolah::where('status_aktif', true)->first() 
+            ?? ($userKepsek ? $userKepsek->kepalaSekolah : null)
+            ?? KepalaSekolah::first();
+
+        $namaKepalaSekolah = $kepalaSekolah->nama_lengkap 
+            ?? 'TRISNO WIBOWO, S.Pd, M.M';
+        $nipKepalaSekolah = $kepalaSekolah->nip ?? '19810115 200312 1 003';
+
+        return view('guru_piket.jadwal.cetak', compact('siklusAData', 'siklusBData', 'hariOrder', 'namaKepalaSekolah', 'nipKepalaSekolah'));
     }
 
     /**

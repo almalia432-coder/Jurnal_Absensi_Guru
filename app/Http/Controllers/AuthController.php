@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Admin;
 use App\Models\WaliKelas;
@@ -13,6 +14,7 @@ use App\Models\Satpam;
 use App\Models\KepalaSekolah;
 use App\Models\Waka;
 use App\Models\Siswa;
+use App\Models\Guru;
 
 class AuthController extends Controller
 {
@@ -45,16 +47,45 @@ class AuthController extends Controller
             $user = $this->findUserByNipInRoleTables($loginInput);
         }
 
-        // 3. If user found and role selected, verify role match
+        // 3. If user found and role selected, verify role match with dual-role flexibility
         if ($user && $selectedRole && $selectedRole !== 'semua' && $user->role !== $selectedRole) {
-            return back()->withErrors([
-                'username' => 'Akun tidak memiliki hak akses sebagai ' . str_replace('_', ' ', strtoupper($selectedRole)) . '.',
-            ])->onlyInput('username');
+            $isCompatible = false;
+            // Guru Mapel & Wali Kelas interoperability:
+            // A Wali Kelas is also a Guru Mapel, and a Guru Mapel assigned to a class is a Wali Kelas
+            if ($selectedRole === 'guru_mapel' && $user->isGuru()) {
+                $isCompatible = true;
+            } elseif ($selectedRole === 'wali_kelas' && $user->isWaliKelas()) {
+                $isCompatible = true;
+            }
+
+            if (!$isCompatible) {
+                return back()->withErrors([
+                    'username' => 'Akun tidak memiliki hak akses sebagai ' . str_replace('_', ' ', strtoupper($selectedRole)) . '.',
+                ])->onlyInput('username');
+            }
         }
 
-        // 4. Attempt login
-        if ($user && Auth::attempt(['email' => $user->email, 'password' => $password], $remember)) {
+        // 4. Periksa apakah akun dinonaktifkan oleh Admin
+        if ($user && Hash::check($password, $user->password)) {
+            if (!$user->is_active) {
+                return back()->withErrors([
+                    'username' => 'Akun ini sedang dinonaktifkan oleh Administrator. Silakan hubungi pihak sekolah.',
+                ])->onlyInput('username');
+            }
+        }
+
+        // 5. Attempt login
+        if ($user && Auth::attempt(['email' => $user->email, 'password' => $password, 'is_active' => true], $remember)) {
             $request->session()->regenerate();
+
+            // If user explicitly picked a valid dual role during login, redirect to that portal
+            if ($selectedRole === 'guru_mapel' && $user->isGuru()) {
+                return redirect()->route('guru-mapel.dashboard');
+            }
+            if ($selectedRole === 'wali_kelas' && $user->isWaliKelas()) {
+                return redirect()->route('wali-kelas.dashboard');
+            }
+
             return $this->redirectUser(Auth::user());
         }
 
@@ -83,6 +114,10 @@ class AuthController extends Controller
         // Check guru_mapel
         $mapel = GuruMapel::where('nip', $nip)->first();
         if ($mapel && $mapel->user_id) return User::find($mapel->user_id);
+
+        // Check master guru
+        $guru = Guru::where('nip', $nip)->first();
+        if ($guru && $guru->user_id) return User::find($guru->user_id);
 
         // Check satpam
         $satpam = Satpam::where('nip', $nip)->first();

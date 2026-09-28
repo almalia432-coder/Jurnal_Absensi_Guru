@@ -71,9 +71,9 @@ class DatabaseSeeder extends Seeder
             'no_hp' => '081234567891',
         ]);
 
-        // Guru Piket
+        // Guru Piket (Akun Bersama Petugas Piket)
         $userPiket = User::create([
-            'name' => 'Bambang Setyono, S.Pd (Guru Piket)',
+            'name' => 'Petugas Piket',
             'email' => 'gurupiket@smkn1boyolangu.sch.id',
             'password' => Hash::make('password'),
             'role' => 'guru_piket',
@@ -81,11 +81,11 @@ class DatabaseSeeder extends Seeder
         ]);
         GuruPiket::create([
             'user_id' => $userPiket->id,
-            'nip' => '198203152008011003',
-            'nama_lengkap' => 'Bambang Setyono, S.Pd',
+            'nip' => 'PIKET-SMKN1',
+            'nama_lengkap' => 'Petugas Piket',
             'jenis_kelamin' => 'L',
             'no_hp' => '081234567892',
-            'hari_piket' => 'Senin, Rabu',
+            'hari_piket' => 'Senin s/d Jumat',
         ]);
 
         // Guru Mapel
@@ -323,6 +323,15 @@ class DatabaseSeeder extends Seeder
                 'created_at' => now()->subHours(1)->subMinutes(8),
                 'updated_at' => now()->subHours(1)->subMinutes(8),
             ],
+        ]);
+
+        // Seed Jadwal Piket KBM and full 48-class KBM Schedules
+        $this->call([
+            JadwalPiketKbmSeeder::class,
+            JadwalKbmBatch1Seeder::class,
+            JadwalKbmBatch2Seeder::class,
+            JadwalKbmBatch3Seeder::class,
+            JadwalKbmBatch4Seeder::class,
         ]);
     }
 }

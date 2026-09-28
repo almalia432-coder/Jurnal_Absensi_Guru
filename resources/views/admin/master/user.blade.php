@@ -402,6 +402,8 @@
     .btn-tbl-action.view:hover   { background: #f0fdf4; border-color: #86efac; color: #16a34a; }
     .btn-tbl-action.edit:hover   { background: #eff6ff; border-color: #93c5fd; color: #2563eb; }
     .btn-tbl-action.toggle:hover { background: #fef3c7; border-color: #fde68a; color: #b45309; }
+    .btn-tbl-action.toggle.inactive { background: #f0fdf4; border-color: #bbf7d0; color: #16a34a; }
+    .btn-tbl-action.toggle.inactive:hover { background: #dcfce7; border-color: #86efac; color: #15803d; }
     .btn-tbl-action.delete:hover { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
 
     /* Empty state */
@@ -882,22 +884,20 @@
                             </td>
                             <td style="text-align: right;">
                                 <div class="action-btn-group">
-                                    {{-- Toggle Aktif --}}
-                                    <form action="{{ route('admin.master.user.toggle-status', $u->id) }}" method="POST" style="display: inline;">
-                                        @csrf
-                                        <button type="submit" 
-                                                class="btn-tbl-action toggle" 
-                                                title="{{ $u->is_active ? 'Non-aktifkan Akun' : 'Aktifkan Akun' }}"
-                                                {{ $u->id === Auth::id() ? 'disabled style=opacity:0.4;cursor:not-allowed;' : '' }}>
-                                            <i class="fa-solid {{ $u->is_active ? 'fa-user-slash' : 'fa-user-check' }}"></i>
-                                        </button>
-                                    </form>
+                                    {{-- Toggle Aktif / Nonaktif --}}
+                                    <button type="button" 
+                                            class="btn-tbl-action toggle" 
+                                            title="{{ $u->is_active ? 'Non-aktifkan Akun' : 'Aktifkan Akun' }}"
+                                            {{ $u->id === Auth::id() ? 'disabled style=opacity:0.4;cursor:not-allowed;' : '' }}
+                                            onclick="openToggleModal({{ $u->id }}, '{{ addslashes($u->name) }}', {{ $u->is_active ? 'true' : 'false' }})">
+                                        <i class="fa-solid {{ $u->is_active ? 'fa-user-slash' : 'fa-user-check' }}" style="{{ !$u->is_active ? 'color: #059669;' : '' }}"></i>
+                                    </button>
 
                                     {{-- Detail Modal --}}
                                     <button type="button" 
                                             class="btn-tbl-action view" 
                                             title="Lihat Detail Akun"
-                                            onclick="openDetailModal(@json($u), '{{ $roleLabel }}', '{{ $avatarUrl }}')">
+                                            onclick="openDetailModal({{ $u->id }})">
                                         <i class="fa-solid fa-eye"></i>
                                     </button>
 
@@ -905,7 +905,7 @@
                                     <button type="button" 
                                             class="btn-tbl-action edit" 
                                             title="Edit Akun"
-                                            onclick="openEditModal(@json($u))">
+                                            onclick="openEditModal({{ $u->id }})">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
 
@@ -1194,6 +1194,39 @@
     </div>
 </div>
 
+{{-- MODAL TOGGLE STATUS KONFIRMASI --}}
+<div class="custom-modal-backdrop" id="toggleStatusModal">
+    <div class="custom-modal" style="max-width: 440px;">
+        <div class="modal-hdr" style="border-bottom: none; padding-bottom: 0;">
+            <div class="modal-title-text" id="toggle_modal_title" style="color: #d97706;">
+                <i class="fa-solid fa-user-slash" id="toggle_modal_icon"></i>
+                <span id="toggle_modal_title_text">Nonaktifkan Akun</span>
+            </div>
+            <button type="button" class="modal-close-btn" onclick="closeToggleModal()">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="toggleStatusForm" method="POST">
+            @csrf
+            <div class="modal-body" style="padding-top: 12px;">
+                <p style="font-size: 14px; color: #475569; line-height: 1.5; margin: 0;" id="toggle_modal_desc">
+                    Apakah Anda yakin ingin menonaktifkan akun pengguna <strong id="toggle_user_name" style="color: #0f172a;"></strong>?
+                </p>
+                <div id="toggle_modal_alert" style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 10px; padding: 10px 14px; margin-top: 14px; display: flex; gap: 8px; align-items: center; color: #b45309; font-size: 12px;">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span id="toggle_modal_note">Pengguna tidak akan dapat login ke sistem selama akun berstatus non-aktif.</span>
+                </div>
+            </div>
+            <div class="modal-ftr">
+                <button type="button" class="btn-modal-cancel" onclick="closeToggleModal()">Batal</button>
+                <button type="submit" id="toggle_modal_btn" class="btn-modal-submit" style="background: #d97706;">
+                    <i class="fa-solid fa-user-slash" id="toggle_modal_btn_icon"></i> <span id="toggle_modal_btn_text">Ya, Nonaktifkan Akun</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @endsection
 
 @section('scripts')
@@ -1203,6 +1236,46 @@
         const toasts = document.querySelectorAll('.toast');
         toasts.forEach(t => t.style.display = 'none');
     }, 4000);
+
+    @php
+        $roleMap = [
+            'admin'          => 'Administrator',
+            'wali_kelas'     => 'Wali Kelas',
+            'guru_mapel'     => 'Guru Mapel',
+            'guru_piket'     => 'Guru Piket',
+            'waka_kurikulum' => 'Waka Kurikulum',
+            'waka_sdm'       => 'Waka SDM',
+            'wali_murid'     => 'Wali Murid',
+            'kepala_sekolah' => 'Kepala Sekolah',
+            'satpam'         => 'Satpam',
+            'waka'           => 'Waka',
+        ];
+    @endphp
+    // Dictionary of all users in current pagination for instant & safe modal access
+    const usersData = {
+        @foreach($userList as $userItem)
+        @php
+            $rLabel = $roleMap[$userItem->role] ?? ucfirst($userItem->role);
+            $avUrl = $userItem->photo 
+                ? Storage::url($userItem->photo) 
+                : 'https://ui-avatars.com/api/?name='.urlencode($userItem->name).'&background=e0e7ff&color=2b43b9&bold=true';
+            $tglDaftar = $userItem->created_at ? $userItem->created_at->locale('id')->isoFormat('D MMMM Y') : '-';
+        @endphp
+        {{ $userItem->id }}: {
+            id: {{ $userItem->id }},
+            name: @json($userItem->name),
+            email: @json($userItem->email),
+            role: @json($userItem->role),
+            roleLabel: @json($rLabel),
+            is_active: {{ $userItem->is_active ? 1 : 0 }},
+            created_at: @json($tglDaftar),
+            verified: {{ $userItem->email_verified_at ? 1 : 0 }},
+            avatarUrl: @json($avUrl),
+            id_siswa: @json($userItem->siswa->id_siswa ?? null),
+            nama_siswa: @json($userItem->siswa->nama_lengkap ?? null)
+        },
+        @endforeach
+    };
 
     function onRoleChange(type) {
         const select = document.getElementById(type + '_role');
@@ -1223,15 +1296,18 @@
     }
 
     // Modal Edit
-    function openEditModal(user) {
+    function openEditModal(userId) {
+        const user = usersData[userId];
+        if (!user) return;
+
         document.getElementById('edit_name').value = user.name || '';
         document.getElementById('edit_email').value = user.email || '';
         document.getElementById('edit_password').value = '';
         document.getElementById('edit_role').value = user.role || 'guru_mapel';
         document.getElementById('edit_is_active').value = user.is_active ? '1' : '0';
 
-        if (user.role === 'wali_murid' && user.siswa) {
-            document.getElementById('edit_id_siswa').value = user.siswa.id_siswa;
+        if (user.role === 'wali_murid' && user.id_siswa) {
+            document.getElementById('edit_id_siswa').value = user.id_siswa;
         } else {
             document.getElementById('edit_id_siswa').value = '';
         }
@@ -1246,27 +1322,30 @@
         document.getElementById('editUserModal').classList.remove('show');
     }
 
-    // Modal Detail
-    function openDetailModal(user, roleLabel, avatarUrl) {
-        document.getElementById('detail_avatar').src = avatarUrl;
+    // Modal Detail (Icon Mata)
+    function openDetailModal(userId) {
+        const user = usersData[userId];
+        if (!user) return;
+
+        document.getElementById('detail_avatar').src = user.avatarUrl;
         document.getElementById('detail_name').textContent = user.name || '-';
         document.getElementById('detail_email').textContent = user.email || '-';
         document.getElementById('detail_id').textContent = '#' + user.id;
-        document.getElementById('detail_created').textContent = user.created_at ? new Date(user.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
-        document.getElementById('detail_verified').textContent = user.email_verified_at ? 'Terverifikasi' : 'Belum Verifikasi';
+        document.getElementById('detail_created').textContent = user.created_at || '-';
+        document.getElementById('detail_verified').textContent = user.verified ? 'Terverifikasi' : 'Belum Verifikasi';
         
         document.getElementById('detail_status').innerHTML = user.is_active 
-            ? '<span style="color: #065f46;">● Aktif</span>' 
-            : '<span style="color: #991b1b;">● Non-Aktif</span>';
+            ? '<span style="color: #065f46; font-weight: 700;"><i class="fa-solid fa-circle-check"></i> Aktif (Bisa Login)</span>' 
+            : '<span style="color: #991b1b; font-weight: 700;"><i class="fa-solid fa-circle-xmark"></i> Non-Aktif (Ditangguhkan)</span>';
 
         let siswaInfo = '';
-        if (user.role === 'wali_murid' && user.siswa) {
-            siswaInfo = `<div style="font-size: 11.5px; color: #047857; margin-top: 4px;"><i class="fa-solid fa-graduation-cap"></i> Mewakili Siswa: <strong>${user.siswa.nama_lengkap}</strong></div>`;
+        if (user.role === 'wali_murid' && user.nama_siswa) {
+            siswaInfo = `<div style="font-size: 11.5px; color: #047857; margin-top: 6px;"><i class="fa-solid fa-graduation-cap"></i> Mewakili Siswa: <strong>${user.nama_siswa}</strong></div>`;
         }
 
         document.getElementById('detail_role_badge').innerHTML = `
             <span class="role-badge ${user.role}">
-                <i class="fa-solid fa-tag"></i> ${roleLabel}
+                <i class="fa-solid fa-tag"></i> ${user.roleLabel}
             </span>
             ${siswaInfo}
         `;
@@ -1275,6 +1354,56 @@
     }
     function closeDetailModal() {
         document.getElementById('detailUserModal').classList.remove('show');
+    }
+
+    // Modal Toggle Status (Aktif / Nonaktifkan)
+    function openToggleModal(id, name, isActive) {
+        document.getElementById('toggle_user_name').textContent = name;
+        const form = document.getElementById('toggleStatusForm');
+        form.action = `/admin/master/user/${id}/toggle-status`;
+
+        const titleText = document.getElementById('toggle_modal_title_text');
+        const titleIcon = document.getElementById('toggle_modal_icon');
+        const titleBox = document.getElementById('toggle_modal_title');
+        const desc = document.getElementById('toggle_modal_desc');
+        const alertBox = document.getElementById('toggle_modal_alert');
+        const note = document.getElementById('toggle_modal_note');
+        const btn = document.getElementById('toggle_modal_btn');
+        const btnText = document.getElementById('toggle_modal_btn_text');
+        const btnIcon = document.getElementById('toggle_modal_btn_icon');
+
+        if (isActive) {
+            // Mau menonaktifkan
+            titleBox.style.color = '#d97706';
+            titleIcon.className = 'fa-solid fa-user-slash';
+            titleText.textContent = 'Nonaktifkan Akun Pengguna';
+            desc.innerHTML = `Apakah Anda yakin ingin menonaktifkan akun pengguna <strong style="color: #0f172a;">${name}</strong>?`;
+            alertBox.style.background = '#fffbeb';
+            alertBox.style.borderColor = '#fef3c7';
+            alertBox.style.color = '#b45309';
+            note.textContent = 'Pengguna tidak akan dapat login ke sistem selama akun berstatus non-aktif.';
+            btn.style.background = '#d97706';
+            btnIcon.className = 'fa-solid fa-user-slash';
+            btnText.textContent = 'Ya, Nonaktifkan Akun';
+        } else {
+            // Mau mengaktifkan kembali
+            titleBox.style.color = '#059669';
+            titleIcon.className = 'fa-solid fa-user-check';
+            titleText.textContent = 'Aktifkan Kembali Akun';
+            desc.innerHTML = `Apakah Anda ingin mengaktifkan kembali akun pengguna <strong style="color: #0f172a;">${name}</strong>?`;
+            alertBox.style.background = '#ecfdf5';
+            alertBox.style.borderColor = '#d1fae5';
+            alertBox.style.color = '#047857';
+            note.textContent = 'Pengguna akan dapat segera login kembali ke sistem seperti biasa.';
+            btn.style.background = '#059669';
+            btnIcon.className = 'fa-solid fa-user-check';
+            btnText.textContent = 'Ya, Aktifkan Akun';
+        }
+
+        document.getElementById('toggleStatusModal').classList.add('show');
+    }
+    function closeToggleModal() {
+        document.getElementById('toggleStatusModal').classList.remove('show');
     }
 
     // Modal Delete

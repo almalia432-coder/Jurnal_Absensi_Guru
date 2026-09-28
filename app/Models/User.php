@@ -113,6 +113,47 @@ class User extends Authenticatable
         return $this->role === 'wali_murid';
     }
 
+    public function isWaliKelas(): bool
+    {
+        if ($this->role === 'wali_kelas') {
+            return true;
+        }
+
+        if ($this->waliKelas && $this->waliKelas->kelas()->exists()) {
+            return true;
+        }
+
+        if ($this->guru) {
+            return Kelas::whereHas('waliKelas', function ($q) {
+                $q->where('nip', $this->guru->nip);
+            })->exists();
+        }
+
+        return false;
+    }
+
+    public function isGuru(): bool
+    {
+        return in_array($this->role, ['guru_mapel', 'wali_kelas', 'guru_piket'])
+            || $this->guru()->exists()
+            || ($this->waliKelas && Guru::where('nip', $this->waliKelas->nip)->exists());
+    }
+
+    public function getKelasBinaanAttribute(): ?Kelas
+    {
+        if ($this->waliKelas && $this->waliKelas->kelas) {
+            return $this->waliKelas->kelas;
+        }
+
+        if ($this->guru) {
+            return Kelas::whereHas('waliKelas', function ($q) {
+                $q->where('nip', $this->guru->nip);
+            })->first();
+        }
+
+        return null;
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

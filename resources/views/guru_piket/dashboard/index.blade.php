@@ -8,8 +8,8 @@
     <div style="background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 14px; padding: 8px 16px; display: flex; align-items: center; gap: 10px;">
         <i class="fa-solid fa-user-shield" style="font-size: 20px; color: #a5b4fc;"></i>
         <div>
-            <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; font-weight: 700;">Petugas Piket Hari Ini</div>
-            <div style="font-size: 13.5px; font-weight: 800; color: #ffffff;">{{ $guruPiket->nama_lengkap ?? (Auth::user()->name ?? 'Guru Piket') }}</div>
+            <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.85; font-weight: 700;">Pos Meja Piket</div>
+            <div style="font-size: 13.5px; font-weight: 800; color: #ffffff;">Petugas Piket SMKN 1 Boyolangu</div>
         </div>
     </div>
 @endsection
@@ -413,7 +413,7 @@
 <!-- 1. Greeting Section & Controls (Matches Admin Dashboard) -->
 <div class="greeting-section" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>
-        <h2 class="greeting-title">Halo, {{ $guruPiket->nama_lengkap ?? (Auth::user()->name ?? 'Guru Piket') }} 👋</h2>
+        <h2 class="greeting-title">Halo, Bapak/Ibu Guru Petugas Piket 👋</h2>
         <p class="greeting-subtitle">Berikut adalah ringkasan operasional KBM, kehadiran guru & dispensasi siswa hari ini ({{ $todayFormatted }}).</p>
     </div>
 
@@ -501,6 +501,91 @@
             @endif
         </form>
     </div>
+</div>
+@endif
+
+<!-- Widget Roster Petugas Piket KBM Hari Ini -->
+@if(isset($rosterToday))
+<div style="background: #ffffff; border-radius: 18px; border: 1.5px solid #e2e8f0; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: #eef2ff; color: #2b43b9; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                <i class="fa-solid fa-users-viewfinder"></i>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h3 style="font-size: 16px; font-weight: 800; color: #1b2559;">Petugas Piket KBM Hari Ini</h3>
+                    <span style="background: {{ $rosterToday['siklus'] === 'A' ? '#dbeafe' : '#fef3c7' }}; color: {{ $rosterToday['siklus'] === 'A' ? '#1e40af' : '#92400e' }}; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 6px; text-transform: uppercase;">
+                        Siklus {{ $rosterToday['siklus'] }} (Minggu {{ $rosterToday['siklus'] === 'A' ? 'Ganjil' : 'Genap' }})
+                    </span>
+                </div>
+                <span style="font-size: 12.5px; color: #64748b;">{{ $todayFormatted }} &bull; Roster penugasan resmi semester ganjil</span>
+            </div>
+        </div>
+
+        <a href="{{ route('guru-piket.jadwal') }}" class="btn-action-secondary" style="font-size: 12px; padding: 6px 14px; text-decoration: none;">
+            <i class="fa-solid fa-calendar-days"></i> Lihat Jadwal Lengkap 1 Semester &rarr;
+        </a>
+    </div>
+
+    @if($rosterToday['is_libur'])
+        <div style="background: #f8fafc; border-radius: 12px; padding: 14px; text-align: center; color: #64748b; font-size: 13px;">
+            <i class="fa-solid fa-calendar-xmark" style="color: #94a3b8; margin-right: 6px;"></i>
+            Hari Libur Akhir Pekan ({{ $rosterToday['hari'] }}). Tidak ada jadwal piket KBM aktif hari ini.
+        </div>
+    @else
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+            <!-- Kolom Waka -->
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 14px; padding: 14px 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #166534; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-user-shield"></i> Piket Waka
+                    </span>
+                    <span style="background: #dcfce7; color: #15803d; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px;">Seharian</span>
+                </div>
+                <strong style="font-size: 13.5px; color: #1b2559; display: block; margin-bottom: 2px;">
+                    {{ $rosterToday['waka']['nama'] ?? 'Belum Ditentukan' }}
+                </strong>
+                <span style="font-size: 11px; color: #475569;">Penanggung jawab pimpinan</span>
+            </div>
+
+            <!-- Kolom Shift Pagi -->
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 14px; padding: 14px 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #92400e; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-sun" style="color: #f59e0b;"></i> Shift Pagi
+                    </span>
+                    <span style="background: #fef3c7; color: #b45309; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px;">07.00 - 11.00</span>
+                </div>
+                <div style="font-size: 12.5px; margin-bottom: 4px;">
+                    <span style="color: #78350f; font-weight: 700;">Koord:</span>
+                    <strong style="color: #1b2559;">{{ $rosterToday['pagi_koordinator']->nama_guru ?? '-' }}</strong>
+                </div>
+                <div style="font-size: 11.5px; color: #475569; line-height: 1.4;">
+                    <span style="color: #78350f; font-weight: 600;">Petugas:</span>
+                    {{ $rosterToday['pagi_petugas']->pluck('nama_guru')->implode(', ') }}
+                </div>
+            </div>
+
+            <!-- Kolom Shift Siang -->
+            <div style="background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 14px; padding: 14px 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #3730a3; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-cloud-sun" style="color: #3b82f6;"></i> Shift Siang
+                    </span>
+                    <span style="background: #e0e7ff; color: #3730a3; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 6px;">11.00 - 15.00</span>
+                </div>
+                <div style="font-size: 12.5px; margin-bottom: 4px;">
+                    <span style="color: #3730a3; font-weight: 700;">Koord:</span>
+                    <strong style="color: #1b2559;">{{ $rosterToday['siang_koordinator']->nama_guru ?? '-' }}</strong>
+                </div>
+                <div style="font-size: 11.5px; color: #475569; line-height: 1.4;">
+                    <span style="color: #3730a3; font-weight: 600;">Petugas:</span>
+                    {{ $rosterToday['siang_petugas']->pluck('nama_guru')->implode(', ') }}
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
 @endif
 
