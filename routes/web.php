@@ -6,6 +6,7 @@ use App\Http\Controllers\JurnalMengajarController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminAbsensiController;
 use App\Http\Controllers\JadwalPelajaranController;
+use App\Http\Controllers\AdminJadwalPiketController;
 use App\Http\Controllers\MasterUserController;
 use App\Http\Controllers\MasterSiswaController;
 use App\Http\Controllers\MasterGuruController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\CsvImportController;
 use App\Http\Controllers\WakaSdmDashboardController;
 use App\Http\Controllers\WaliMuridDashboardController;
 use App\Http\Controllers\KepalaSekolahDashboardController;
+use App\Http\Controllers\WakaPiketController;
 
 Route::get('/', function () {
     return redirect()->route('admin.dashboard');
@@ -60,6 +62,13 @@ Route::prefix('admin')->middleware('auth')->group(function () {
     Route::post('/jadwal/{id}/move', [JadwalPelajaranController::class, 'move'])->name('admin.jadwal.move');
     Route::put('/jadwal/{id}', [JadwalPelajaranController::class, 'update'])->name('admin.jadwal.update');
     Route::delete('/jadwal/{id}', [JadwalPelajaranController::class, 'destroy'])->name('admin.jadwal.destroy');
+
+    // Jadwal Guru Piket KBM
+    Route::get('/jadwal-piket', [AdminJadwalPiketController::class, 'index'])->name('admin.jadwal-piket');
+    Route::post('/jadwal-piket', [AdminJadwalPiketController::class, 'store'])->name('admin.jadwal-piket.store');
+    Route::put('/jadwal-piket/{id}', [AdminJadwalPiketController::class, 'update'])->name('admin.jadwal-piket.update');
+    Route::delete('/jadwal-piket/{id}', [AdminJadwalPiketController::class, 'destroy'])->name('admin.jadwal-piket.destroy');
+    Route::post('/jadwal-piket/update-waka', [AdminJadwalPiketController::class, 'updateWaka'])->name('admin.jadwal-piket.update-waka');
 
     // Download CSV Templates
     Route::get('/import/template/{type}', [CsvImportController::class, 'downloadTemplate'])->name('admin.import.template');
@@ -283,6 +292,12 @@ Route::prefix('kepala-sekolah')->name('kepala-sekolah.')->middleware('auth')->gr
     Route::get('/izin-guru',  [KepalaSekolahDashboardController::class, 'izinGuru'])->name('izin-guru');
     Route::post('/izin-guru/{id}/status', [KepalaSekolahDashboardController::class, 'updateStatusIzin'])->name('izin-guru.status');
     Route::get('/dispensasi', [KepalaSekolahDashboardController::class, 'dispensasi'])->name('dispensasi');
+});
+
+// Waka Piket KBM Routes (Persetujuan Dispensasi Siswa Harian)
+Route::prefix('waka-piket')->name('waka-piket.')->middleware('auth')->group(function () {
+    Route::get('/dispensasi', [WakaPiketController::class, 'dispensasi'])->name('dispensasi');
+    Route::post('/dispensasi/{id}/status', [WakaPiketController::class, 'updateStatus'])->name('dispensasi.status');
 });
 
 Route::resource('jurnal', JurnalMengajarController::class);

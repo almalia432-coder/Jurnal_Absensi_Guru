@@ -131,22 +131,31 @@
 
         <div class="signatures">
             <div class="sign-box">
-                <div>Siswa Ybs,</div>
+                <div>Siswa Pemohon,</div>
                 <div class="sign-space"></div>
                 <div>( {{ $dispensasi->siswa->nama_lengkap ?? 'Siswa' }} )</div>
             </div>
 
             <div class="sign-box">
-                <div>Petugas Satpam Gate,</div>
+                <div>Petugas Meja Piket,</div>
                 <div class="sign-space"></div>
-                <div>( ................................... )</div>
+                <div><strong>{{ $dispensasi->diinputOlehUser->name ?? 'Petugas Piket' }}</strong></div>
             </div>
 
             <div class="sign-box">
                 <div>Tulungagung, {{ Carbon\Carbon::parse($dispensasi->tanggal)->translatedFormat('d F Y') }}</div>
-                <div>Petugas Guru Piket,</div>
-                <div class="sign-space"></div>
-                <div><strong>{{ $dispensasi->diinputOlehUser->name ?? 'Guru Piket' }}</strong></div>
+                <div>Menyetujui,<br><strong>Waka Piket (Pimpinan KBM)</strong></div>
+                <div class="sign-space" style="display: flex; align-items: center; justify-content: center;">
+                    @if($dispensasi->status === 'Disetujui' || $dispensasi->status === 'Selesai')
+                        <span style="border: 1.5px solid #16a34a; color: #16a34a; padding: 2px 8px; font-size: 10px; font-weight: bold; border-radius: 4px; font-family: sans-serif; letter-spacing: 0.5px;">
+                            ✓ DISETUJUI DIGITAL
+                        </span>
+                    @endif
+                </div>
+                <div>
+                    <strong>{{ $dispensasi->disetujuiOlehUser->name ?? ($wakaPiket['nama'] ?? 'Waka Piket') }}</strong>
+                    <div style="font-size: 10.5px;">NIP: {{ $wakaPiket['nip'] ?? '-' }}</div>
+                </div>
             </div>
         </div>
 

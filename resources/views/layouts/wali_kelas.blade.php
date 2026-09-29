@@ -924,47 +924,6 @@
                     </a>
                 </li>
 
-                {{-- Tugas Pokok Mengajar (Guru Mapel) --}}
-                <li class="sidebar-category-header">
-                    <span>Tugas Pokok Mengajar</span>
-                </li>
-                <li class="{{ request()->routeIs('guru-mapel.dashboard') ? 'active' : '' }}">
-                    <a href="{{ route('guru-mapel.dashboard') }}">
-                        <i class="fa-solid fa-graduation-cap"></i>
-                        <span>Dashboard Guru Mapel</span>
-                    </a>
-                </li>
-                <li class="{{ request()->routeIs('guru-mapel.jadwal*') ? 'active' : '' }}">
-                    <a href="{{ route('guru-mapel.jadwal') }}">
-                        <i class="fa-solid fa-calendar-week"></i>
-                        <span>Jadwal Mengajar</span>
-                    </a>
-                </li>
-                <li class="{{ request()->routeIs('guru-mapel.jurnal.create') ? 'active' : '' }}">
-                    <a href="{{ route('guru-mapel.jurnal.create') }}">
-                        <i class="fa-solid fa-pen-to-square"></i>
-                        <span>Isi Jurnal &amp; Presensi</span>
-                    </a>
-                </li>
-                <li class="{{ request()->routeIs('guru-mapel.jurnal.riwayat') || request()->routeIs('guru-mapel.jurnal.show') ? 'active' : '' }}">
-                    <a href="{{ route('guru-mapel.jurnal.riwayat') }}">
-                        <i class="fa-solid fa-book-bookmark"></i>
-                        <span>Riwayat Jurnal Mapel</span>
-                    </a>
-                </li>
-                <li class="{{ request()->routeIs('guru-mapel.rekap*') ? 'active' : '' }}">
-                    <a href="{{ route('guru-mapel.rekap') }}">
-                        <i class="fa-solid fa-chart-simple"></i>
-                        <span>Rekap Presensi Siswa</span>
-                    </a>
-                </li>
-                <li class="{{ request()->routeIs('guru-mapel.izin*') ? 'active' : '' }}">
-                    <a href="{{ route('guru-mapel.izin') }}">
-                        <i class="fa-solid fa-user-clock"></i>
-                        <span>Pengajuan Izin Mengajar</span>
-                    </a>
-                </li>
-
                 @if(Auth::user()->role === 'admin')
                 <li class="sidebar-category-header">
                     <span>Akses Administrator</span>
@@ -1002,11 +961,13 @@
             <div class="header-user-nav">
                 @yield('header_extra')
 
-                {{-- Switch Role to Guru Mapel --}}
+                {{-- Switch Role to Guru Mapel (Hanya tampil jika akun punya tugas ganda mengajar) --}}
+                @if(Auth::user()->hasTeachingDuty())
                 <a href="{{ route('guru-mapel.dashboard') }}" class="btn-portal-switch" title="Beralih ke Portal Guru Mapel">
                     <i class="fa-solid fa-graduation-cap"></i>
                     <span>Portal Guru Mapel</span>
                 </a>
+                @endif
 
                 {{-- Notification Bell --}}
                 <div class="notif-dropdown-wrap" id="notifDropdownWrap">
@@ -1061,9 +1022,11 @@
                             <i class="fa-solid fa-user-pen"></i> Profil Saya
                         </a>
 
+                        @if(Auth::user()->hasTeachingDuty())
                         <a href="{{ route('guru-mapel.dashboard') }}" class="dropdown-item" style="color: #1d4ed8; font-weight: 600;">
                             <i class="fa-solid fa-graduation-cap"></i> Beralih ke Portal Guru Mapel
                         </a>
+                        @endif
 
                         <div class="dropdown-divider"></div>
 

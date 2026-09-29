@@ -380,6 +380,49 @@
     </script>
 @endif
 
+@php
+    $rosterDuty = \App\Models\JadwalPiketKbm::getRosterForDate(\Carbon\Carbon::today());
+    $wakaNamaToday = $rosterDuty['waka']['nama'] ?? '';
+    $wakaNipToday = $rosterDuty['waka']['nip'] ?? '';
+    $userNipGuru = Auth::user()->guru->nip ?? '';
+    $isWakaPiketToday = ($userNipGuru && $userNipGuru === $wakaNipToday) || ($wakaNamaToday && str_contains(Auth::user()->name, explode(',', $wakaNamaToday)[0]));
+    $pendingDispenCount = \App\Models\DispensasiSiswa::where('status', 'Menunggu')->whereDate('tanggal', \Carbon\Carbon::today())->count();
+@endphp
+
+@if($isWakaPiketToday || (Auth::user()->waka && $pendingDispenCount > 0))
+<div style="background: linear-gradient(135deg, #1e3a8a 0%, #2b43b9 55%, #1d4ed8 100%); border-radius: 18px; padding: 20px 24px; color: white; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 8px 24px rgba(43, 67, 185, 0.22); border: 1px solid rgba(255,255,255,0.2);">
+    <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 50px; height: 50px; border-radius: 14px; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 24px; color: #ffffff; flex-shrink: 0;">
+            <i class="fa-solid fa-user-shield"></i>
+        </div>
+        <div>
+            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; color: #bfdbfe;">
+                Penugasan Pimpinan Hari Ini
+            </span>
+            <h3 style="font-size: 17px; font-weight: 800; margin: 2px 0 4px 0; color: #ffffff;">
+                Anda Bertugas Sebagai Waka Piket KBM
+            </h3>
+            <div style="font-size: 13px; color: #e0e7ff;">
+                @if($pendingDispenCount > 0)
+                    ⚠️ Terdapat <strong>{{ $pendingDispenCount }} permohonan dispensasi siswa</strong> yang sedang menunggu persetujuan Anda.
+                @else
+                    Semua permohonan dispensasi siswa hari ini telah ditinjau.
+                @endif
+            </div>
+        </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+        <a href="{{ route('waka-piket.dispensasi') }}" style="background: #ffffff; color: #1e3a8a; padding: 10px 18px; border-radius: 12px; font-weight: 800; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); transition: all 0.2s;">
+            <i class="fa-solid fa-clipboard-check" style="color: #2b43b9;"></i>
+            <span>Tinjau Dispensasi Siswa</span>
+            @if($pendingDispenCount > 0)
+                <span style="background: #ef4444; color: white; padding: 2px 8px; border-radius: 20px; font-size: 11px;">{{ $pendingDispenCount }}</span>
+            @endif
+        </a>
+    </div>
+</div>
+@endif
+
 <!-- 1. Greeting Section & Quick Actions -->
 <div class="greeting-section" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
     <div>

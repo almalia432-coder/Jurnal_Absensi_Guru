@@ -1021,24 +1021,27 @@
                     </a>
                 </li>
 
-                @if(Auth::user()->isWaliKelas())
-                <li class="sidebar-category-header">Tugas Tambahan (Wali Kelas)</li>
-                <li class="{{ request()->routeIs('wali-kelas.dashboard') ? 'active' : '' }}">
-                    <a href="{{ route('wali-kelas.dashboard') }}">
-                        <i class="fa-solid fa-chalkboard-user"></i>
-                        <span>Dashboard Kelas Binaan</span>
-                    </a>
-                </li>
-                <li class="{{ request()->routeIs('wali-kelas.jurnal') ? 'active' : '' }}">
-                    <a href="{{ route('wali-kelas.jurnal') }}">
-                        <i class="fa-solid fa-clipboard-check"></i>
-                        <span>Jurnal &amp; Presensi Kelas</span>
-                    </a>
-                </li>
-                <li class="{{ request()->routeIs('wali-kelas.siswa') ? 'active' : '' }}">
-                    <a href="{{ route('wali-kelas.siswa') }}">
-                        <i class="fa-solid fa-users"></i>
-                        <span>Data Siswa Kelas</span>
+                @php
+                    $isWakaRole = Auth::user()->waka || in_array(Auth::user()->role, ['waka', 'waka_kurikulum', 'waka_sdm', 'admin']);
+                    $rosterHariIni = \App\Models\JadwalPiketKbm::getRosterForDate(\Carbon\Carbon::today());
+                    $wakaNipToday = $rosterHariIni['waka']['nip'] ?? '';
+                    $wakaNamaToday = $rosterHariIni['waka']['nama'] ?? '';
+                    $userNipGuru = Auth::user()->guru->nip ?? '';
+                    $isWakaPiketToday = ($userNipGuru && $userNipGuru === $wakaNipToday) || ($wakaNamaToday && str_contains(Auth::user()->name, explode(',', $wakaNamaToday)[0]));
+                    $pendingDispenCount = \App\Models\DispensasiSiswa::where('status', 'Menunggu')->whereDate('tanggal', \Carbon\Carbon::today())->count();
+                @endphp
+
+                @if($isWakaRole || $isWakaPiketToday)
+                <li class="sidebar-category-header">Tugas Waka Piket</li>
+                <li class="{{ request()->routeIs('waka-piket.dispensasi*') ? 'active' : '' }}">
+                    <a href="{{ route('waka-piket.dispensasi') }}" style="display: flex; align-items: center; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 14px;">
+                            <i class="fa-solid fa-user-shield" style="color: #16a34a;"></i>
+                            <span>Persetujuan Dispen</span>
+                        </div>
+                        @if($pendingDispenCount > 0)
+                            <span style="background: #ef4444; color: white; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 10px;">{{ $pendingDispenCount }}</span>
+                        @endif
                     </a>
                 </li>
                 @endif

@@ -139,6 +139,27 @@ class User extends Authenticatable
             || ($this->waliKelas && Guru::where('nip', $this->waliKelas->nip)->exists());
     }
 
+    public function hasTeachingDuty(): bool
+    {
+        if ($this->role === 'admin') {
+            return true;
+        }
+
+        if ($this->role === 'guru_mapel') {
+            return true;
+        }
+
+        if ($this->guru()->exists()) {
+            return true;
+        }
+
+        if ($this->waliKelas && Guru::where('nip', $this->waliKelas->nip)->exists()) {
+            return true;
+        }
+
+        return false;
+    }
+
     public function getKelasBinaanAttribute(): ?Kelas
     {
         if ($this->waliKelas && $this->waliKelas->kelas) {

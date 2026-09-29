@@ -609,42 +609,29 @@
         }
 
         .user-profile-badge {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 30px;
+            padding: 4px 16px 4px 4px;
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 6px 14px 6px 8px;
-            border-radius: 40px;
-            background: rgba(255, 255, 255, 0.18);
+            gap: 12px;
             cursor: pointer;
-            border: 1px solid rgba(255, 255, 255, 0.28);
-            transition: all 0.2s ease;
+            transition: background 0.2s ease;
             user-select: none;
         }
 
         .user-profile-badge:hover {
-            background: rgba(255, 255, 255, 0.26);
+            background: rgba(255, 255, 255, 0.25);
         }
 
-        .avatar-circle {
-            width: 34px;
-            height: 34px;
+        .avatar-img {
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
-            background: #3b82f6;
-            color: white;
-            font-weight: 800;
-            font-size: 12.5px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid white;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-
-        .avatar-circle img {
-            width: 100%;
-            height: 100%;
             object-fit: cover;
+            border: 2px solid white;
+            flex-shrink: 0;
         }
 
         .user-info-text {
@@ -654,18 +641,19 @@
         }
 
         .user-name {
+            font-size: 13px;
             font-weight: 700;
-            font-size: 12.5px;
-            color: white;
             line-height: 1.2;
+            color: white;
             white-space: nowrap;
         }
 
-        .user-role-label {
-            font-size: 10.5px;
-            color: #bfdbfe;
-            font-weight: 600;
-            text-transform: capitalize;
+        .user-email {
+            font-size: 11px;
+            opacity: 0.8;
+            line-height: 1.2;
+            color: white;
+            white-space: nowrap;
         }
 
         /* Micro Animations */
@@ -1268,10 +1256,16 @@
                         <span>Absensi &amp; Jurnal Mengajar</span>
                     </a>
                 </li>
-                <li class="{{ request()->is('admin/jadwal*') ? 'active' : '' }}">
+                <li class="{{ (request()->is('admin/jadwal') || request()->is('admin/jadwal/*')) && !request()->is('admin/jadwal-piket*') ? 'active' : '' }}">
                     <a href="{{ url('/admin/jadwal') }}">
                         <i class="fa-solid fa-calendar-days"></i>
                         <span>Jadwal Pelajaran</span>
+                    </a>
+                </li>
+                <li class="{{ request()->is('admin/jadwal-piket*') ? 'active' : '' }}">
+                    <a href="{{ route('admin.jadwal-piket') }}">
+                        <i class="fa-solid fa-clipboard-user"></i>
+                        <span>Jadwal Guru Piket</span>
                     </a>
                 </li>
 
@@ -1404,36 +1398,24 @@
                 </div>
 
                 {{-- User Profile Dropdown --}}
-                @php
-                    $authName = Auth::user()->name ?? 'Administrator';
-                    $words = preg_split('/\s+/', trim(preg_replace('/[^a-zA-Z\s]/', '', $authName)));
-                    $initials = 'AD';
-                    if (count($words) >= 2 && !empty($words[0]) && !empty($words[1])) {
-                        $initials = strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
-                    } elseif (count($words) == 1 && strlen($words[0]) >= 2) {
-                        $initials = strtoupper(substr($words[0], 0, 2));
-                    }
-                @endphp
+                {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">
                     <div class="user-profile-badge" onclick="toggleProfileDropdown()">
-                        <div class="avatar-circle">
-                            @if(Auth::user()->photo)
-                                <img src="{{ Storage::url(Auth::user()->photo) }}" alt="Avatar">
-                            @else
-                                {{ $initials }}
-                            @endif
-                        </div>
+                        <img src="{{ Auth::user()->photo ? Storage::url(Auth::user()->photo) : 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->name ?? 'Administrator').'&background=e0e7ff&color=2b43b9&bold=true' }}" 
+                             alt="Avatar" 
+                             class="avatar-img"
+                             onerror="this.onerror=null;this.src='https://ui-avatars.com/api/?name={{ urlencode(Auth::user()->name ?? 'Administrator') }}&background=e0e7ff&color=2b43b9&bold=true';">
                         <div class="user-info-text">
-                            <span class="user-name">{{ $authName }}</span>
-                            <span class="user-role-label">{{ str_replace('_', ' ', Auth::user()->role ?? 'Administrator') }}</span>
+                            <span class="user-name">{{ Auth::user()->name ?? 'Administrator' }}</span>
+                            <span class="user-email">{{ Auth::user()->email ?? 'admin@smkn1boyolangu.sch.id' }}</span>
                         </div>
                     </div>
 
                     <div class="profile-dropdown" id="profileDropdown">
                         <div class="dropdown-header">
-                            <div class="d-name">{{ Auth::user()->name ?? 'Admin' }}</div>
+                            <div class="d-name">{{ Auth::user()->name ?? 'Administrator' }}</div>
                             <div class="d-email">{{ Auth::user()->email ?? 'admin@smkn1boyolangu.sch.id' }}</div>
-                            <span class="d-role">{{ str_replace('_', ' ', Auth::user()->role ?? 'admin') }}</span>
+                            <span class="d-role">{{ strtoupper(str_replace('_', ' ', Auth::user()->role ?? 'ADMIN')) }}</span>
                         </div>
 
                         <a href="{{ route('admin.profil') }}" class="dropdown-item">
@@ -1442,7 +1424,7 @@
 
                         <div class="dropdown-divider"></div>
 
-                        <button type="button" onclick="closeProfileDropdown(); openLogoutModal();" class="dropdown-item danger" style="width:100%;background:none;border:none;font-family:inherit;text-align:left;">
+                        <button type="button" onclick="closeProfileDropdown(); openLogoutModal();" class="dropdown-item danger" style="width:100%;background:none;border:none;font-family:inherit;text-align:left;cursor:pointer;">
                             <i class="fa-solid fa-right-from-bracket"></i> Keluar
                         </button>
                     </div>

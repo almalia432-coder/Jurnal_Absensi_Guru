@@ -160,6 +160,7 @@ class WaliKelasDashboardController extends Controller
     public function siswa(Request $request)
     {
         Carbon::setLocale('id');
+        $user = Auth::user();
         [$waliKelas, $kelas] = $this->resolveWaliKelasAndKelas($user, $request);
 
         $allKelasList = Kelas::orderBy('nama_kelas')->get();
@@ -189,6 +190,7 @@ class WaliKelasDashboardController extends Controller
     public function jurnal(Request $request)
     {
         Carbon::setLocale('id');
+        $user = Auth::user();
         [$waliKelas, $kelas] = $this->resolveWaliKelasAndKelas($user, $request);
 
         $allKelasList = Kelas::orderBy('nama_kelas')->get();
@@ -213,6 +215,10 @@ class WaliKelasDashboardController extends Controller
     {
         $waliKelas = null;
         $kelas = null;
+
+        if (!$user) {
+            $user = Auth::user();
+        }
 
         if ($user->isWaliKelas()) {
             $waliKelas = $user->waliKelas;

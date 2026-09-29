@@ -492,21 +492,21 @@ class GuruPiketDashboardController extends Controller
             'jam_kembali'         => $request->jam_kembali,
             'alasan'              => $request->alasan,
             'bukti_file'          => $buktiPath,
-            'status'              => 'Disetujui',
-            'disetujui_oleh'      => Auth::id(),
-            'tanggal_persetujuan' => now(),
+            'status'              => 'Menunggu',
+            'disetujui_oleh'      => null,
+            'tanggal_persetujuan' => null,
             'diinput_oleh'        => Auth::id(),
         ]);
 
         $namaSiswa = $disp->siswa->nama_lengkap ?? 'Siswa';
         LogAktivitas::catat(
             'Dispensasi Siswa',
-            "Guru Piket menerbitkan surat izin dispensasi untuk {$namaSiswa}",
+            "Guru Piket mengajukan surat izin dispensasi untuk {$namaSiswa} (Menunggu Persetujuan Waka Piket)",
             $disp,
             Auth::user()
         );
 
-        return back()->with('success', 'Surat dispensasi siswa berhasil diterbitkan.');
+        return back()->with('success', "Pengajuan dispensasi untuk {$namaSiswa} berhasil disimpan dan sekarang menunggu persetujuan Waka Piket.");
     }
 
     /**
@@ -552,7 +552,10 @@ class GuruPiketDashboardController extends Controller
         Carbon::setLocale('id');
         $dispensasi = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser', 'disetujuiOlehUser'])->findOrFail($id);
 
-        return view('guru_piket.dispensasi.cetak', compact('dispensasi'));
+        $rosterTarget = JadwalPiketKbm::getRosterForDate(Carbon::parse($dispensasi->tanggal));
+        $wakaPiket = $rosterTarget['waka'] ?? null;
+
+        return view('guru_piket.dispensasi.cetak', compact('dispensasi', 'wakaPiket'));
     }
 
     /**
