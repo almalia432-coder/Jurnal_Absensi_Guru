@@ -14,10 +14,12 @@ use App\Models\TahunAjaran;
 use App\Models\IzinGuru;
 use App\Models\IzinSiswa;
 use App\Models\DispensasiSiswa;
+use App\Models\IzinTerlambat;
 use App\Models\Notifikasi;
 use App\Models\User;
 use App\Models\LogAktivitas;
 use App\Models\StatusHarianKbm;
+use App\Support\PortalResolver;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +45,22 @@ class GuruMapelDashboardController extends Controller
         // If user is registered via wali_kelas, try finding guru by NIP
         if ($user->waliKelas && $user->waliKelas->nip) {
             $guru = Guru::where('nip', $user->waliKelas->nip)->first();
+            if ($guru) {
+                return $guru;
+            }
+        }
+
+        // If user is registered via waka, try finding guru by NIP
+        if ($user->waka && $user->waka->nip) {
+            $guru = Guru::where('nip', $user->waka->nip)->first();
+            if ($guru) {
+                return $guru;
+            }
+        }
+
+        // If user is registered via guru_mapel, try finding guru by NIP
+        if ($user->guruMapel && $user->guruMapel->nip) {
+            $guru = Guru::where('nip', $user->guruMapel->nip)->first();
             if ($guru) {
                 return $guru;
             }
@@ -452,19 +470,36 @@ class GuruMapelDashboardController extends Controller
                     ->get()
                     ->keyBy('id_siswa');
 
-                // Ambil dispensasi siswa yang disetujui pada tanggal ini
+                // Ambil dispensasi siswa yang disetujui final pada tanggal ini
                 $dispensasiSiswaMap = DispensasiSiswa::whereIn('id_siswa', $siswaIds)
                     ->whereDate('tanggal', $tanggal)
-                    ->whereIn('status', ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai'])
+                    ->final()
                     ->get()
                     ->keyBy('id_siswa');
 
+                // Ambil izin terlambat siswa yang disetujui pada tanggal ini
+                $izinTerlambatMap = IzinTerlambat::whereIn('id_siswa', $siswaIds)
+                    ->whereDate('tanggal', $tanggal)
+                    ->where('status', 'Disetujui')
+                    ->get()
+                    ->keyBy('id_siswa');
+
+                $sessionJamKe = $jamKeSuggestion ?? ($selectedJadwal->jam_ke ?? '1-2');
+
                 // Pasangkan ke data setiap siswa untuk otomatisasi presensi di jurnal
-                $siswaList->transform(function ($s) use ($izinSiswaMap, $dispensasiSiswaMap, &$piketAbsenceCount, &$piketDetails) {
+                $siswaList->transform(function ($s) use ($izinSiswaMap, $dispensasiSiswaMap, $izinTerlambatMap, $sessionJamKe, &$piketAbsenceCount, &$piketDetails) {
                     $s->piket_status = null;
                     $s->piket_keterangan = null;
+                    $s->piket_jam_ke_mulai = null;
 
-                    if ($izin = $izinSiswaMap->get($s->id_siswa)) {
+                    // Prioritas 1: Dispensasi Siswa
+                    if ($disp = $dispensasiSiswaMap->get($s->id_siswa)) {
+                        $s->piket_status = 'Dispensasi';
+                        $s->piket_keterangan = $disp->alasan;
+                        $piketAbsenceCount++;
+                        $piketDetails['dispensasi']++;
+                    // Prioritas 2: Izin / Sakit Siswa
+                    } elseif ($izin = $izinSiswaMap->get($s->id_siswa)) {
                         $s->piket_status = $izin->jenis_izin; // 'Sakit', 'Izin', 'Dispensasi'
                         $s->piket_keterangan = $izin->alasan;
                         $piketAbsenceCount++;
@@ -475,11 +510,20 @@ class GuruMapelDashboardController extends Controller
                         } else {
                             $piketDetails['dispensasi']++;
                         }
-                    } elseif ($disp = $dispensasiSiswaMap->get($s->id_siswa)) {
-                        $s->piket_status = 'Dispensasi';
-                        $s->piket_keterangan = $disp->alasan;
-                        $piketAbsenceCount++;
-                        $piketDetails['dispensasi']++;
+                    // Prioritas 3: Izin Siswa Terlambat
+                    } elseif ($terlambat = $izinTerlambatMap->get($s->id_siswa)) {
+                        $res = $terlambat->resolveStatusForTeachingHour($sessionJamKe);
+                        if ($res['is_locked']) {
+                            $s->piket_status = $res['status'];
+                            $s->piket_keterangan = $res['keterangan'];
+                            $s->piket_jam_ke_mulai = $terlambat->jam_ke_mulai;
+                            $piketAbsenceCount++;
+                            if ($res['status'] === 'Terlambat') {
+                                $piketDetails['terlambat'] = ($piketDetails['terlambat'] ?? 0) + 1;
+                            } else {
+                                $piketDetails['alpha_terlambat'] = ($piketDetails['alpha_terlambat'] ?? 0) + 1;
+                            }
+                        }
                     }
 
                     return $s;
@@ -497,10 +541,10 @@ class GuruMapelDashboardController extends Controller
         $jadwalHariIniOptions = $this->groupConsecutiveSchedules($rawJadwalHariIniOptions, $tanggal);
 
         // Cek apakah guru memiliki izin aktif hari ini
-        $activeIzinHariIni = IzinGuru::where('id_guru', $guru->id_guru ?? 0)
+        $activeIzinHariIni = IzinGuru::berlaku()
+            ->where('id_guru', $guru->id_guru ?? 0)
             ->where('tanggal_mulai', '<=', $today)
             ->where('tanggal_selesai', '>=', $today)
-            ->where('status', '!=', 'Ditolak')
             ->first();
 
         // Status KBM Hari Ini (Upacara / Pembiasaan Ditiadakan)
@@ -552,18 +596,75 @@ class GuruMapelDashboardController extends Controller
         ]);
 
         $today = Carbon::today()->format('Y-m-d');
+        $idKelas = $validated['id_kelas'];
         $presensiData = $request->input('presensi', []);
         $keteranganData = $request->input('keterangan', []);
 
+        // Ambil izin/sakit siswa dari Guru Piket yang aktif hari ini untuk rombel ini
+        $izinSiswaMap = IzinSiswa::whereHas('siswa', fn($q) => $q->where('id_kelas', $idKelas))
+            ->whereDate('tanggal_mulai', '<=', $today)
+            ->whereDate('tanggal_selesai', '>=', $today)
+            ->where('status', '!=', 'Ditolak')
+            ->get()
+            ->keyBy('id_siswa');
+
+        // Ambil dispensasi siswa yang disetujui final pada hari ini
+        $dispensasiSiswaMap = DispensasiSiswa::whereHas('siswa', fn($q) => $q->where('id_kelas', $idKelas))
+            ->whereDate('tanggal', $today)
+            ->final()
+            ->get()
+            ->keyBy('id_siswa');
+
+        // Ambil izin terlambat siswa yang disetujui pada hari ini
+        $izinTerlambatMap = IzinTerlambat::whereHas('siswa', fn($q) => $q->where('id_kelas', $idKelas))
+            ->whereDate('tanggal', $today)
+            ->where('status', 'Disetujui')
+            ->get()
+            ->keyBy('id_siswa');
+
+        $sessionJamKe = $validated['jam_ke'];
         $hadirCount = 0;
         $tidakHadirCount = 0;
+        $processedPresensi = [];
 
-        foreach ($presensiData as $status) {
-            if ($status === 'Hadir') {
+        foreach ($presensiData as $idSiswa => $status) {
+            $ket = $keteranganData[$idSiswa] ?? null;
+
+            // Prioritas 1: Dispensasi Piket
+            if ($disp = $dispensasiSiswaMap->get($idSiswa)) {
+                $finalStatus = 'Dispensasi';
+                $finalKet = "(Piket: Dispensasi) " . ($disp->alasan ?: '');
+            // Prioritas 2: Sakit / Izin Piket
+            } elseif ($izin = $izinSiswaMap->get($idSiswa)) {
+                $finalStatus = $izin->jenis_izin;
+                $finalKet = "(Piket: {$izin->jenis_izin}) " . ($izin->alasan ?: '');
+            // Prioritas 3: Izin Siswa Terlambat
+            } elseif ($terlambat = $izinTerlambatMap->get($idSiswa)) {
+                $res = $terlambat->resolveStatusForTeachingHour($sessionJamKe);
+                if ($res['is_locked']) {
+                    $finalStatus = $res['status'];
+                    $finalKet = "(Piket: " . $res['keterangan'] . ")";
+                } else {
+                    // Sesi KBM setelah siswa tiba di sekolah
+                    $finalStatus = ($status === 'Alpha') ? 'Alpha' : 'Hadir';
+                    $finalKet = $ket;
+                }
+            // Prioritas 4: Presensi Reguler Guru Mapel
+            } else {
+                $finalStatus = ($status === 'Alpha') ? 'Alpha' : 'Hadir';
+                $finalKet = $ket;
+            }
+
+            if (in_array($finalStatus, ['Hadir', 'Terlambat'])) {
                 $hadirCount++;
             } else {
                 $tidakHadirCount++;
             }
+
+            $processedPresensi[$idSiswa] = [
+                'status' => $finalStatus,
+                'keterangan' => $finalKet,
+            ];
         }
 
         DB::beginTransaction();
@@ -585,12 +686,12 @@ class GuruMapelDashboardController extends Controller
             ]);
 
             // Save individual student attendance
-            foreach ($presensiData as $idSiswa => $status) {
+            foreach ($processedPresensi as $idSiswa => $pData) {
                 PresensiSiswa::create([
                     'id_jurnal'   => $jurnal->id_jurnal,
                     'id_siswa'    => $idSiswa,
-                    'status'      => $status,
-                    'keterangan'  => $keteranganData[$idSiswa] ?? null,
+                    'status'      => $pData['status'],
+                    'keterangan'  => $pData['keterangan'],
                 ]);
             }
 
@@ -604,7 +705,7 @@ class GuruMapelDashboardController extends Controller
             );
 
             return redirect()->route('guru-mapel.jurnal.riwayat')
-                ->with('success', "Jurnal mengajar dan presensi {$hadirCount} siswa hadir berhasil disimpan.");
+                ->with('success', "Jurnal mengajar dan presensi ({$hadirCount} Hadir, {$tidakHadirCount} Tidak Hadir) berhasil disimpan.");
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()
@@ -809,11 +910,14 @@ class GuruMapelDashboardController extends Controller
     }
 
     /**
-     * Simpan Pengajuan Izin Guru
+     * Simpan Pengajuan Izin Guru (Status Tercatat langsung, tanpa alur persetujuan)
      */
     public function storeIzin(Request $request)
     {
         $guru = $this->resolveGuru();
+        if (!$guru) {
+            abort(403, 'Profil guru tidak ditemukan.');
+        }
 
         $validated = $request->validate([
             'tanggal_mulai'    => 'required|date',
@@ -826,6 +930,21 @@ class GuruMapelDashboardController extends Controller
             'lampiran_tugas'   => 'nullable|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:3072',
         ]);
 
+        // Pencegahan tumpang tindih tanggal izin untuk guru yang sama (abaikan yang Dibatalkan)
+        $isOverlapping = IzinGuru::where('id_guru', $guru->id_guru)
+            ->where('status', '!=', 'Dibatalkan')
+            ->where(function ($q) use ($validated) {
+                $q->where('tanggal_mulai', '<=', $validated['tanggal_selesai'])
+                  ->where('tanggal_selesai', '>=', $validated['tanggal_mulai']);
+            })
+            ->exists();
+
+        if ($isOverlapping) {
+            return back()->withInput()->withErrors([
+                'tanggal_mulai' => 'Anda sudah memiliki catatan izin pada rentang tanggal tersebut.',
+            ]);
+        }
+
         $filePath = null;
         if ($request->hasFile('bukti_file')) {
             $filePath = $request->file('bukti_file')->store('izin_guru', 'public');
@@ -837,53 +956,131 @@ class GuruMapelDashboardController extends Controller
             $tugasFilePath = $request->file('lampiran_tugas')->store('tugas_izin', 'public');
         }
 
-        $izin = IzinGuru::create([
-            'id_guru'           => $guru->id_guru,
-            'tanggal_mulai'     => $validated['tanggal_mulai'],
-            'tanggal_selesai'   => $validated['tanggal_selesai'],
-            'jenis_izin'        => $validated['jenis_izin'],
-            'alasan'            => $validated['alasan'],
-            'bukti_file'        => $filePath,
-            'menitipkan_tugas'  => $menitipkanTugas,
-            'keterangan_tugas'  => $menitipkanTugas ? $request->input('keterangan_tugas') : null,
-            'lampiran_tugas'    => $tugasFilePath,
-            'status'            => 'Menunggu',
-            'tahap_approval'    => 'piket',
-            'piket_status'      => 'Menunggu',
-            'waka_status'       => 'Menunggu',
-            'kepsek_status'     => 'Menunggu',
-            'diinput_oleh'      => Auth::id(),
-        ]);
-
-        LogAktivitas::catat(
-            'Pengajuan Izin',
-            "Guru {$guru->nama_lengkap} mengajukan permohonan izin {$validated['jenis_izin']}",
-            $izin,
-            Auth::user()
-        );
-
-        // Notifikasi ke seluruh Guru Piket yang sedang aktif/terdaftar
-        $piketUsers = User::where('role', 'guru_piket')->get();
-        $tanggalStr = Carbon::parse($validated['tanggal_mulai'])->translatedFormat('d M Y');
-        if ($validated['tanggal_mulai'] !== $validated['tanggal_selesai']) {
-            $tanggalStr .= ' s/d ' . Carbon::parse($validated['tanggal_selesai'])->translatedFormat('d M Y');
-        }
-        $infoTugas = $menitipkanTugas ? ' (Disertai tugas mandiri untuk siswa)' : ' (Tanpa tugas mandiri - Butuh pantauan/pengganti)';
-
-        foreach ($piketUsers as $pUser) {
-            Notifikasi::create([
-                'user_id'        => $pUser->id,
-                'judul'          => 'Pengajuan Izin Guru Baru (Tahap 1 - Piket)',
-                'pesan'          => "Guru {$guru->nama_lengkap} mengajukan izin {$validated['jenis_izin']} ({$tanggalStr}){$infoTugas}. Menunggu peninjauan & persetujuan Anda sebagai Guru Piket.",
-                'tipe'           => 'izin_guru',
-                'reference_id'   => $izin->id,
-                'reference_type' => IzinGuru::class,
-                'is_read'        => false,
+        $izin = DB::transaction(function () use ($guru, $validated, $filePath, $menitipkanTugas, $tugasFilePath, $request) {
+            $izinRecord = IzinGuru::create([
+                'id_guru'           => $guru->id_guru,
+                'tanggal_mulai'     => $validated['tanggal_mulai'],
+                'tanggal_selesai'   => $validated['tanggal_selesai'],
+                'jenis_izin'        => $validated['jenis_izin'],
+                'alasan'            => $validated['alasan'],
+                'bukti_file'        => $filePath,
+                'menitipkan_tugas'  => $menitipkanTugas,
+                'keterangan_tugas'  => $menitipkanTugas ? $request->input('keterangan_tugas') : null,
+                'lampiran_tugas'    => $tugasFilePath,
+                'status'            => 'Tercatat',
+                'tahap_approval'    => null,
+                'diinput_oleh'      => Auth::id(),
             ]);
-        }
+
+            LogAktivitas::catat(
+                'Pengajuan Izin Guru',
+                "Guru {$guru->nama_lengkap} mencatat izin {$validated['jenis_izin']} ({$validated['tanggal_mulai']} s/d {$validated['tanggal_selesai']})",
+                $izinRecord,
+                Auth::user()
+            );
+
+            // Hitung dampak jadwal kelas dan jam pelajaran
+            $start = Carbon::parse($validated['tanggal_mulai']);
+            $end = Carbon::parse($validated['tanggal_selesai']);
+            $taAktif = TahunAjaran::where('is_aktif', true)->first();
+            $dayNames = [
+                1 => 'Senin', 2 => 'Selasa', 3 => 'Rabu', 4 => 'Kamis', 5 => 'Jumat', 6 => 'Sabtu', 7 => 'Minggu',
+            ];
+
+            $terdampakKelasIds = collect();
+            $totalJamTerdampak = 0;
+
+            for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+                $hari = $dayNames[$d->dayOfWeekIso] ?? null;
+                if (!$hari) continue;
+
+                $jadwals = JadwalPelajaran::where('id_guru', $guru->id_guru)
+                    ->where('hari', $hari)
+                    ->when($taAktif, fn($q) => $q->where('id_tahun_ajaran', $taAktif->id))
+                    ->get();
+
+                foreach ($jadwals as $j) {
+                    $terdampakKelasIds->push($j->id_kelas);
+                    $totalJamTerdampak++;
+                }
+            }
+
+            $jumlahKelas = $terdampakKelasIds->unique()->count();
+            $jumlahJam = $totalJamTerdampak;
+
+            $rentangTanggal = $start->translatedFormat('d M Y');
+            if ($validated['tanggal_mulai'] !== $validated['tanggal_selesai']) {
+                $rentangTanggal .= ' s/d ' . $end->translatedFormat('d M Y');
+            }
+
+            $pesanNotif = "Guru {$guru->nama_lengkap} mengajukan izin {$validated['jenis_izin']} ({$rentangTanggal}). Terdampak: {$jumlahKelas} kelas / {$jumlahJam} jam pelajaran.";
+
+            // Kirim notifikasi ke 4 pihak terkait (Piket, Waka Piket, Waka SDM, Kepala Sekolah)
+            $recipients = PortalResolver::resolveIzinGuruNotificationRecipients($start);
+
+            foreach ($recipients as $recipient) {
+                Notifikasi::create([
+                    'user_id'        => $recipient->id,
+                    'judul'          => 'Pemberitahuan Izin Guru: ' . $guru->nama_lengkap,
+                    'pesan'          => $pesanNotif,
+                    'tipe'           => 'izin_guru',
+                    'reference_id'   => $izinRecord->id,
+                    'reference_type' => IzinGuru::class,
+                    'is_read'        => false,
+                ]);
+            }
+
+            return $izinRecord;
+        });
 
         return redirect()->route('guru-mapel.izin')
-            ->with('success', 'Pengajuan izin berhasil dikirimkan. Permintaan saat ini masuk ke sistem Guru Piket untuk peninjauan tahap 1.');
+            ->with('success', 'Izin berhasil dicatat dalam sistem dan telah dinotifikasikan ke petugas terkait.');
+    }
+
+    /**
+     * Batalkan Pengajuan Izin oleh Guru (Hanya sebelum tanggal mulai izin)
+     */
+    public function batalkanIzin(Request $request, $id)
+    {
+        $guru = $this->resolveGuru();
+        if (!$guru) {
+            abort(403, 'Akses ditolak.');
+        }
+
+        $request->validate([
+            'alasan_batal' => 'required|string|min:5',
+        ], [
+            'alasan_batal.required' => 'Alasan pembatalan wajib diisi.',
+            'alasan_batal.min'      => 'Alasan pembatalan minimal 5 karakter.',
+        ]);
+
+        $izin = IzinGuru::where('id_guru', $guru->id_guru)->findOrFail($id);
+
+        if (Carbon::today()->gte(Carbon::parse($izin->tanggal_mulai))) {
+            return back()->withErrors(['error' => 'Izin hanya dapat dibatalkan sebelum tanggal mulai izin.']);
+        }
+
+        if ($izin->status === 'Dibatalkan') {
+            return back()->with('info', 'Izin ini sudah dibatalkan sebelumnya.');
+        }
+
+        DB::transaction(function () use ($izin, $request, $guru) {
+            $izin->update([
+                'status'          => 'Dibatalkan',
+                'alasan_batal'    => $request->alasan_batal,
+                'dibatalkan_oleh' => Auth::id(),
+                'dibatalkan_at'   => now(),
+            ]);
+
+            LogAktivitas::catat(
+                'Pembatalan Izin Guru',
+                "Guru {$guru->nama_lengkap} membatalkan izin {$izin->jenis_izin} ({$izin->tanggal_mulai}). Alasan: {$request->alasan_batal}",
+                $izin,
+                Auth::user()
+            );
+        });
+
+        return back()->with('success', 'Permohonan izin berhasil dibatalkan.');
     }
 
     /**

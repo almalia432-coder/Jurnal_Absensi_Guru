@@ -1,8 +1,8 @@
 @extends('layouts.guru_piket')
 
-@section('title', 'Monitoring & Persetujuan Izin Guru - Jurnal Absensi SMKN 1 BOYOLANGU')
-@section('header_title', 'Persetujuan & Monitoring Izin Guru')
-@section('header_subtitle', 'Verifikasi pengajuan izin berhalangan mengajar (Tahap 1) dan pantau jadwal kelas terdampak')
+@section('title', 'Monitoring Izin Guru - Jurnal Absensi SMKN 1 BOYOLANGU')
+@section('header_title', 'Monitoring Izin Guru')
+@section('header_subtitle', 'Pantau daftar guru berhalangan mengajar dan jadwal kelas yang terdampak')
 
 @section('styles')
 <style>
@@ -233,90 +233,7 @@
     </div>
 </div>
 
-<!-- SECTION 1: Permohonan Izin Menunggu Persetujuan Guru Piket (Tahap 1) -->
-<div class="section-card" style="border-left: 5px solid #2b43b9;">
-    <div class="section-header">
-        <div class="section-title">
-            <i class="fa-solid fa-user-clock" style="color: #2b43b9; font-size: 18px;"></i>
-            <span>Persetujuan Izin Guru Baru (Tahap 1 - Guru Piket)</span>
-            <span class="status-badge {{ $pendingPiketList->count() > 0 ? 'warning' : 'success' }}" style="border-radius: 12px; font-size: 11.5px;">
-                {{ $pendingPiketList->count() }} Menunggu
-            </span>
-        </div>
-        <div style="font-size: 12px; color: #64748b; font-weight: 600;">
-            Alur: <strong>Guru Piket</strong> &rarr; Waka SDM &rarr; Kepala Sekolah
-        </div>
-    </div>
-
-    <div class="table-responsive-wrap">
-        <table class="custom-table">
-            <thead>
-                <tr>
-                    <th>Guru Pengampu</th>
-                    <th>Kategori</th>
-                    <th>Rentang Tanggal</th>
-                    <th>Alasan & Keterangan</th>
-                    <th>Berkas</th>
-                    <th style="text-align: right;">Aksi Keputusan Piket</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($pendingPiketList as $pIzin)
-                <tr>
-                    <td>
-                        <strong style="color: #1b2559; font-size: 13.5px;">{{ $pIzin->guru->nama_lengkap ?? 'Guru' }}</strong>
-                        <div style="font-size: 11.5px; color: #6b7a99;">
-                            NIP: {{ $pIzin->guru->nip ?? '-' }} &bull; {{ $pIzin->guru->no_hp ?? '-' }}
-                        </div>
-                    </td>
-                    <td>
-                        <span class="status-badge warning">{{ str_replace('_', ' ', $pIzin->jenis_izin) }}</span>
-                    </td>
-                    <td>
-                        <strong style="color: #0f172a;">{{ Carbon\Carbon::parse($pIzin->tanggal_mulai)->translatedFormat('d M Y') }}</strong>
-                        @if($pIzin->tanggal_mulai != $pIzin->tanggal_selesai)
-                            <div style="font-size: 11.5px; color: #64748b;">
-                                s/d {{ Carbon\Carbon::parse($pIzin->tanggal_selesai)->translatedFormat('d M Y') }}
-                            </div>
-                        @endif
-                    </td>
-                    <td style="max-width: 240px;">
-                        <div style="font-size: 13px; color: #334155;">{{ $pIzin->alasan }}</div>
-                    </td>
-                    <td>
-                        @if($pIzin->bukti_file)
-                            <a href="{{ Storage::url($pIzin->bukti_file) }}" target="_blank" style="font-size: 11.5px; color: #2b43b9; font-weight: 700; text-decoration: none;">
-                                <i class="fa-solid fa-paperclip"></i> Lihat Lampiran
-                            </a>
-                        @else
-                            <span style="color: #94a3b8; font-size: 12px;">-</span>
-                        @endif
-                    </td>
-                    <td style="text-align: right;">
-                        <div class="btn-action-group" style="justify-content: flex-end;">
-                            <button type="button" class="btn-approve" onclick="openApprovalModal({{ $pIzin->id }}, '{{ addslashes($pIzin->guru->nama_lengkap ?? 'Guru') }}', 'Disetujui')">
-                                <i class="fa-solid fa-check"></i> Setujui
-                            </button>
-                            <button type="button" class="btn-reject" onclick="openApprovalModal({{ $pIzin->id }}, '{{ addslashes($pIzin->guru->nama_lengkap ?? 'Guru') }}', 'Ditolak')">
-                                <i class="fa-solid fa-xmark"></i> Tolak
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                @empty
-                <tr>
-                    <td colspan="6" style="text-align: center; color: #6b7a99; padding: 28px;">
-                        <i class="fa-solid fa-circle-check" style="font-size: 28px; color: #10b981; margin-bottom: 6px; display: block;"></i>
-                        <div>Tidak ada pengajuan izin guru yang sedang menunggu persetujuan Guru Piket.</div>
-                    </td>
-                </tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- SECTION 2: Dua Kolom (Guru Izin Hari Ini & Jadwal Terdampak) -->
+<!-- SECTION: Dua Kolom (Guru Izin Hari Ini & Jadwal Terdampak) -->
 <div class="two-cols-layout">
     <!-- Left: Daftar Guru Izin Hari Ini -->
     <div class="section-card" style="margin-bottom: 0;">
@@ -494,47 +411,6 @@
     </div>
 </div>
 
-<!-- Modal Konfirmasi Persetujuan / Penolakan -->
-<div id="modalApprovalPiket" class="modal-backdrop">
-    <div class="modal-box">
-        <div class="modal-head">
-            <h4 id="modalTitle">Konfirmasi Persetujuan Izin</h4>
-            <button type="button" onclick="closeApprovalModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #94a3b8;">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <form id="formApprovalPiket" method="POST" action="">
-            @csrf
-            <div class="modal-body">
-                <input type="hidden" name="status" id="modalStatusInput" value="">
-                
-                <p id="modalDesc" style="font-size: 13.5px; color: #334155; margin-bottom: 16px;">
-                    Apakah Anda yakin ingin menyetujui pengajuan izin ini?
-                </p>
-
-                <div id="alertRejectWarning" style="display: none; background: #fef2f2; border: 1px solid #fecaca; border-radius: 10px; padding: 12px; margin-bottom: 14px; font-size: 12.5px; color: #991b1b;">
-                    <i class="fa-solid fa-circle-exclamation"></i> <strong>Peringatan Penolakan:</strong> Pengajuan izin akan dibatalkan, dan sistem akan langsung menotifikasi guru pengampu untuk <strong>tetap hadir dan melanjutkan KBM</strong>.
-                </div>
-
-                <div style="margin-bottom: 12px;">
-                    <label style="display: block; font-size: 12.5px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">
-                        Catatan Piket (Opsional untuk Setujui, Disarankan untuk Tolak):
-                    </label>
-                    <textarea name="catatan" id="modalCatatanInput" rows="3" class="filter-input" style="width: 100%; box-sizing: border-box;" placeholder="Tambahkan catatan atau alasan keputusan..."></textarea>
-                </div>
-            </div>
-            <div class="modal-foot">
-                <button type="button" onclick="closeApprovalModal()" style="padding: 8px 16px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; cursor: pointer;">
-                    Batal
-                </button>
-                <button type="submit" id="modalSubmitBtn" class="btn-approve">
-                    Konfirmasi
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <!-- Modal Detail Tugas Mandiri untuk Piket -->
 <div id="modalTugasPiket" class="modal-backdrop">
     <div class="modal-box" style="max-width: 520px;">
@@ -654,48 +530,6 @@
     document.getElementById('modalJurnalGuru').addEventListener('click', function(e) {
         if (e.target === this) {
             closeJurnalModal();
-        }
-    });
-
-    function openApprovalModal(id, namaGuru, status) {
-        const form = document.getElementById('formApprovalPiket');
-        form.action = `/guru-piket/izin-guru/${id}/status`;
-
-        const statusInput = document.getElementById('modalStatusInput');
-        statusInput.value = status;
-
-        const title = document.getElementById('modalTitle');
-        const desc = document.getElementById('modalDesc');
-        const warning = document.getElementById('alertRejectWarning');
-        const submitBtn = document.getElementById('modalSubmitBtn');
-        const catatan = document.getElementById('modalCatatanInput');
-        catatan.value = '';
-
-        if (status === 'Disetujui') {
-            title.textContent = 'Setujui Izin Guru (Lanjut ke Waka SDM)';
-            desc.innerHTML = `Setujui permohonan izin dari <strong>${namaGuru}</strong>? Pengajuan ini akan diteruskan ke sistem Waka SDM untuk persetujuan tahap 2.`;
-            warning.style.display = 'none';
-            submitBtn.className = 'btn-approve';
-            submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Ya, Setujui & Teruskan';
-        } else {
-            title.textContent = 'Tolak Izin Guru';
-            desc.innerHTML = `Tolak permohonan izin dari <strong>${namaGuru}</strong>?`;
-            warning.style.display = 'block';
-            submitBtn.className = 'btn-reject';
-            submitBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> Tolak Izin (Wajib Lanjut KBM)';
-        }
-
-        document.getElementById('modalApprovalPiket').classList.add('active');
-    }
-
-    function closeApprovalModal() {
-        document.getElementById('modalApprovalPiket').classList.remove('active');
-    }
-
-    // Close when click backdrop
-    document.getElementById('modalApprovalPiket').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeApprovalModal();
         }
     });
 </script>

@@ -906,23 +906,23 @@
             align-items: center;
             gap: 8px;
             padding: 7px 15px;
-            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-            color: #4338ca;
-            border: 1px solid #c7d2fe;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
             border-radius: 20px;
             font-size: 12.5px;
             font-weight: 700;
             text-decoration: none;
             transition: all 0.25s ease;
-            box-shadow: 0 1px 3px rgba(67, 56, 202, 0.08);
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
             white-space: nowrap;
         }
         .btn-portal-switch:hover {
-            background: #4338ca;
+            background: #2563eb;
             color: #ffffff;
-            border-color: #4338ca;
+            border-color: #2563eb;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(67, 56, 202, 0.25);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
         }
         .btn-portal-switch i {
             font-size: 13px;
@@ -1021,30 +1021,7 @@
                     </a>
                 </li>
 
-                @php
-                    $isWakaRole = Auth::user()->waka || in_array(Auth::user()->role, ['waka', 'waka_kurikulum', 'waka_sdm', 'admin']);
-                    $rosterHariIni = \App\Models\JadwalPiketKbm::getRosterForDate(\Carbon\Carbon::today());
-                    $wakaNipToday = $rosterHariIni['waka']['nip'] ?? '';
-                    $wakaNamaToday = $rosterHariIni['waka']['nama'] ?? '';
-                    $userNipGuru = Auth::user()->guru->nip ?? '';
-                    $isWakaPiketToday = ($userNipGuru && $userNipGuru === $wakaNipToday) || ($wakaNamaToday && str_contains(Auth::user()->name, explode(',', $wakaNamaToday)[0]));
-                    $pendingDispenCount = \App\Models\DispensasiSiswa::where('status', 'Menunggu')->whereDate('tanggal', \Carbon\Carbon::today())->count();
-                @endphp
 
-                @if($isWakaRole || $isWakaPiketToday)
-                <li class="sidebar-category-header">Tugas Waka Piket</li>
-                <li class="{{ request()->routeIs('waka-piket.dispensasi*') ? 'active' : '' }}">
-                    <a href="{{ route('waka-piket.dispensasi') }}" style="display: flex; align-items: center; justify-content: space-between;">
-                        <div style="display: flex; align-items: center; gap: 14px;">
-                            <i class="fa-solid fa-user-shield" style="color: #16a34a;"></i>
-                            <span>Persetujuan Dispen</span>
-                        </div>
-                        @if($pendingDispenCount > 0)
-                            <span style="background: #ef4444; color: white; font-size: 10.5px; font-weight: 800; padding: 2px 7px; border-radius: 10px;">{{ $pendingDispenCount }}</span>
-                        @endif
-                    </a>
-                </li>
-                @endif
 
                 @if(Auth::user()->role === 'admin')
                 <li class="sidebar-category-header">Akses Administrator</li>
@@ -1089,6 +1066,29 @@
                 </a>
                 @endif
 
+                @if(Auth::user()->isWaka() && Auth::user()->email !== 'waka.piket@smkn1boyolangu.sch.id')
+                {{-- Switch Portal to Waka --}}
+                @php
+                    $wakaBidang = Auth::user()->waka->bidang ?? '';
+                    $wakaLabel = 'Portal Waka';
+                    $wakaRoute = route('waka-kesiswaan.dashboard');
+                    if (Auth::user()->isWakaKurikulum()) {
+                        $wakaLabel = 'Portal Waka Kurikulum';
+                        $wakaRoute = route('waka-kurikulum.dashboard');
+                    } elseif (Auth::user()->isWakaSdm()) {
+                        $wakaLabel = 'Portal Waka SDM';
+                        $wakaRoute = route('waka-sdm.dashboard');
+                    } elseif (Auth::user()->isWakaKesiswaan()) {
+                        $wakaLabel = 'Portal Waka Kesiswaan';
+                        $wakaRoute = route('waka-kesiswaan.dashboard');
+                    }
+                @endphp
+                <a href="{{ $wakaRoute }}" class="btn-portal-switch" title="Beralih ke {{ $wakaLabel }}">
+                    <i class="fa-solid fa-user-shield"></i>
+                    <span>{{ $wakaLabel }}</span>
+                </a>
+                @endif
+
                 {{-- Interactive Notification Dropdown --}}
                 <div class="notif-dropdown-wrap" id="notifDropdownWrap">
                     <div class="notif-bell" id="notifBellBtn" onclick="toggleNotifDropdown()" title="Notifikasi">
@@ -1120,6 +1120,9 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
 
                 {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">

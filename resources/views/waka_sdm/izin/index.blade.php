@@ -1,8 +1,8 @@
 @extends('layouts.waka_sdm')
 
-@section('title', 'Persetujuan Izin Guru - Waka SDM')
-@section('header_title', 'Persetujuan Izin Guru')
-@section('header_subtitle', 'Verifikasi, tinjau berkas pendukung, dan kelola persetujuan izin ketidakhadiran guru')
+@section('title', 'Rekapitulasi Izin Guru - Waka SDM')
+@section('header_title', 'Rekapitulasi Izin Guru')
+@section('header_subtitle', 'Pantau data perizinan guru, ketidakhadiran, dan berkas pendukung')
 
 @section('styles')
 <style>
@@ -63,19 +63,10 @@
         display: inline-flex; align-items: center; padding: 4px 14px; border-radius: 20px;
         font-size: 12px; font-weight: 700;
     }
-    .status-pill.menunggu { background: #ffedd5; color: #ea580c; }
+    .status-pill.tercatat  { background: #e0f2fe; color: #0369a1; }
     .status-pill.disetujui { background: #d1fae5; color: #059669; }
-    .status-pill.ditolak { background: #fee2e2; color: #dc2626; }
-
-    .action-btns { display: flex; align-items: center; gap: 6px; }
-    .btn-act {
-        padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700;
-        border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s;
-    }
-    .btn-act.approve { background: #d1fae5; color: #059669; }
-    .btn-act.approve:hover { background: #a7f3d0; }
-    .btn-act.reject { background: #fee2e2; color: #dc2626; }
-    .btn-act.reject:hover { background: #fecaca; }
+    .status-pill.dibatalkan{ background: #f1f5f9; color: #64748b; }
+    .status-pill.ditolak   { background: #fee2e2; color: #dc2626; }
 
     .pagination-wrap { padding: 18px 24px; border-top: 1px solid #f1f5f9; }
 </style>
@@ -90,17 +81,17 @@
                 <span>Semua</span>
                 <span class="tab-badge">{{ $counts->semua }}</span>
             </a>
-            <a href="{{ route('waka-sdm.izin', ['status' => 'menunggu_waka', 'search' => $search]) }}" class="tab-btn {{ $status === 'menunggu_waka' || $status === 'Menunggu' ? 'active' : '' }}">
-                <span>Menunggu Waka SDM</span>
-                <span class="tab-badge" style="background:#fef3c7; color:#b45309;">{{ $counts->menunggu_waka }}</span>
-            </a>
-            <a href="{{ route('waka-sdm.izin', ['status' => 'diteruskan_kepsek', 'search' => $search]) }}" class="tab-btn {{ $status === 'diteruskan_kepsek' ? 'active' : '' }}">
-                <span>Diteruskan ke Kepsek</span>
-                <span class="tab-badge" style="background:#e0e7ff; color:#3730a3;">{{ $counts->diteruskan_kepsek }}</span>
+            <a href="{{ route('waka-sdm.izin', ['status' => 'Tercatat', 'search' => $search]) }}" class="tab-btn {{ $status === 'Tercatat' ? 'active' : '' }}">
+                <span>Tercatat</span>
+                <span class="tab-badge" style="background:#e0f2fe; color:#0369a1;">{{ $counts->tercatat }}</span>
             </a>
             <a href="{{ route('waka-sdm.izin', ['status' => 'Disetujui', 'search' => $search]) }}" class="tab-btn {{ $status === 'Disetujui' ? 'active' : '' }}">
-                <span>Disetujui Penuh</span>
+                <span>Disetujui</span>
                 <span class="tab-badge" style="background:#d1fae5; color:#065f46;">{{ $counts->disetujui }}</span>
+            </a>
+            <a href="{{ route('waka-sdm.izin', ['status' => 'Dibatalkan', 'search' => $search]) }}" class="tab-btn {{ $status === 'Dibatalkan' ? 'active' : '' }}">
+                <span>Dibatalkan</span>
+                <span class="tab-badge" style="background:#f1f5f9; color:#475569;">{{ $counts->dibatalkan }}</span>
             </a>
             <a href="{{ route('waka-sdm.izin', ['status' => 'Ditolak', 'search' => $search]) }}" class="tab-btn {{ $status === 'Ditolak' ? 'active' : '' }}">
                 <span>Ditolak</span>
@@ -132,8 +123,7 @@
                         <th>Alasan</th>
                         <th>Berkas</th>
                         <th>Status</th>
-                        <th>Persetujuan</th>
-                        <th style="text-align: right;">Aksi</th>
+                        <th>Keterangan</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -179,95 +169,48 @@
                                 @endif
                             </td>
                             <td>
-                                @if($iz->status === 'Disetujui')
-                                    <span class="status-pill disetujui"><i class="fa-solid fa-circle-check"></i> Disetujui Penuh</span>
-                                @elseif($iz->status === 'Ditolak')
-                                    <span class="status-pill ditolak"><i class="fa-solid fa-circle-xmark"></i> Ditolak ({{ $iz->ditolak_oleh_role ?? 'Sekolah' }})</span>
-                                @elseif($iz->tahap_approval === 'waka_sdm')
-                                    <span class="status-pill menunggu" style="background:#fef3c7; color:#b45309;">
-                                        <i class="fa-solid fa-hourglass-half"></i> Menunggu Waka SDM
+                                @if($iz->status === 'Tercatat')
+                                    <span class="status-pill" style="background:#dbeafe; color:#1e40af; font-weight:700;">
+                                        <i class="fa-solid fa-circle-check"></i> Tercatat
                                     </span>
-                                    <div style="font-size:11px; color:#10b981; font-weight:700; margin-top:2px;">
-                                        &bull; Lolos Guru Piket
-                                    </div>
-                                @elseif($iz->tahap_approval === 'kepsek')
-                                    <span class="status-pill" style="background:#e0e7ff; color:#3730a3;">
-                                        <i class="fa-solid fa-paper-plane"></i> Diteruskan ke Kepsek
+                                @elseif($iz->status === 'Disetujui')
+                                    <span class="status-pill disetujui">
+                                        <i class="fa-solid fa-circle-check"></i> Disetujui
+                                    </span>
+                                @elseif($iz->status === 'Dibatalkan')
+                                    <span class="status-pill" style="background:#f1f5f9; color:#64748b; font-weight:700;">
+                                        <i class="fa-solid fa-ban"></i> Dibatalkan
+                                    </span>
+                                @elseif($iz->status === 'Ditolak')
+                                    <span class="status-pill ditolak">
+                                        <i class="fa-solid fa-circle-xmark"></i> Ditolak
                                     </span>
                                 @else
-                                    <span class="status-pill menunggu" style="background:#f1f5f9; color:#475569;">
-                                        <i class="fa-solid fa-clock"></i> Tahap Guru Piket
-                                    </span>
+                                    <span class="status-pill">{{ $iz->status }}</span>
                                 @endif
                             </td>
                             <td>
-                                <div style="font-size:11.5px; line-height:1.4;">
-                                    <div><strong>1. Piket:</strong> 
-                                        @if($iz->piket_status === 'Disetujui')
-                                            <span style="color:#10b981; font-weight:700;">Disetujui</span>
-                                        @elseif($iz->piket_status === 'Ditolak')
-                                            <span style="color:#ef4444; font-weight:700;">Ditolak</span>
-                                        @else
-                                            <span style="color:#94a3b8;">Menunggu</span>
-                                        @endif
+                                @if($iz->status === 'Dibatalkan' && $iz->alasan_batal)
+                                    <div style="font-size:12px; color:#ef4444;">
+                                        <strong>Alasan Batal:</strong> {{ $iz->alasan_batal }}
                                     </div>
-                                    <div><strong>2. Waka SDM:</strong> 
-                                        @if($iz->waka_status === 'Disetujui')
-                                            <span style="color:#10b981; font-weight:700;">Disetujui</span>
-                                        @elseif($iz->waka_status === 'Ditolak')
-                                            <span style="color:#ef4444; font-weight:700;">Ditolak</span>
-                                        @else
-                                            <span style="color:#94a3b8;">Menunggu</span>
-                                        @endif
-                                    </div>
-                                    <div><strong>3. Kepsek:</strong> 
-                                        @if($iz->kepsek_status === 'Disetujui')
-                                            <span style="color:#10b981; font-weight:700;">Disetujui</span>
-                                        @elseif($iz->kepsek_status === 'Ditolak')
-                                            <span style="color:#ef4444; font-weight:700;">Ditolak</span>
-                                        @else
-                                            <span style="color:#94a3b8;">Menunggu</span>
-                                        @endif
-                                    </div>
-                                    @if($iz->waka_catatan)
-                                        <div style="font-size:11px; color:#64748b; font-style:italic; margin-top:2px;">
-                                            Catatan: "{{ $iz->waka_catatan }}"
+                                    @if($iz->dibatalkanOlehUser)
+                                        <div style="font-size:11px; color:#94a3b8;">
+                                            Oleh: {{ $iz->dibatalkanOlehUser->name }} ({{ \Carbon\Carbon::parse($iz->dibatalkan_at)->format('d/m/Y H:i') }})
                                         </div>
                                     @endif
-                                </div>
-                            </td>
-                            <td style="text-align: right;">
-                                <div class="action-btns" style="justify-content: flex-end;">
-                                    @if($iz->tahap_approval === 'waka_sdm')
-                                        <button type="button" class="btn-act approve" onclick="openActionModal({{ $iz->id }}, '{{ addslashes($nama) }}', 'Disetujui')">
-                                            <i class="fa-solid fa-check"></i> Setujui
-                                        </button>
-                                        <button type="button" class="btn-act reject" onclick="openActionModal({{ $iz->id }}, '{{ addslashes($nama) }}', 'Ditolak')">
-                                            <i class="fa-solid fa-xmark"></i> Tolak
-                                        </button>
-                                    @elseif($iz->tahap_approval === 'kepsek')
-                                        <span style="font-size:11.5px; font-weight:700; color:#4338ca; background:#e0e7ff; padding:4px 8px; border-radius:6px;">
-                                            Di Kepala Sekolah
-                                        </span>
-                                    @elseif($iz->status === 'Disetujui')
-                                        <span style="font-size:11.5px; font-weight:700; color:#065f46; background:#d1fae5; padding:4px 8px; border-radius:6px;">
-                                            Disetujui Penuh
-                                        </span>
-                                    @elseif($iz->status === 'Ditolak')
-                                        <span style="font-size:11.5px; font-weight:700; color:#991b1b; background:#fee2e2; padding:4px 8px; border-radius:6px;">
-                                            Ditolak
-                                        </span>
-                                    @else
-                                        <span style="font-size:11.5px; font-weight:600; color:#64748b;">
-                                            Tahap Guru Piket
-                                        </span>
-                                    @endif
-                                </div>
+                                @elseif($iz->catatan)
+                                    <div style="font-size:12px; color:#64748b; font-style:italic;">
+                                        {{ $iz->catatan }}
+                                    </div>
+                                @else
+                                    <span style="color:#94a3b8; font-size:12px;">-</span>
+                                @endif
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" style="text-align:center; padding:40px; color:#94a3b8;">
+                            <td colspan="7" style="text-align:center; padding:40px; color:#94a3b8;">
                                 <i class="fa-solid fa-inbox" style="font-size:32px; margin-bottom:8px; display:block;"></i>
                                 Tidak ada data permohonan izin guru yang sesuai filter.
                             </td>
@@ -281,64 +224,4 @@
         </div>
     </div>
 </div>
-
-{{-- Action Modal --}}
-<div class="modal-overlay" id="actionModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
-    <div style="background:white; border-radius:20px; width:100%; max-width:460px; box-shadow:0 24px 60px rgba(0,0,0,0.18); overflow:hidden; padding:24px;">
-        <h3 id="modalActionTitle" style="font-size:17px; font-weight:800; color:#0f172a; margin-bottom:8px;">Konfirmasi Persetujuan</h3>
-        <p id="modalActionDesc" style="font-size:13px; color:#64748b; margin-bottom:16px;"></p>
-        
-        <div id="modalRejectNotice" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px; margin-bottom:14px; font-size:12.5px; color:#991b1b;">
-            <i class="fa-solid fa-circle-exclamation"></i> <strong>Instruksi Penolakan:</strong> Penolakan izin oleh Waka SDM akan mengirim notifikasi langsung ke guru mapel bahwa permohonan ditolak dan guru <strong>harus tetap melanjutkan KBM</strong>.
-        </div>
-
-        <form id="actionForm" method="POST">
-            @csrf
-            <input type="hidden" name="status" id="actionStatusInput">
-            <div style="margin-bottom:18px;">
-                <label style="font-size:12.5px; font-weight:700; color:#1e293b; display:block; margin-bottom:6px;">
-                    Catatan Waka SDM (Opsional untuk Setuju, Disarankan untuk Tolak):
-                </label>
-                <textarea name="catatan" class="filter-input" style="width:100%; height:70px; resize:vertical; box-sizing:border-box;" placeholder="Tambahkan catatan jika ada..."></textarea>
-            </div>
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" class="tab-btn" onclick="closeActionModal()">Batal</button>
-                <button type="submit" id="btnActionSubmit" class="btn-search">Konfirmasi</button>
-            </div>
-        </form>
-    </div>
-</div>
-@endsection
-
-@section('scripts')
-<script>
-    function openActionModal(id, guruName, status) {
-        document.getElementById('actionForm').action = `/waka-sdm/izin/${id}/status`;
-        document.getElementById('actionStatusInput').value = status;
-        
-        const notice = document.getElementById('modalRejectNotice');
-        const btn = document.getElementById('btnActionSubmit');
-
-        if (status === 'Disetujui') {
-            document.getElementById('modalActionTitle').innerText = 'Setujui Izin Guru (Tahap 2)';
-            document.getElementById('modalActionDesc').innerHTML = `Apakah Anda yakin ingin menyetujui pengajuan izin untuk <strong>${guruName}</strong>? Pengajuan ini akan diteruskan ke <strong>Kepala Sekolah</strong> untuk persetujuan final.`;
-            notice.style.display = 'none';
-            btn.style.background = '#059669';
-            btn.innerText = 'Ya, Setujui & Teruskan';
-        } else {
-            document.getElementById('modalActionTitle').innerText = 'Tolak Izin Guru (Tahap 2)';
-            document.getElementById('modalActionDesc').innerHTML = `Tolak permohonan izin untuk <strong>${guruName}</strong>?`;
-            notice.style.display = 'block';
-            btn.style.background = '#dc2626';
-            btn.innerText = 'Tolak Izin (Wajib Lanjut KBM)';
-        }
-
-        const modal = document.getElementById('actionModal');
-        modal.style.display = 'flex';
-    }
-
-    function closeActionModal() {
-        document.getElementById('actionModal').style.display = 'none';
-    }
-</script>
 @endsection

@@ -3,20 +3,15 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use App\Models\User;
-use App\Models\Admin;
 use App\Models\WaliKelas;
-use App\Models\GuruPiket;
-use App\Models\GuruMapel;
-use App\Models\Satpam;
-use App\Models\KepalaSekolah;
-use App\Models\Waka;
 use App\Models\Guru;
 use App\Models\Kelas;
 use App\Models\Jurusan;
 use App\Models\Mapel;
 use App\Models\TahunAjaran;
+
 
 class DatabaseSeeder extends Seeder
 {
@@ -39,147 +34,46 @@ class DatabaseSeeder extends Seeder
         $mapelTkj = Mapel::create(['kode_mapel' => 'TKJ01', 'nama_mapel' => 'Administrasi Infrastruktur Jaringan', 'kelompok' => 'Produktif']);
         $mapelMtk = Mapel::create(['kode_mapel' => 'MTK01', 'nama_mapel' => 'Matematika Terapan', 'kelompok' => 'Adaptif']);
 
-        // 3. User & Role Records across separate tables
-        // Admin
+        // 3. Akun operasional minimal (dipakai oleh relasi guru, kelas, jurnal di bawah)
+        // Akun demo lengkap (password 'password') ada di DemoSeeder — hanya local/testing.
+        //
+        // ADMIN: password diambil dari env ADMIN_INITIAL_PASSWORD.
+        // Setelah instalasi baru, jalankan:
+        //   php artisan user:set-password admin@smkn1boyolangu.sch.id
+        // atau set di .env: ADMIN_INITIAL_PASSWORD=NipKuatAnda123!
+        // Jika kosong, password akan berupa string acak (admin perlu di-reset via artisan).
+        $adminInitialPassword = env('ADMIN_INITIAL_PASSWORD', Str::random(32));
         $userAdmin = User::create([
-            'name' => 'Administrator',
-            'email' => 'admin@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'admin',
+            'name'      => 'Administrator',
+            'email'     => 'admin@smkn1boyolangu.sch.id',
+            'password'  => \Illuminate\Support\Facades\Hash::make($adminInitialPassword),
+            'role'      => 'admin',
             'is_active' => true,
         ]);
-        Admin::create([
-            'user_id' => $userAdmin->id,
-            'nip' => '198001012005011001',
-            'nama_lengkap' => 'Administrator Utama',
-            'no_hp' => '081234567890',
-        ]);
 
-        // Wali Kelas
         $userWali = User::create([
-            'name' => 'Drs. Ahmad Fauzi, M.Pd (Wali Kelas)',
-            'email' => 'walikelas@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'wali_kelas',
+            'name'      => 'Drs. Ahmad Fauzi, M.Pd',
+            'email'     => 'a.fauzi@smkn1boyolangu.sch.id',
+            'password'  => \Illuminate\Support\Facades\Hash::make(Str::random(32)),
+            'role'      => 'wali_kelas',
             'is_active' => true,
         ]);
         $waliKelasRecord = WaliKelas::create([
-            'user_id' => $userWali->id,
-            'nip' => '197502122003121002',
+            'user_id'      => $userWali->id,
+            'nip'          => '197502122003121002',
             'nama_lengkap' => 'Drs. Ahmad Fauzi, M.Pd',
             'jenis_kelamin' => 'L',
-            'no_hp' => '081234567891',
+            'no_hp'        => '081234567891',
         ]);
 
-        // Guru Piket (Akun Bersama Petugas Piket)
-        $userPiket = User::create([
-            'name' => 'Petugas Piket',
-            'email' => 'gurupiket@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'guru_piket',
-            'is_active' => true,
-        ]);
-        GuruPiket::create([
-            'user_id' => $userPiket->id,
-            'nip' => 'PIKET-SMKN1',
-            'nama_lengkap' => 'Petugas Piket',
-            'jenis_kelamin' => 'L',
-            'no_hp' => '081234567892',
-            'hari_piket' => 'Senin s/d Jumat',
-        ]);
-
-        // Guru Mapel
         $userMapel = User::create([
-            'name' => 'Siti Rahayu, S.Kom (Guru Mapel)',
-            'email' => 'gurumapel@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'guru_mapel',
-            'is_active' => true,
-        ]);
-        GuruMapel::create([
-            'user_id' => $userMapel->id,
-            'nip' => '198805202012022004',
-            'nama_lengkap' => 'Siti Rahayu, S.Kom',
-            'jenis_kelamin' => 'P',
-            'no_hp' => '081234567893',
-        ]);
-
-        // Kepala Sekolah
-        $userKepsek = User::create([
-            'name' => 'Dr. H. Supriyanto, M.Pd (Kepala Sekolah)',
-            'email' => 'kepsek@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'kepala_sekolah',
-            'is_active' => true,
-        ]);
-        KepalaSekolah::create([
-            'user_id' => $userKepsek->id,
-            'nip' => '196808101994031005',
-            'nama_lengkap' => 'Dr. H. Supriyanto, M.Pd',
-            'jenis_kelamin' => 'L',
-            'no_hp' => '081234567894',
-            'periode_jabatan' => '2022-2026',
-        ]);
-
-        // Waka Kurikulum
-        $userWakaKurikulum = User::create([
-            'name' => 'Budi Santoso, M.T (Waka Kurikulum)',
-            'email' => 'wakakurikulum@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'waka_kurikulum',
-            'is_active' => true,
-        ]);
-        Waka::create([
-            'user_id' => $userWakaKurikulum->id,
-            'nip' => '197911042006041006',
-            'nama_lengkap' => 'Budi Santoso, M.T',
-            'jenis_kelamin' => 'L',
-            'no_hp' => '081234567895',
-            'bidang' => 'Kurikulum',
-        ]);
-
-        // Waka SDM
-        $userWakaSdm = User::create([
-            'name' => 'Dr. Hendra Wijaya, M.Pd (Waka SDM)',
-            'email' => 'wakasdm@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'waka_sdm',
-            'is_active' => true,
-        ]);
-        Waka::create([
-            'user_id' => $userWakaSdm->id,
-            'nip' => '198103152008011009',
-            'nama_lengkap' => 'Dr. Hendra Wijaya, M.Pd',
-            'jenis_kelamin' => 'L',
-            'no_hp' => '081234567897',
-            'bidang' => 'SDM',
-        ]);
-
-        // Wali Murid / Siswa Sample
-        $userWaliMurid = User::create([
-            'name' => 'Bapak/Ibu Wali Murid',
-            'email' => 'walimurid@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'wali_murid',
+            'name'      => 'Siti Rahayu, S.Kom',
+            'email'     => 's.rahayu@smkn1boyolangu.sch.id',
+            'password'  => \Illuminate\Support\Facades\Hash::make(Str::random(32)),
+            'role'      => 'guru_mapel',
             'is_active' => true,
         ]);
 
-        // Satpam
-        $userSatpam = User::create([
-            'name' => 'Agus Setiawan (Satpam Gate)',
-            'email' => 'satpam@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'satpam',
-            'is_active' => true,
-        ]);
-        Satpam::create([
-            'user_id' => $userSatpam->id,
-            'nip' => '9900112233',
-            'nama_lengkap' => 'Agus Setiawan',
-            'jenis_kelamin' => 'L',
-            'no_hp' => '081234567896',
-            'pos_jaga' => 'Gerbang Utama',
-        ]);
 
         // 4. Sample Kelas & Guru entries
         $guru1 = Guru::create([
@@ -333,5 +227,10 @@ class DatabaseSeeder extends Seeder
             JadwalKbmBatch3Seeder::class,
             JadwalKbmBatch4Seeder::class,
         ]);
+
+        // Akun demo (password 'password') — hanya local & testing
+        if (app()->environment(['local', 'testing'])) {
+            $this->call([DemoSeeder::class]);
+        }
     }
 }

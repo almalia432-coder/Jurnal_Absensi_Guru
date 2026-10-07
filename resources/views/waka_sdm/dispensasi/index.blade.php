@@ -1,8 +1,8 @@
 @extends('layouts.waka_sdm')
 
-@section('title', 'Persetujuan Dispensasi Siswa - Waka SDM')
-@section('header_title', 'Persetujuan Dispensasi Siswa')
-@section('header_subtitle', 'Verifikasi izin meninggalkan sekolah untuk lomba, kegiatan dinas, atau keperluan siswa')
+@section('title', 'Monitoring Dispensasi Siswa - Waka SDM')
+@section('header_title', 'Monitoring Dispensasi Siswa')
+@section('header_subtitle', 'Rekapitulasi dan pemantauan izin dispensasi siswa KBM (Persetujuan operasional harian diproses oleh Waka Piket KBM)')
 
 @section('styles')
 <style>
@@ -83,6 +83,19 @@
 
 @section('content')
 <div>
+    {{-- Info SOP Notice Banner --}}
+    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-left: 5px solid #16a34a; border-radius: 14px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.05);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-circle-info" style="font-size: 20px; color: #16a34a;"></i>
+            <div style="font-size: 13px; color: #166534; line-height: 1.45;">
+                <strong>Ketentuan SOP Sekolah:</strong> Persetujuan operasional harian dispensasi siswa diproses langsung oleh <strong>Waka Piket KBM</strong> yang bertugas hari itu. Halaman ini berfungsi sebagai arsip monitoring, rekapitulasi pelaporan, dan audit ketertiban KBM sekolah.
+            </div>
+        </div>
+        <a href="{{ route('waka-sdm.izin') }}" style="background: #16a34a; color: white; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-user-check"></i> Kelola Izin Guru
+        </a>
+    </div>
+
     {{-- Filter Bar --}}
     <div class="filter-card">
         <div class="status-tabs">
@@ -192,10 +205,14 @@
                                 @endif
                             </td>
                             <td>
-                                @if($ds->status === 'Disetujui' || $ds->status === 'Disetujui_Waka' || $ds->status === 'Selesai')
+                                @if(in_array($ds->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))
                                     <span class="status-pill disetujui">Disetujui</span>
+                                @elseif($ds->status === 'Disetujui_Piket')
+                                    <span class="status-pill menunggu" style="background:#dbeafe; color:#1e40af;">Disetujui Piket</span>
                                 @elseif($ds->status === 'Ditolak')
                                     <span class="status-pill ditolak">Ditolak</span>
+                                @elseif($ds->status === 'Dibatalkan')
+                                    <span class="status-pill ditolak" style="background:#fce7f3; color:#9d174d;">Dibatalkan</span>
                                 @else
                                     <span class="status-pill menunggu">Menunggu</span>
                                 @endif
@@ -210,11 +227,13 @@
                             </td>
                             <td style="text-align: right;">
                                 <div class="action-btns" style="justify-content: flex-end;">
-                                    <button type="button" class="btn-act approve" onclick="openDispensasiActionModal({{ $ds->id }}, '{{ addslashes($nama) }}', 'Disetujui')">
-                                        <i class="fa-solid fa-check"></i> Setujui
-                                    </button>
-                                    <button type="button" class="btn-act reject" onclick="openDispensasiActionModal({{ $ds->id }}, '{{ addslashes($nama) }}', 'Ditolak')">
-                                        <i class="fa-solid fa-xmark"></i> Tolak
+                                    @if(in_array($ds->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))
+                                        <a href="{{ route('guru-piket.dispensasi.cetak', $ds->id) }}" target="_blank" class="btn-act approve" style="text-decoration:none;" title="Cetak Surat Izin Keluar">
+                                            <i class="fa-solid fa-print"></i> Slip
+                                        </a>
+                                    @endif
+                                    <button type="button" class="btn-act" style="background:#f1f5f9; color:#475569;" onclick="openDispensasiActionModal({{ $ds->id }}, '{{ addslashes($nama) }}', '{{ $ds->status }}')" title="Detail / Tinjau">
+                                        <i class="fa-solid fa-eye"></i> Tinjau
                                     </button>
                                 </div>
                             </td>
@@ -236,26 +255,17 @@
     </div>
 </div>
 
-{{-- Action Modal Dispensasi --}}
+{{-- Detail Modal Dispensasi (Read-Only) --}}
 <div class="modal-overlay" id="actionDispensasiModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
     <div style="background:white; border-radius:20px; width:100%; max-width:440px; box-shadow:0 24px 60px rgba(0,0,0,0.18); overflow:hidden; padding:24px;">
-        <h3 id="modalDispActionTitle" style="font-size:17px; font-weight:800; color:#0f172a; margin-bottom:8px;">Konfirmasi Persetujuan</h3>
+        <h3 id="modalDispActionTitle" style="font-size:17px; font-weight:800; color:#0f172a; margin-bottom:8px;">Detail Dispensasi</h3>
         <p id="modalDispActionDesc" style="font-size:13px; color:#64748b; margin-bottom:16px;"></p>
-        
-        <form id="actionDispForm" method="POST">
-            @csrf
-            <input type="hidden" name="status" id="actionDispStatusInput">
-            <div style="margin-bottom:18px;">
-                <label style="font-size:12.5px; font-weight:700; color:#1e293b; display:block; margin-bottom:6px;">
-                    Catatan Waka SDM (Opsional):
-                </label>
-                <textarea name="catatan" class="filter-input" style="width:100%; height:70px; resize:vertical;" placeholder="Tambahkan catatan jika ada..."></textarea>
-            </div>
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" class="tab-btn" onclick="closeDispensasiActionModal()">Batal</button>
-                <button type="submit" id="btnDispActionSubmit" class="btn-search">Konfirmasi</button>
-            </div>
-        </form>
+        <div style="padding:12px; background:#f8fafc; border-radius:12px; margin-bottom:16px;">
+            <p style="font-size:12px; color:#94a3b8; margin:0;">Persetujuan dispensasi kini melalui Guru Piket (Tahap 1) dan Waka Piket (Tahap 2).</p>
+        </div>
+        <div style="display:flex; justify-content:flex-end;">
+            <button type="button" class="tab-btn" onclick="closeDispensasiActionModal()">Tutup</button>
+        </div>
     </div>
 </div>
 @endsection
@@ -263,19 +273,8 @@
 @section('scripts')
 <script>
     function openDispensasiActionModal(id, siswaName, status) {
-        document.getElementById('actionDispForm').action = `/waka-sdm/dispensasi/${id}/status`;
-        document.getElementById('actionDispStatusInput').value = status;
-        document.getElementById('modalDispActionTitle').innerText = `${status} Dispensasi Siswa`;
-        document.getElementById('modalDispActionDesc').innerText = `Apakah Anda yakin ingin memberikan keputusan "${status}" untuk dispensasi siswa ${siswaName}?`;
-        
-        const btn = document.getElementById('btnDispActionSubmit');
-        if (status === 'Disetujui') {
-            btn.style.background = '#059669';
-            btn.innerText = 'Ya, Setujui';
-        } else {
-            btn.style.background = '#dc2626';
-            btn.innerText = 'Ya, Tolak';
-        }
+        document.getElementById('modalDispActionTitle').innerText = `Detail Dispensasi: ${siswaName}`;
+        document.getElementById('modalDispActionDesc').innerText = `Status saat ini: ${status}`;
 
         const modal = document.getElementById('actionDispensasiModal');
         modal.style.display = 'flex';

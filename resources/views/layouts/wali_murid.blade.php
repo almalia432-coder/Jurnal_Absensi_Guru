@@ -453,6 +453,9 @@
                     </div>
                 </div>
 
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
+
                 {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">
                     <div class="user-profile-badge" onclick="toggleProfileDropdown()">

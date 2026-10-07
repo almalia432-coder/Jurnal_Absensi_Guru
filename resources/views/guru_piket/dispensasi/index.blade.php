@@ -323,10 +323,16 @@
                     <td>
                         @if($d->status === 'Menunggu')
                             <span class="status-badge warning">Menunggu</span>
-                        @elseif($d->status === 'Disetujui' && !$d->jam_kembali)
-                            <span class="status-badge info">Sedang Keluar</span>
-                        @elseif($d->status === 'Selesai' || ($d->status === 'Disetujui' && $d->jam_kembali))
+                        @elseif($d->status === 'Disetujui_Piket')
+                            <span class="status-badge info" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Menunggu Waka Piket</span>
+                        @elseif($d->status === 'Disetujui' && !$d->jam_kembali && !$d->jam_kembali_aktual)
+                            <span class="status-badge info">Disetujui / Sedang Keluar</span>
+                        @elseif($d->status === 'Selesai' || ($d->status === 'Disetujui' && ($d->jam_kembali || $d->jam_kembali_aktual)))
                             <span class="status-badge success">Kembali / Selesai</span>
+                        @elseif($d->status === 'Ditolak')
+                            <span class="status-badge danger">Ditolak</span>
+                        @elseif($d->status === 'Dibatalkan')
+                            <span class="status-badge danger" style="background:#fce7f3; color:#9d174d;">Dibatalkan</span>
                         @else
                             <span class="status-badge danger">{{ $d->status }}</span>
                         @endif
@@ -338,15 +344,22 @@
                     <td>
                         <div class="action-btn-wrap">
                             @if($d->status === 'Menunggu')
-                                <form action="{{ route('guru-piket.dispensasi.status', $d->id) }}" method="POST">
+                                <form action="{{ route('guru-piket.dispensasi.status', $d->id) }}" method="POST" style="display:inline;">
                                     @csrf
                                     <input type="hidden" name="action" value="setujui">
-                                    <button type="submit" class="btn-action approve" title="Setujui Izin">
+                                    <button type="submit" class="btn-action approve" title="Setujui Tahap 1 (Guru Piket)">
                                         <i class="fa-solid fa-check"></i> Setujui
                                     </button>
                                 </form>
-                            @elseif($d->status === 'Disetujui' && !$d->jam_kembali)
-                                <form action="{{ route('guru-piket.dispensasi.status', $d->id) }}" method="POST">
+                                <button type="button" class="btn-action" style="background:#fee2e2; color:#dc2626; border:1px solid #fecaca;" onclick="openTolakDispensasiModal({{ $d->id }}, '{{ addslashes($d->siswa->nama_lengkap ?? 'Siswa') }}')" title="Tolak Permohonan">
+                                    <i class="fa-solid fa-xmark"></i> Tolak
+                                </button>
+                            @elseif($d->status === 'Disetujui_Piket')
+                                <span style="font-size: 11px; font-weight: 700; color: #0284c7; background: #f0f9ff; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid fa-clock"></i> Menunggu waka piket
+                                </span>
+                            @elseif($d->status === 'Disetujui' && !$d->jam_kembali && !$d->jam_kembali_aktual)
+                                <form action="{{ route('guru-piket.dispensasi.status', $d->id) }}" method="POST" style="display:inline;">
                                     @csrf
                                     <input type="hidden" name="action" value="kembali">
                                     <button type="submit" class="btn-action return" title="Konfirmasi Siswa Kembali">
@@ -355,9 +368,11 @@
                                 </form>
                             @endif
 
-                            <a href="{{ route('guru-piket.dispensasi.cetak', $d->id) }}" target="_blank" class="btn-action print" title="Cetak Surat Izin Satpam">
-                                <i class="fa-solid fa-print"></i> Cetak Slip
-                            </a>
+                            @if(in_array($d->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))
+                                <a href="{{ route('guru-piket.dispensasi.cetak', $d->id) }}" target="_blank" class="btn-action print" title="Cetak Surat Izin Satpam">
+                                    <i class="fa-solid fa-print"></i> Cetak Slip
+                                </a>
+                            @endif
                         </div>
                     </td>
                 </tr>
@@ -456,31 +471,7 @@
                                 Tidak ada siswa yang cocok dengan filter.
                             </div>
                             <div id="dispensasiSiswaOptions">
-                                @foreach($siswaSelectOption as $s)
-                                    <div class="dispensasi-siswa-item" 
-                                         data-id="{{ $s->id_siswa }}" 
-                                         data-name="{{ $s->nama_lengkap }}" 
-                                         data-kelas="{{ $s->kelas->nama_kelas ?? '-' }}" 
-                                         data-id-kelas="{{ $s->id_kelas }}"
-                                         data-tingkat="{{ $s->kelas->tingkat ?? '' }}"
-                                         data-nisn="{{ $s->nisn }}"
-                                         data-jurusan="{{ strtolower($s->kelas->jurusan ?? '') }}"
-                                         data-search="{{ strtolower($s->nama_lengkap . ' ' . ($s->kelas->nama_kelas ?? '') . ' ' . $s->nisn) }}"
-                                         onclick="selectSiswaDispensasi(this)"
-                                         style="padding: 9px 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s ease; border-bottom: 1px solid #f8fafc;">
-                                        <div>
-                                            <div class="siswa-name" style="font-weight: 700; font-size: 13px; color: #1b2559;">{{ $s->nama_lengkap }}</div>
-                                            <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
-                                                <span style="background: #eef2ff; color: #2b43b9; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">{{ $s->kelas->nama_kelas ?? '-' }}</span>
-                                                @if($s->kelas->jurusan ?? null)
-                                                    <span style="background: #fff7ed; color: #c2410c; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 10px; margin-left: 4px;">{{ $s->kelas->jurusan }}</span>
-                                                @endif
-                                                <span style="margin-left: 6px;">NISN: {{ $s->nisn }}</span>
-                                            </div>
-                                        </div>
-                                        <i class="fa-solid fa-chevron-right" style="font-size: 11px; color: #cbd5e1; transition: all 0.15s ease;"></i>
-                                    </div>
-                                @endforeach
+                                <!-- Rendered dynamically via JavaScript from allSiswaDispensasi -->
                             </div>
                         </div>
                     </div>
@@ -523,8 +514,26 @@
 
 @section('scripts')
 <script>
+    const allSiswaDispensasi = {!! json_encode($siswaSelectOption->map(fn($s) => [
+        'id'   => $s->id_siswa,
+        'name' => $s->nama_lengkap,
+        'k'    => $s->kelas->nama_kelas ?? '-',
+        'ik'   => (string)$s->id_kelas,
+        't'    => (string)($s->kelas->tingkat ?? ''),
+        'n'    => (string)($s->nisn ?? ''),
+        'j'    => strtolower($s->kelas->jurusan ?? ''),
+        's'    => strtolower($s->nama_lengkap . ' ' . ($s->kelas->nama_kelas ?? '') . ' ' . ($s->nisn ?? ''))
+    ])) !!};
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
     function openDispensasiModal() {
         document.getElementById('dispensasiModal').classList.add('show');
+        filterSiswaDispensasi();
         setTimeout(() => {
             const searchInput = document.getElementById('dispensasiSearchInput');
             if (searchInput && document.getElementById('dispensasiSearchSection').style.display !== 'none') {
@@ -542,7 +551,7 @@
         const filterTingkat = document.getElementById('dispensasiFilterTingkat')?.value || '';
         const filterKelas = document.getElementById('dispensasiFilterKelas')?.value || '';
 
-        const items = document.querySelectorAll('.dispensasi-siswa-item');
+        const container = document.getElementById('dispensasiSiswaOptions');
         const emptyMsg = document.getElementById('dispensasiSiswaEmpty');
         const counter = document.getElementById('dispensasiSiswaCount');
         const clearBtn = document.getElementById('dispensasiClearSearchBtn');
@@ -571,22 +580,21 @@
         const activeKelas = document.getElementById('dispensasiFilterKelas')?.value || '';
 
         let matchCount = 0;
-        items.forEach(item => {
-            const searchText = item.getAttribute('data-search') || '';
-            const itemTingkat = item.getAttribute('data-tingkat') || '';
-            const itemIdKelas = item.getAttribute('data-id-kelas') || '';
+        const matches = [];
 
-            const matchText   = !term        || searchText.includes(term);
-            const matchTingkat = !filterTingkat || itemTingkat === filterTingkat;
-            const matchKelas  = !activeKelas  || itemIdKelas === activeKelas;
+        for (let i = 0; i < allSiswaDispensasi.length; i++) {
+            const item = allSiswaDispensasi[i];
+            const matchText   = !term        || item.s.includes(term);
+            const matchTingkat = !filterTingkat || item.t === filterTingkat;
+            const matchKelas  = !activeKelas  || item.ik === activeKelas;
 
             if (matchText && matchTingkat && matchKelas) {
-                item.style.display = 'flex';
                 matchCount++;
-            } else {
-                item.style.display = 'none';
+                if (matches.length < 50) {
+                    matches.push(item);
+                }
             }
-        });
+        }
 
         if (emptyMsg) emptyMsg.style.display = matchCount === 0 ? 'block' : 'none';
 
@@ -594,6 +602,29 @@
             counter.innerText = hasAnyFilter
                 ? `Ditemukan ${matchCount} siswa`
                 : `Menampilkan ${matchCount} siswa`;
+        }
+
+        if (container) {
+            container.innerHTML = matches.map(s => `
+                <div class="dispensasi-siswa-item" 
+                     data-id="${s.id}" 
+                     data-name="${escapeHtml(s.name)}" 
+                     data-kelas="${escapeHtml(s.k)}" 
+                     data-nisn="${escapeHtml(s.n)}" 
+                     data-jurusan="${escapeHtml(s.j)}" 
+                     onclick="selectSiswaDispensasi(this)"
+                     style="padding: 9px 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s ease; border-bottom: 1px solid #f8fafc;">
+                    <div>
+                        <div class="siswa-name" style="font-weight: 700; font-size: 13px; color: #1b2559;">${escapeHtml(s.name)}</div>
+                        <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+                            <span style="background: #eef2ff; color: #2b43b9; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">${escapeHtml(s.k)}</span>
+                            ${s.j ? `<span style="background: #fff7ed; color: #c2410c; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 10px; margin-left: 4px;">${escapeHtml(s.j.toUpperCase())}</span>` : ''}
+                            <span style="margin-left: 6px;">NISN: ${escapeHtml(s.n)}</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="font-size: 11px; color: #cbd5e1; transition: all 0.15s ease;"></i>
+                </div>
+            `).join('');
         }
     }
 
@@ -646,5 +677,37 @@
         }
         return true;
     }
+
+    function openTolakDispensasiModal(id, siswaName) {
+        document.getElementById('formTolakDispensasi').action = `/guru-piket/dispensasi/${id}/status`;
+        document.getElementById('tolakSiswaName').innerText = siswaName;
+        document.getElementById('modalTolakDispensasi').style.display = 'flex';
+    }
+
+    function closeTolakDispensasiModal() {
+        document.getElementById('modalTolakDispensasi').style.display = 'none';
+    }
 </script>
+
+{{-- Modal Tolak Dispensasi --}}
+<div id="modalTolakDispensasi" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.6); z-index:9999; align-items:center; justify-content:center; backdrop-filter:blur(3px);">
+    <div style="background:white; border-radius:18px; width:100%; max-width:440px; padding:24px; box-shadow:0 20px 50px rgba(0,0,0,0.2);">
+        <h3 style="font-size:16px; font-weight:800; color:#0f172a; margin-bottom:6px;">Tolak Permohonan Dispensasi</h3>
+        <p style="font-size:13px; color:#64748b; margin-bottom:16px;">
+            Tolak permohonan dispensasi untuk <strong id="tolakSiswaName"></strong>. Alasan penolakan wajib diisi (minimal 5 karakter).
+        </p>
+        <form id="formTolakDispensasi" method="POST">
+            @csrf
+            <input type="hidden" name="action" value="tolak">
+            <div style="margin-bottom:16px;">
+                <label style="display:block; font-size:12px; font-weight:700; color:#334155; margin-bottom:6px;">Alasan Penolakan <span style="color:#ef4444;">*</span></label>
+                <textarea name="catatan" required minlength="5" rows="3" class="form-control" style="width:100%; padding:10px; border-radius:10px; border:1.5px solid #cbd5e1; font-size:13px;" placeholder="Contoh: Bukti surat tidak valid / kegiatan tidak resmi"></textarea>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="closeTolakDispensasiModal()" class="btn" style="background:#f1f5f9; color:#475569; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:700;">Batal</button>
+                <button type="submit" class="btn" style="background:#dc2626; color:white; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:700;">Tolak Dispensasi</button>
+            </div>
+        </form>
+    </div>
+</div>
 @endsection

@@ -22,6 +22,7 @@ use App\Models\User;
 use App\Models\LogAktivitas;
 use App\Models\StatusHarianKbm;
 use App\Models\JadwalPiketKbm;
+use App\Support\PortalResolver;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -96,10 +97,10 @@ class GuruPiketDashboardController extends Controller
             ->distinct('id_guru')
             ->count('id_guru');
 
-        $guruIzinRecords = IzinGuru::with('guru')
+        $guruIzinRecords = IzinGuru::berlaku()
+            ->with('guru')
             ->where('tanggal_mulai', '<=', $today)
             ->where('tanggal_selesai', '>=', $today)
-            ->where('status', '!=', 'Ditolak')
             ->get();
         
         $guruIzinCount = $guruIzinRecords->pluck('id_guru')->unique()->count();
@@ -112,7 +113,7 @@ class GuruPiketDashboardController extends Controller
 
         $totalDispensasi = $dispensasiToday->count();
         $dispensasiPending = $dispensasiToday->where('status', 'Menunggu')->count();
-        $dispensasiAktif = $dispensasiToday->whereIn('status', ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka'])->count();
+        $dispensasiAktif = $dispensasiToday->filter(fn($d) => in_array($d->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))->count();
 
         // Presensi Siswa Se-Sekolah Hari Ini
         $presensiToday = PresensiSiswa::whereHas('jurnal', function ($q) use ($today) {
@@ -348,10 +349,10 @@ class GuruPiketDashboardController extends Controller
             ->get()
             ->groupBy('id_kelas');
 
-        $guruIzinRecords = IzinGuru::with('guru')
+        $guruIzinRecords = IzinGuru::berlaku()
+            ->with('guru')
             ->where('tanggal_mulai', '<=', $tanggal)
             ->where('tanggal_selesai', '>=', $tanggal)
-            ->where('status', '!=', 'Ditolak')
             ->get();
 
         $kelasMonitoring = $allKelas->map(function ($k) use ($allJurnals, $allJadwals, $guruIzinRecords) {
@@ -510,38 +511,237 @@ class GuruPiketDashboardController extends Controller
     }
 
     /**
-     * Update Status Dispensasi (Setujui / Kembali / Tolak)
+     * Update Status Dispensasi — Tahap 1 (Guru Piket)
+     *
+     * Aksi:
+     *  - setujui : Menunggu → Disetujui_Piket (lanjut ke Waka Piket)
+     *  - tolak   : Menunggu → Ditolak (catatan wajib, min 5 karakter)
+     *  - kembali : Disetujui → Selesai (catat jam_kembali_aktual)
      */
     public function updateDispensasiStatus(Request $request, $id)
     {
-        $dispensasi = DispensasiSiswa::findOrFail($id);
+        $request->validate([
+            'action'  => 'required|in:setujui,tolak,kembali,batalkan',
+            'catatan' => 'nullable|string|max:500',
+        ]);
+
+        $dispensasi = DispensasiSiswa::with('siswa')->findOrFail($id);
+        $user = Auth::user();
         $action = $request->input('action');
 
-        if ($action === 'setujui') {
-            $dispensasi->update([
-                'status'              => 'Disetujui',
-                'disetujui_oleh'      => Auth::id(),
-                'tanggal_persetujuan' => now(),
-            ]);
-            $msg = 'Dispensasi siswa berhasil disetujui.';
-        } elseif ($action === 'kembali') {
-            $dispensasi->update([
-                'status'      => 'Selesai',
-                'jam_kembali' => Carbon::now()->format('H:i:s'),
-            ]);
-            $msg = 'Siswa tercatat telah kembali ke sekolah.';
-        } elseif ($action === 'tolak') {
-            $dispensasi->update([
-                'status'              => 'Ditolak',
-                'disetujui_oleh'      => Auth::id(),
-                'tanggal_persetujuan' => now(),
-            ]);
-            $msg = 'Dispensasi siswa ditolak.';
-        } else {
-            $msg = 'Status dispensasi diperbarui.';
+        // ── Otorisasi: guru piket bertugas pada tanggal dispensasi via PortalResolver (atau admin) ──
+        $dispDate = Carbon::parse($dispensasi->tanggal);
+        $isAuthorized = PortalResolver::hasDuty($user, 'piket', $dispDate);
+
+        if (!$isAuthorized) {
+            return back()->with('error', 'Anda tidak bertugas sebagai Guru Piket pada tanggal ' . $dispDate->translatedFormat('d F Y') . '.');
         }
 
-        return back()->with('success', $msg);
+        $namaSiswa = $dispensasi->siswa->nama_lengkap ?? 'Siswa';
+
+        // ── Pembatalan oleh Admin (atau aksi batalkan) ────────────────────
+        if ($action === 'batalkan') {
+            if ($user->role !== 'admin') {
+                return back()->with('error', 'Hanya administrator yang berhak membatalkan dispensasi.');
+            }
+
+            $request->validate(['catatan' => 'required|string|min:5|max:500']);
+
+            $msg = DB::transaction(function () use ($dispensasi, $user, $namaSiswa, $request) {
+                $locked = DispensasiSiswa::where('id', $dispensasi->id)->lockForUpdate()->first();
+                $locked->update([
+                    'status'          => 'Dibatalkan',
+                    'alasan_batal'    => $request->catatan,
+                    'dibatalkan_oleh' => $user->id,
+                    'dibatalkan_at'   => now(),
+                ]);
+
+                LogAktivitas::catat(
+                    'Dispensasi Siswa',
+                    "Admin ({$user->name}) MEMBATALKAN dispensasi siswa {$namaSiswa}. Alasan: {$request->catatan}",
+                    $locked,
+                    $user
+                );
+
+                if ($locked->diinput_oleh) {
+                    try {
+                        Notifikasi::create([
+                            'user_id'        => $locked->diinput_oleh,
+                            'judul'          => "Dispensasi {$namaSiswa} Dibatalkan",
+                            'pesan'          => "Dispensasi atas nama {$namaSiswa} telah dibatalkan oleh Administrator. Alasan: {$request->catatan}",
+                            'tipe'           => 'dispensasi_siswa',
+                            'reference_id'   => $locked->id,
+                            'reference_type' => DispensasiSiswa::class,
+                            'is_read'        => false,
+                        ]);
+                    } catch (\Exception $e) {}
+                }
+
+                return "Dispensasi siswa {$namaSiswa} berhasil dibatalkan.";
+            });
+
+            return back()->with('success', $msg);
+        }
+
+        // ── Setujui (Tahap 1) ─────────────────────────────────────────────
+        if ($action === 'setujui') {
+            $msg = DB::transaction(function () use ($dispensasi, $user, $namaSiswa, $request) {
+                $locked = DispensasiSiswa::where('id', $dispensasi->id)
+                    ->where('status', 'Menunggu')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$locked) {
+                    return null; // status sudah berubah
+                }
+
+                $locked->update([
+                    'status'           => 'Disetujui_Piket',
+                    'piket_approved_by' => $user->id,
+                    'piket_at'          => now(),
+                    'piket_catatan'     => $request->input('catatan'),
+                ]);
+
+                LogAktivitas::catat(
+                    'Dispensasi Siswa',
+                    "Guru Piket ({$user->name}) MENYETUJUI Tahap 1 dispensasi siswa {$namaSiswa}",
+                    $locked,
+                    $user
+                );
+
+                // Notifikasi ke Waka Piket yang bertugas pada tanggal dispensasi
+                $rosterTarget = JadwalPiketKbm::getRosterForDate(Carbon::parse($locked->tanggal));
+                $wakaDuty = $rosterTarget['waka'] ?? null;
+                if ($wakaDuty && !empty($wakaDuty['nip'])) {
+                    $wakaUser = User::whereHas('guru', fn($q) => $q->where('nip', $wakaDuty['nip']))
+                        ->where('is_active', true)->first()
+                        ?? User::whereHas('waka', fn($q) => $q->where('nip', $wakaDuty['nip']))
+                        ->where('is_active', true)->first();
+                    if ($wakaUser) {
+                        try {
+                            Notifikasi::create([
+                                'user_id'        => $wakaUser->id,
+                                'judul'          => 'Dispensasi Menunggu Persetujuan Anda',
+                                'pesan'          => "Dispensasi atas nama {$namaSiswa} telah disetujui Guru Piket dan menunggu persetujuan Waka Piket.",
+                                'tipe'           => 'dispensasi_siswa',
+                                'reference_id'   => $locked->id,
+                                'reference_type' => DispensasiSiswa::class,
+                                'is_read'        => false,
+                            ]);
+                        } catch (\Exception $e) {}
+                    }
+                }
+
+                return "Dispensasi {$namaSiswa} disetujui Guru Piket (Tahap 1). Menunggu persetujuan Waka Piket.";
+            });
+
+            if (!$msg) {
+                return back()->with('error', 'Status dispensasi sudah berubah. Silakan muat ulang halaman.');
+            }
+            return back()->with('success', $msg);
+        }
+
+        // ── Tolak (dari Menunggu) ─────────────────────────────────────────
+        if ($action === 'tolak') {
+            $request->validate(['catatan' => 'required|string|min:5|max:500']);
+
+            $msg = DB::transaction(function () use ($dispensasi, $user, $namaSiswa, $request) {
+                $locked = DispensasiSiswa::where('id', $dispensasi->id)
+                    ->where('status', 'Menunggu')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$locked) {
+                    return null;
+                }
+
+                $locked->update([
+                    'status'           => 'Ditolak',
+                    'piket_approved_by' => $user->id,
+                    'piket_at'          => now(),
+                    'piket_catatan'     => $request->input('catatan'),
+                ]);
+
+                LogAktivitas::catat(
+                    'Dispensasi Siswa',
+                    "Guru Piket ({$user->name}) MENOLAK dispensasi siswa {$namaSiswa}. Alasan: {$request->input('catatan')}",
+                    $locked,
+                    $user
+                );
+
+                // Notifikasi ke penginput
+                if ($locked->diinput_oleh) {
+                    try {
+                        Notifikasi::create([
+                            'user_id'        => $locked->diinput_oleh,
+                            'judul'          => "Dispensasi {$namaSiswa} Ditolak",
+                            'pesan'          => "Dispensasi atas nama {$namaSiswa} ditolak oleh Guru Piket. Alasan: {$request->input('catatan')}",
+                            'tipe'           => 'dispensasi_siswa',
+                            'reference_id'   => $locked->id,
+                            'reference_type' => DispensasiSiswa::class,
+                            'is_read'        => false,
+                        ]);
+                    } catch (\Exception $e) {}
+                }
+
+                return "Dispensasi {$namaSiswa} ditolak.";
+            });
+
+            if (!$msg) {
+                return back()->with('error', 'Status dispensasi sudah berubah. Silakan muat ulang halaman.');
+            }
+            return back()->with('warning', $msg);
+        }
+
+        // ── Kembali (dari Disetujui → Selesai) ───────────────────────────
+        if ($action === 'kembali') {
+            $msg = DB::transaction(function () use ($dispensasi, $user, $namaSiswa) {
+                $locked = DispensasiSiswa::where('id', $dispensasi->id)
+                    ->where('status', 'Disetujui')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$locked) {
+                    return null;
+                }
+
+                $locked->update([
+                    'status'            => 'Selesai',
+                    'jam_kembali_aktual' => Carbon::now()->format('H:i:s'),
+                ]);
+
+                LogAktivitas::catat(
+                    'Dispensasi Siswa',
+                    "Guru Piket ({$user->name}) mencatat siswa {$namaSiswa} telah kembali ke sekolah",
+                    $locked,
+                    $user
+                );
+
+                // Notifikasi ke penginput
+                if ($locked->diinput_oleh) {
+                    try {
+                        Notifikasi::create([
+                            'user_id'        => $locked->diinput_oleh,
+                            'judul'          => "{$namaSiswa} Telah Kembali",
+                            'pesan'          => "Siswa {$namaSiswa} telah kembali ke sekolah pada " . Carbon::now()->format('H:i') . ' WIB.',
+                            'tipe'           => 'dispensasi_siswa',
+                            'reference_id'   => $locked->id,
+                            'reference_type' => DispensasiSiswa::class,
+                            'is_read'        => false,
+                        ]);
+                    } catch (\Exception $e) {}
+                }
+
+                return "Siswa {$namaSiswa} tercatat telah kembali ke sekolah.";
+            });
+
+            if (!$msg) {
+                return back()->with('error', 'Status dispensasi bukan Disetujui. Tidak dapat mencatat kembali.');
+            }
+            return back()->with('success', $msg);
+        }
+
+        return back()->with('error', 'Aksi tidak valid.');
     }
 
     /**
@@ -550,7 +750,11 @@ class GuruPiketDashboardController extends Controller
     public function cetakDispensasi($id)
     {
         Carbon::setLocale('id');
-        $dispensasi = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser', 'disetujuiOlehUser'])->findOrFail($id);
+        $dispensasi = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser', 'disetujuiOlehUser', 'piketApprovedByUser'])->findOrFail($id);
+
+        if (!in_array($dispensasi->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai'])) {
+            abort(403, 'Surat izin dispensasi tidak dapat dicetak sebelum disetujui.');
+        }
 
         $rosterTarget = JadwalPiketKbm::getRosterForDate(Carbon::parse($dispensasi->tanggal));
         $wakaPiket = $rosterTarget['waka'] ?? null;
@@ -668,6 +872,7 @@ class GuruPiketDashboardController extends Controller
     {
         $izin = IzinSiswa::with('siswa')->findOrFail($id);
         $namaSiswa = $izin->siswa->nama_lengkap ?? 'Siswa';
+        $jenis = $izin->jenis_izin ?? 'Izin';
         if ($izin->bukti_file && Storage::disk('public')->exists($izin->bukti_file)) {
             Storage::disk('public')->delete($izin->bukti_file);
         }
@@ -700,23 +905,17 @@ class GuruPiketDashboardController extends Controller
 
         $tahunAjaranAktif = TahunAjaran::where('is_aktif', true)->first();
 
-        // 1. Izin yang membutuhkan persetujuan Guru Piket (Tahap 1)
-        $pendingPiketList = IzinGuru::with(['guru.user'])
-            ->where('tahap_approval', 'piket')
-            ->where('status', 'Menunggu')
-            ->orderByDesc('id')
-            ->get();
-
-        // 2. Guru yang izin pada rentang tanggal terpilih (semua status untuk monitoring)
-        $izinGuruList = IzinGuru::with(['guru', 'disetujuiOlehUser', 'piketApprover', 'wakaApprover', 'kepsekApprover'])
+        // 1. Guru yang izin pada rentang tanggal terpilih (menggunakan scopeBerlaku untuk monitoring kelas terdampak)
+        $izinGuruList = IzinGuru::berlaku()
+            ->with(['guru', 'diinputOlehUser'])
             ->where('tanggal_mulai', '<=', $tanggal)
             ->where('tanggal_selesai', '>=', $tanggal)
             ->orderByDesc('id')
             ->get();
 
-        $izinGuruIds = $izinGuruList->where('status', '!=', 'Ditolak')->pluck('id_guru')->toArray();
+        $izinGuruIds = $izinGuruList->pluck('id_guru')->toArray();
 
-        // 3. Jadwal kelas yang terdampak guru berhalangan
+        // 2. Jadwal kelas yang terdampak guru berhalangan
         $jadwalTerdampak = collect();
         if (count($izinGuruIds) > 0) {
             $jadwalTerdampak = JadwalPelajaran::with(['guru', 'kelas', 'mapel'])
@@ -738,88 +937,15 @@ class GuruPiketDashboardController extends Controller
             });
         }
 
-        // 4. Semua riwayat izin untuk tab riwayat lengkap
-        $semuaIzinList = IzinGuru::with(['guru', 'piketApprover', 'wakaApprover', 'kepsekApprover'])
+        // 3. Semua riwayat izin untuk tab riwayat lengkap
+        $semuaIzinList = IzinGuru::with(['guru', 'diinputOlehUser', 'dibatalkanOlehUser'])
             ->orderByDesc('id')
             ->paginate(15);
 
         return view('guru_piket.izin_guru.index', compact(
             'user', 'guruPiket', 'tanggal', 'todayFormatted', 'hariIni',
-            'pendingPiketList', 'izinGuruList', 'jadwalTerdampak', 'semuaIzinList'
+            'izinGuruList', 'jadwalTerdampak', 'semuaIzinList'
         ));
-    }
-
-    /**
-     * Update Status Persetujuan Izin Guru oleh Guru Piket (Tahap 1)
-     */
-    public function updateStatusIzin(Request $request, $id)
-    {
-        $request->validate([
-            'status'  => 'required|in:Disetujui,Ditolak',
-            'catatan' => 'nullable|string|max:255',
-        ]);
-
-        $izin = IzinGuru::with(['guru.user'])->findOrFail($id);
-
-        if ($request->status === 'Disetujui') {
-            $izin->update([
-                'piket_status'      => 'Disetujui',
-                'piket_approved_by' => Auth::id(),
-                'piket_at'          => now(),
-                'piket_catatan'     => $request->catatan,
-                'tahap_approval'    => 'waka_sdm',
-                // overall status tetap 'Menunggu' sampai Kepala Sekolah menyetujui tahap akhir
-            ]);
-
-            // Kirim notifikasi ke Waka SDM
-            $wakaUsers = User::where('role', 'waka_sdm')
-                ->orWhere(fn($q) => $q->where('role', 'waka')->whereHas('waka', fn($w) => $w->where('bidang', 'SDM')))
-                ->get();
-
-            $guruNama = $izin->guru->nama_lengkap ?? 'Guru';
-            foreach ($wakaUsers as $wUser) {
-                Notifikasi::create([
-                    'user_id'        => $wUser->id,
-                    'judul'          => 'Persetujuan Izin Guru (Tahap 2 - Waka SDM)',
-                    'pesan'          => "Pengajuan izin guru {$guruNama} telah disetujui Guru Piket. Menunggu peninjauan & persetujuan Anda sebagai Waka SDM.",
-                    'tipe'           => 'izin_guru',
-                    'reference_id'   => $izin->id,
-                    'reference_type' => IzinGuru::class,
-                    'is_read'        => false,
-                ]);
-            }
-
-            return back()->with('success', "Izin guru {$guruNama} berhasil disetujui oleh Guru Piket dan diteruskan ke Waka SDM.");
-        } else {
-            // Ditolak oleh Guru Piket
-            $izin->update([
-                'status'            => 'Ditolak',
-                'piket_status'      => 'Ditolak',
-                'piket_approved_by' => Auth::id(),
-                'piket_at'          => now(),
-                'piket_catatan'     => $request->catatan,
-                'tahap_approval'    => 'ditolak',
-                'ditolak_oleh_role' => 'guru_piket',
-                'ditolak_catatan'   => $request->catatan,
-            ]);
-
-            // Kirim notifikasi tegas ke Guru Mapel: Ditolak dan HARUS MELANJUTKAN KBM
-            $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;
-            if ($targetUserId) {
-                Notifikasi::create([
-                    'user_id'        => $targetUserId,
-                    'judul'          => 'Pengajuan Izin Ditolak oleh Guru Piket',
-                    'pesan'          => "Pengajuan izin {$izin->jenis_izin} Anda TIDAK DISETUJUI oleh Guru Piket." . ($request->catatan ? " Catatan: \"{$request->catatan}\"." : "") . " Anda diwajibkan untuk tetap hadir dan melanjutkan KBM.",
-                    'tipe'           => 'izin_guru',
-                    'reference_id'   => $izin->id,
-                    'reference_type' => IzinGuru::class,
-                    'is_read'        => false,
-                ]);
-            }
-
-            $guruNama = $izin->guru->nama_lengkap ?? 'Guru';
-            return back()->with('warning', "Pengajuan izin guru {$guruNama} telah ditolak. Guru bersangkutan telah dinotifikasi untuk tetap melanjutkan KBM.");
-        }
     }
 
     /**
@@ -922,7 +1048,7 @@ class GuruPiketDashboardController extends Controller
 
         // Auto calculate metrics
         $guruHadir = JurnalMengajar::where('tanggal', $tanggal)->where('status_guru', 'Hadir')->distinct('id_guru')->count('id_guru');
-        $guruIzin  = IzinGuru::where('tanggal_mulai', '<=', $tanggal)->where('tanggal_selesai', '>=', $tanggal)->distinct('id_guru')->count('id_guru');
+        $guruIzin  = IzinGuru::berlaku()->where('tanggal_mulai', '<=', $tanggal)->where('tanggal_selesai', '>=', $tanggal)->distinct('id_guru')->count('id_guru');
         $dispSiswa = DispensasiSiswa::where('tanggal', $tanggal)->count();
         $alphaSiswa = PresensiSiswa::whereHas('jurnal', fn($q) => $q->where('tanggal', $tanggal))->where('status', 'Alpha')->count();
 
@@ -966,10 +1092,10 @@ class GuruPiketDashboardController extends Controller
             ->toArray();
 
         // Data guru izin
-        $guruIzinList = IzinGuru::with('guru')
+        $guruIzinList = IzinGuru::berlaku()
+            ->with('guru')
             ->where('tanggal_mulai', '<=', $tanggal)
             ->where('tanggal_selesai', '>=', $tanggal)
-            ->where('status', '!=', 'Ditolak')
             ->get();
 
         // Data dispensasi

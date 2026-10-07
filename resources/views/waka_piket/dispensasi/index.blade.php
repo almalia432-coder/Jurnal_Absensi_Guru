@@ -1,4 +1,4 @@
-@extends(Auth::user()->role === 'waka_sdm' ? 'layouts.waka_sdm' : (Auth::user()->role === 'waka_kurikulum' ? 'layouts.waka_kurikulum' : 'layouts.guru_mapel'))
+@extends('layouts.guru_piket')
 
 @section('title', 'Persetujuan Dispensasi Siswa — Waka Piket SMKN 1 Boyolangu')
 @section('header_title', 'Persetujuan Dispensasi Siswa')
@@ -240,6 +240,35 @@
     </div>
 </div>
 
+@if(!$isWakaPiketToday && Auth::user()->email !== 'waka.piket@smkn1boyolangu.sch.id' && Auth::user()->role !== 'admin')
+<div style="background: #fffbeb; border: 1.5px solid #fef3c7; border-left: 5px solid #f59e0b; border-radius: 16px; padding: 18px 24px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.08);">
+    <div style="display: flex; align-items: center; gap: 14px;">
+        <div style="width: 44px; height: 44px; border-radius: 12px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+            <div style="font-weight: 800; font-size: 15px; color: #92400e;">Mode Pantau (Read-Only) — Anda Tidak Bertugas Sebagai Waka Piket Hari Ini</div>
+            <div style="font-size: 13px; color: #b45309; margin-top: 2px;">
+                Penanggung jawab piket KBM hari ini ({{ $todayFormatted }}) adalah: <strong>{{ $wakaPiketInfo['nama'] ?? '-' }}</strong>. Hak persetujuan dan penolakan hanya dapat dilakukan oleh Waka Piket bertugas atau melalui akun dinas meja piket.
+            </div>
+        </div>
+    </div>
+    @php
+        $backRoute = route('guru-mapel.dashboard');
+        if (Auth::user()->isWakaKurikulum()) {
+            $backRoute = route('waka-kurikulum.dashboard');
+        } elseif (Auth::user()->isWakaSdm()) {
+            $backRoute = route('waka-sdm.dashboard');
+        } elseif (Auth::user()->isWakaKesiswaan()) {
+            $backRoute = route('waka-kesiswaan.dashboard');
+        }
+    @endphp
+    <a href="{{ $backRoute }}" style="background: #d97706; color: #ffffff; padding: 10px 20px; border-radius: 12px; font-weight: 800; font-size: 13px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25);">
+        <i class="fa-solid fa-arrow-left"></i> Kembali ke Dashboard Utama
+    </a>
+</div>
+@endif
+
 {{-- Metrics Summary --}}
 <div class="metrics-grid">
     <div class="metric-card">
@@ -291,7 +320,8 @@
         <div>
             <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Status Permohonan</label>
             <select name="status" class="form-control" style="padding: 7px 12px; border-radius: 10px; border: 1.5px solid #cbd5e1; font-weight: 600; font-size: 13px;" onchange="this.form.submit()">
-                <option value="Menunggu" {{ $status === 'Menunggu' ? 'selected' : '' }}>⏳ Menunggu Persetujuan</option>
+                <option value="Disetujui_Piket" {{ $status === 'Disetujui_Piket' ? 'selected' : '' }}>⏳ Siap Disetujui Waka (Tahap 2)</option>
+                <option value="Menunggu" {{ $status === 'Menunggu' ? 'selected' : '' }}>⏳ Menunggu Guru Piket (Tahap 1)</option>
                 <option value="Disetujui" {{ $status === 'Disetujui' ? 'selected' : '' }}>✓ Sudah Disetujui</option>
                 <option value="Ditolak" {{ $status === 'Ditolak' ? 'selected' : '' }}>✕ Ditolak</option>
                 <option value="Semua" {{ $status === 'Semua' ? 'selected' : '' }}>Semua Status</option>
@@ -384,7 +414,12 @@
                     </td>
                     <td>
                         @if($item->status === 'Menunggu')
-                            <span class="status-badge warning"><i class="fa-solid fa-hourglass-half"></i> Menunggu Waka</span>
+                            <span class="status-badge warning"><i class="fa-solid fa-hourglass-half"></i> Menunggu Guru Piket</span>
+                        @elseif($item->status === 'Disetujui_Piket')
+                            <span class="status-badge warning" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;"><i class="fa-solid fa-clock"></i> Siap Disetujui Waka</span>
+                            <div style="font-size: 11px; color: #0284c7; margin-top: 3px;">
+                                piket: {{ $item->piketApprovedByUser->name ?? '-' }}
+                            </div>
                         @elseif($item->status === 'Disetujui')
                             <span class="status-badge success"><i class="fa-solid fa-circle-check"></i> Disetujui</span>
                             <div style="font-size: 11px; color: #059669; margin-top: 3px;">
@@ -392,32 +427,49 @@
                             </div>
                         @elseif($item->status === 'Ditolak')
                             <span class="status-badge danger"><i class="fa-solid fa-circle-xmark"></i> Ditolak</span>
+                        @elseif($item->status === 'Dibatalkan')
+                            <span class="status-badge danger" style="background:#fce7f3; color:#9d174d;"><i class="fa-solid fa-ban"></i> Dibatalkan</span>
                         @elseif($item->status === 'Selesai')
                             <span class="status-badge info"><i class="fa-solid fa-arrow-right-to-bracket"></i> Sudah Kembali</span>
                         @endif
                     </td>
                     <td style="text-align: center;">
-                        @if($item->status === 'Menunggu')
-                            <div style="display: flex; gap: 6px; justify-content: center;">
-                                <form action="{{ route('waka-piket.dispensasi.status', $item->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENYETUJUI dispensasi untuk {{ addslashes($item->siswa->nama_lengkap ?? 'Siswa') }}?');">
-                                    @csrf
-                                    <input type="hidden" name="action" value="setujui">
-                                    <button type="submit" class="btn-approve">
-                                        <i class="fa-solid fa-check"></i> Setujui
+                        @if($item->status === 'Disetujui_Piket')
+                            @if($isWakaPiketToday || Auth::user()->role === 'admin')
+                                <div style="display: flex; gap: 6px; justify-content: center;">
+                                    <form action="{{ route('waka-piket.dispensasi.status', $item->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENYETUJUI dispensasi untuk {{ addslashes($item->siswa->nama_lengkap ?? 'Siswa') }}?');">
+                                        @csrf
+                                        <input type="hidden" name="action" value="setujui">
+                                        <button type="submit" class="btn-approve">
+                                            <i class="fa-solid fa-check"></i> Setujui
+                                        </button>
+                                    </form>
+                                    <button type="button" class="btn-reject" onclick="openRejectModal('{{ route('waka-piket.dispensasi.status', $item->id) }}', '{{ addslashes($item->siswa->nama_lengkap ?? 'Siswa') }}')">
+                                        <i class="fa-solid fa-xmark"></i> Tolak
                                     </button>
-                                </form>
-                                <button type="button" class="btn-reject" onclick="openRejectModal('{{ route('waka-piket.dispensasi.status', $item->id) }}', '{{ addslashes($item->siswa->nama_lengkap ?? 'Siswa') }}')">
-                                    <i class="fa-solid fa-xmark"></i> Tolak
-                                </button>
+                                </div>
+                            @else
+                                <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #94a3b8; background: #f8fafc; border: 1px solid #e2e8f0; padding: 5px 11px; border-radius: 8px; font-weight: 700;">
+                                    <i class="fa-solid fa-lock" style="color: #cbd5e1;"></i> Khusus Waka Piket
+                                </span>
+                            @endif
+                        @elseif($item->status === 'Menunggu')
+                            <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
+                                <span style="font-size: 11.5px; color: #b45309; font-weight: 600;">Tahap 1 Guru Piket</span>
+                                @if($isWakaPiketToday || Auth::user()->role === 'admin')
+                                    <button type="button" class="btn-reject" style="padding: 4px 8px; font-size: 11px;" onclick="openRejectModal('{{ route('waka-piket.dispensasi.status', $item->id) }}', '{{ addslashes($item->siswa->nama_lengkap ?? 'Siswa') }}')">
+                                        Tolak
+                                    </button>
+                                @endif
                             </div>
-                        @elseif($item->status === 'Disetujui')
+                        @elseif($item->status === 'Disetujui' || $item->status === 'Selesai')
                             <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
                                 <a href="{{ route('guru-piket.dispensasi.cetak', $item->id) }}" target="_blank" class="btn-print-slip" title="Cetak Surat Izin">
-                                    <i class="fa-solid fa-print"></i> Slip Izin
+                                    <i class="fa-solid fa-print"></i> Slip
                                 </a>
                             </div>
                         @else
-                            <span style="font-size: 12px; color: #94a3b8;">Telah diproses</span>
+                            <span style="font-size: 12px; color: #94a3b8;">-</span>
                         @endif
                     </td>
                 </tr>

@@ -115,6 +115,7 @@
     .status-badge.dinas      { background: #f3e8ff; color: #7e22ce; }
     .status-badge.alpha      { background: #fef2f2; color: #ef4444; }
     .status-badge.dispensasi { background: #eef2ff; color: #2b43b9; }
+    .status-badge.terlambat  { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
 
     @media (max-width: 1024px) {
         .two-cols-layout { grid-template-columns: 1fr; }

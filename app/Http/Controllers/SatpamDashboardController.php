@@ -154,11 +154,14 @@ class SatpamDashboardController extends Controller
 
         $query = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser'])
             ->where('tanggal', $tanggal)
+            ->where('status', 'Disetujui')
             ->when($search, function ($q) use ($search) {
-                $q->whereHas('siswa', function ($sq) use ($search) {
-                    $sq->where('nama_lengkap', 'like', "%{$search}%")
-                       ->orWhere('nisn', 'like', "%{$search}%");
-                })->orWhere('alasan', 'like', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereHas('siswa', function ($sq) use ($search) {
+                        $sq->where('nama_lengkap', 'like', "%{$search}%")
+                           ->orWhere('nisn', 'like', "%{$search}%");
+                    })->orWhere('alasan', 'like', "%{$search}%");
+                });
             })
             ->orderBy('created_at', 'desc');
 
@@ -174,25 +177,66 @@ class SatpamDashboardController extends Controller
     }
 
     /**
-     * Konfirmasi Keluar / Kembali Siswa di Gerbang
+     * Catat Waktu Keluar / Kembali Siswa di Gerbang
+     *
+     * Satpam TIDAK mengubah status persetujuan — hanya mencatat waktu aktual.
+     *  - keluar  : Disetujui → catat jam_keluar_aktual (status tetap Disetujui)
+     *  - kembali : Disetujui → Selesai + catat jam_kembali_aktual
      */
     public function updateStatusDispensasi(Request $request, $id)
     {
-        $dispensasi = DispensasiSiswa::findOrFail($id);
+        $dispensasi = DispensasiSiswa::with('siswa')->findOrFail($id);
         $action = $request->input('action'); // 'keluar' atau 'kembali'
+        $namaSiswa = $dispensasi->siswa->nama_lengkap ?? 'Siswa';
 
         if ($action === 'keluar') {
-            $dispensasi->update([
-                'status' => 'Disetujui',
-                'jam_keluar' => Carbon::now()->format('H:i:s'),
-            ]);
-            return back()->with('success', "Siswa {$dispensasi->siswa->nama_lengkap} telah dikonfirmasi KELUAR gerbang pada " . Carbon::now()->format('H:i') . " WIB.");
+            $updated = DB::transaction(function () use ($dispensasi) {
+                $locked = DispensasiSiswa::where('id', $dispensasi->id)
+                    ->where('status', 'Disetujui')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$locked) {
+                    return false;
+                }
+
+                $locked->update([
+                    'jam_keluar_aktual' => Carbon::now()->format('H:i:s'),
+                ]);
+
+                return true;
+            });
+
+            if (!$updated) {
+                return back()->with('error', 'Dispensasi belum disetujui atau status sudah berubah.');
+            }
+
+            return back()->with('success', "Siswa {$namaSiswa} telah dikonfirmasi KELUAR gerbang pada " . Carbon::now()->format('H:i') . " WIB.");
+
         } elseif ($action === 'kembali') {
-            $dispensasi->update([
-                'status' => 'Selesai',
-                'jam_kembali' => Carbon::now()->format('H:i:s'),
-            ]);
-            return back()->with('success', "Siswa {$dispensasi->siswa->nama_lengkap} telah dikonfirmasi KEMBALI masuk gerbang pada " . Carbon::now()->format('H:i') . " WIB.");
+            $updated = DB::transaction(function () use ($dispensasi) {
+                $locked = DispensasiSiswa::where('id', $dispensasi->id)
+                    ->where('status', 'Disetujui')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$locked) {
+                    return false;
+                }
+
+                $locked->update([
+                    'status'             => 'Selesai',
+                    'jam_kembali_aktual' => Carbon::now()->format('H:i:s'),
+                ]);
+
+                return true;
+            });
+
+            if (!$updated) {
+                return back()->with('error', 'Dispensasi belum disetujui atau status sudah berubah.');
+            }
+
+            return back()->with('success', "Siswa {$namaSiswa} telah dikonfirmasi KEMBALI masuk gerbang pada " . Carbon::now()->format('H:i') . " WIB.");
         }
 
         return back()->with('error', 'Aksi tidak valid.');

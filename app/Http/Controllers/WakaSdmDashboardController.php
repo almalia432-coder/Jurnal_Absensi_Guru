@@ -32,7 +32,7 @@ class WakaSdmDashboardController extends Controller
         $todayFormatted = Carbon::today()->translatedFormat('d F Y');
 
         // 1. KPI Metrik Utama (4 Kartu Ringkasan)
-        $menungguIzinCount = IzinGuru::where('status', 'Menunggu')->count();
+        $tercatatIzinCount = IzinGuru::where('status', 'Tercatat')->count();
         $menungguDispensasiCount = DispensasiSiswa::where('status', 'Menunggu')->count();
 
         // Ditolak Hari Ini (Izin Guru + Dispensasi)
@@ -43,43 +43,19 @@ class WakaSdmDashboardController extends Controller
             ->whereDate('updated_at', $today)
             ->count();
 
-        // Disetujui Hari Ini (Izin Guru + Dispensasi)
-        $disetujuiHariIniCount = IzinGuru::where('status', 'Disetujui')
+        // Disetujui / Berlaku Hari Ini (Izin Guru + Dispensasi)
+        $disetujuiHariIniCount = IzinGuru::berlaku()
             ->whereDate('updated_at', $today)
             ->count() +
-            DispensasiSiswa::whereIn('status', ['Disetujui', 'Disetujui_Waka'])
+            DispensasiSiswa::final()
             ->whereDate('updated_at', $today)
             ->count();
 
-        // 2. Daftar Pengajuan Menunggu Persetujuan (Tabel Utama Gabungan)
-        $pendingIzin = IzinGuru::with(['guru.user'])
+        // 2. Daftar Pengajuan Menunggu Persetujuan Dispensasi Siswa (Monitoring)
+        $pendingApprovals = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser'])
             ->where('status', 'Menunggu')
             ->orderByDesc('created_at')
-            ->get()
-            ->map(function ($item) {
-                return (object) [
-                    'id'            => $item->id,
-                    'type'          => 'izin_guru',
-                    'type_label'    => 'Izin Guru',
-                    'type_class'    => 'blue',
-                    'nama'          => $item->guru->nama_lengkap ?? 'Guru Pengajar',
-                    'sub_info'      => $item->jenis_izin . ($item->alasan ? ' - ' . Str::limit($item->alasan, 35) : ''),
-                    'tanggal'       => Carbon::parse($item->tanggal_mulai)->translatedFormat('d M Y'),
-                    'tanggal_raw'   => $item->tanggal_mulai,
-                    'status'        => 'Menunggu',
-                    'created_at'    => $item->created_at ?? now(),
-                    'detail_url'    => route('waka-sdm.izin.status', $item->id),
-                    'jenis'         => $item->jenis_izin,
-                    'alasan'        => $item->alasan,
-                    'rentang'       => Carbon::parse($item->tanggal_mulai)->translatedFormat('d M Y') . ' s/d ' . Carbon::parse($item->tanggal_selesai)->translatedFormat('d M Y'),
-                    'bukti_file'    => $item->bukti_file,
-                    'nip_nisn'      => $item->guru->nip ?? '-',
-                ];
-            });
-
-        $pendingDispensasi = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser'])
-            ->where('status', 'Menunggu')
-            ->orderByDesc('created_at')
+            ->take(10)
             ->get()
             ->map(function ($item) {
                 return (object) [
@@ -93,7 +69,7 @@ class WakaSdmDashboardController extends Controller
                     'tanggal_raw'   => $item->tanggal,
                     'status'        => 'Menunggu',
                     'created_at'    => $item->created_at ?? now(),
-                    'detail_url'    => route('waka-sdm.dispensasi.status', $item->id),
+                    'detail_url'    => route('waka-sdm.dispensasi'),
                     'jenis'         => 'Dispensasi Siswa',
                     'alasan'        => $item->alasan,
                     'rentang'       => 'Pukul ' . substr($item->jam_keluar, 0, 5) . ($item->jam_kembali ? ' - ' . substr($item->jam_kembali, 0, 5) : ' WIB'),
@@ -101,9 +77,6 @@ class WakaSdmDashboardController extends Controller
                     'nip_nisn'      => $item->siswa->nisn ?? ($item->siswa->nis ?? '-'),
                 ];
             });
-
-        // Gabungkan dan urutkan pengajuan menunggu
-        $pendingApprovals = $pendingIzin->concat($pendingDispensasi)->sortByDesc('created_at')->values()->take(10);
 
         // 3. Kartu Bersebelahan: Riwayat Persetujuan Izin Guru Terbaru
         $recentIzinGuru = IzinGuru::with(['guru'])
@@ -146,11 +119,12 @@ class WakaSdmDashboardController extends Controller
 
         // 5. Monitoring Dispensasi Hari Ini (4 Kotak Status 2x2)
         $allDispToday = DispensasiSiswa::where('tanggal', $today)->get();
+        $finalStatuses = ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai'];
         $monitoringDispensasi = (object) [
-            'disetujui_waka'    => $allDispToday->whereIn('status', ['Disetujui', 'Disetujui_Waka', 'Selesai'])->count(),
-            'menunggu_keluar'   => $allDispToday->whereIn('status', ['Disetujui', 'Disetujui_Waka'])->where('jam_keluar', null)->count(),
-            'sudah_keluar'      => $allDispToday->filter(function ($item) {
-                return in_array($item->status, ['Disetujui', 'Disetujui_Waka', 'Selesai']) && !empty($item->jam_keluar);
+            'disetujui_waka'    => $allDispToday->filter(fn($d) => in_array($d->status, $finalStatuses))->count(),
+            'menunggu_keluar'   => $allDispToday->filter(fn($d) => in_array($d->status, $finalStatuses))->where('jam_keluar', null)->count(),
+            'sudah_keluar'      => $allDispToday->filter(function ($item) use ($finalStatuses) {
+                return in_array($item->status, $finalStatuses) && !empty($item->jam_keluar);
             })->count(),
             'ditolak'           => $allDispToday->where('status', 'Ditolak')->count(),
         ];
@@ -159,7 +133,7 @@ class WakaSdmDashboardController extends Controller
         if ($monitoringDispensasi->disetujui_waka === 0 && $monitoringDispensasi->ditolak === 0) {
             $allDispTotal = DispensasiSiswa::all();
             $monitoringDispensasi = (object) [
-                'disetujui_waka'    => max(1, $allDispTotal->whereIn('status', ['Disetujui', 'Disetujui_Waka', 'Selesai'])->count()),
+                'disetujui_waka'    => max(1, $allDispTotal->filter(fn($d) => in_array($d->status, $finalStatuses))->count()),
                 'menunggu_keluar'   => $allDispTotal->where('status', 'Menunggu')->count(),
                 'sudah_keluar'      => $allDispTotal->where('status', 'Selesai')->count(),
                 'ditolak'           => $allDispTotal->where('status', 'Ditolak')->count(),
@@ -176,7 +150,8 @@ class WakaSdmDashboardController extends Controller
             $dStr = $day->format('Y-m-d');
             $chartLabels[] = $day->translatedFormat('d M');
 
-            $chartIzinData[] = IzinGuru::where('tanggal_mulai', '<=', $dStr)
+            $chartIzinData[] = IzinGuru::berlaku()
+                ->where('tanggal_mulai', '<=', $dStr)
                 ->where('tanggal_selesai', '>=', $dStr)
                 ->count();
 
@@ -185,10 +160,11 @@ class WakaSdmDashboardController extends Controller
 
         // Unread notifikasi count
         $unreadNotifCount = Notifikasi::where('user_id', $user->id)->unread()->count();
+        $menungguIzinCount = 0; // Legacy view fallback
 
         return view('waka_sdm.dashboard.index', compact(
             'user', 'waka', 'today', 'todayFormatted',
-            'menungguIzinCount', 'menungguDispensasiCount', 'ditolakHariIniCount', 'disetujuiHariIniCount',
+            'tercatatIzinCount', 'menungguIzinCount', 'menungguDispensasiCount', 'ditolakHariIniCount', 'disetujuiHariIniCount',
             'pendingApprovals', 'recentIzinGuru', 'recentDispensasi',
             'monitoringDispensasi', 'chartLabels', 'chartIzinData', 'chartDispData',
             'unreadNotifCount'
@@ -220,20 +196,16 @@ class WakaSdmDashboardController extends Controller
         $status = $request->input('status');
         $bulan  = $request->input('bulan');
 
-        $query = IzinGuru::with(['guru.user', 'piketApprover', 'wakaApprover', 'kepsekApprover', 'disetujuiOlehUser'])
+        $query = IzinGuru::with(['guru.user', 'diinputOlehUser', 'dibatalkanOlehUser'])
             ->when($status && $status !== 'semua', function ($q) use ($status) {
-                if ($status === 'menunggu_waka' || $status === 'Menunggu') {
-                    $q->where('tahap_approval', 'waka_sdm');
-                } elseif ($status === 'diteruskan_kepsek') {
-                    $q->where('tahap_approval', 'kepsek');
-                } else {
-                    $q->where('status', $status);
-                }
+                $q->where('status', $status);
             })
             ->when($search, function ($q) use ($search) {
-                $q->whereHas('guru', fn($qg) => $qg->where('nama_lengkap', 'LIKE', "%{$search}%")->orWhere('nip', 'LIKE', "%{$search}%"))
-                  ->orWhere('alasan', 'LIKE', "%{$search}%")
-                  ->orWhere('jenis_izin', 'LIKE', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereHas('guru', fn($qg) => $qg->where('nama_lengkap', 'LIKE', "%{$search}%")->orWhere('nip', 'LIKE', "%{$search}%"))
+                        ->orWhere('alasan', 'LIKE', "%{$search}%")
+                        ->orWhere('jenis_izin', 'LIKE', "%{$search}%");
+                });
             })
             ->when($bulan, function ($q) use ($bulan) {
                 $q->where('tanggal_mulai', 'LIKE', "{$bulan}%");
@@ -242,98 +214,16 @@ class WakaSdmDashboardController extends Controller
         $izinList = $query->orderByDesc('id')->paginate(15)->withQueryString();
 
         $counts = (object) [
-            'semua'           => IzinGuru::count(),
-            'menunggu_waka'   => IzinGuru::where('tahap_approval', 'waka_sdm')->count(),
-            'diteruskan_kepsek' => IzinGuru::where('tahap_approval', 'kepsek')->count(),
-            'disetujui'       => IzinGuru::where('status', 'Disetujui')->count(),
-            'ditolak'         => IzinGuru::where('status', 'Ditolak')->count(),
+            'semua'      => IzinGuru::count(),
+            'tercatat'   => IzinGuru::where('status', 'Tercatat')->count(),
+            'disetujui'  => IzinGuru::where('status', 'Disetujui')->count(),
+            'dibatalkan' => IzinGuru::where('status', 'Dibatalkan')->count(),
+            'ditolak'    => IzinGuru::where('status', 'Ditolak')->count(),
         ];
 
         return view('waka_sdm.izin.index', compact(
             'user', 'waka', 'izinList', 'search', 'status', 'bulan', 'counts'
         ));
-    }
-
-    /**
-     * Update Status Persetujuan Izin Guru oleh Waka SDM (Tahap 2)
-     */
-    public function updateStatusIzin(Request $request, $id)
-    {
-        $request->validate([
-            'status'  => 'required|in:Disetujui,Ditolak',
-            'catatan' => 'nullable|string|max:255',
-        ]);
-
-        $izin = IzinGuru::with('guru')->findOrFail($id);
-        $guruNama = $izin->guru->nama_lengkap ?? 'Guru';
-
-        if ($request->status === 'Disetujui') {
-            $izin->update([
-                'waka_status'      => 'Disetujui',
-                'waka_approved_by' => Auth::id(),
-                'waka_at'          => now(),
-                'waka_catatan'     => $request->catatan,
-                'tahap_approval'   => 'kepsek',
-            ]);
-
-            LogAktivitas::catat(
-                'Approval Izin Waka SDM',
-                "Waka SDM menyetujui izin guru {$guruNama} (diteruskan ke Kepala Sekolah)",
-                $izin,
-                Auth::user()
-            );
-
-            // Kirim notifikasi ke Kepala Sekolah untuk persetujuan final (Tahap 3)
-            $kepsekUsers = User::where('role', 'kepala_sekolah')->get();
-            foreach ($kepsekUsers as $kUser) {
-                Notifikasi::create([
-                    'user_id'        => $kUser->id,
-                    'judul'          => 'Persetujuan Izin Guru Final (Tahap 3 - Kepala Sekolah)',
-                    'pesan'          => "Pengajuan izin guru {$guruNama} telah disetujui Guru Piket dan Waka SDM. Menunggu persetujuan final dari Anda sebagai Kepala Sekolah.",
-                    'tipe'           => 'izin_guru',
-                    'reference_id'   => $izin->id,
-                    'reference_type' => IzinGuru::class,
-                    'is_read'        => false,
-                ]);
-            }
-
-            return back()->with('success', "Izin guru {$guruNama} berhasil disetujui Waka SDM dan diteruskan ke Kepala Sekolah (Tahap 3).");
-        } else {
-            // Ditolak oleh Waka SDM
-            $izin->update([
-                'status'            => 'Ditolak',
-                'waka_status'       => 'Ditolak',
-                'waka_approved_by'  => Auth::id(),
-                'waka_at'           => now(),
-                'waka_catatan'      => $request->catatan,
-                'tahap_approval'    => 'ditolak',
-                'ditolak_oleh_role' => 'waka_sdm',
-                'ditolak_catatan'   => $request->catatan,
-            ]);
-
-            LogAktivitas::catat(
-                'Penolakan Izin Waka SDM',
-                "Waka SDM menolak permohonan izin guru {$guruNama} (" . ($request->catatan ?: 'Lanjut KBM') . ")",
-                $izin,
-                Auth::user()
-            );
-
-            // Kirim notifikasi ke Guru Mapel: Ditolak dan WAJIB LANJUT KBM
-            $targetUserId = $izin->guru?->user_id ?? $izin->diinput_oleh;
-            if ($targetUserId) {
-                Notifikasi::create([
-                    'user_id'        => $targetUserId,
-                    'judul'          => 'Pengajuan Izin Ditolak oleh Waka SDM',
-                    'pesan'          => "Pengajuan izin {$izin->jenis_izin} Anda TIDAK DISETUJUI oleh Waka SDM." . ($request->catatan ? " Catatan: \"{$request->catatan}\"." : "") . " Anda diwajibkan untuk tetap hadir dan melanjutkan KBM.",
-                    'tipe'           => 'izin_guru',
-                    'reference_id'   => $izin->id,
-                    'reference_type' => IzinGuru::class,
-                    'is_read'        => false,
-                ]);
-            }
-
-            return back()->with('warning', "Pengajuan izin guru {$guruNama} telah ditolak. Guru bersangkutan telah dinotifikasi untuk tetap melanjutkan KBM.");
-        }
     }
 
     /**
@@ -353,17 +243,19 @@ class WakaSdmDashboardController extends Controller
         $query = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser', 'disetujuiOlehUser'])
             ->when($status && $status !== 'semua', function ($q) use ($status) {
                 if ($status === 'Disetujui') {
-                    $q->whereIn('status', ['Disetujui', 'Disetujui_Waka']);
+                    $q->final();
                 } else {
                     $q->where('status', $status);
                 }
             })
             ->when($search, function ($q) use ($search) {
-                $q->whereHas('siswa', function ($qs) use ($search) {
-                    $qs->where('nama_lengkap', 'LIKE', "%{$search}%")
-                       ->orWhere('nisn', 'LIKE', "%{$search}%")
-                       ->orWhere('nis', 'LIKE', "%{$search}%");
-                })->orWhere('alasan', 'LIKE', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereHas('siswa', function ($qs) use ($search) {
+                        $qs->where('nama_lengkap', 'LIKE', "%{$search}%")
+                           ->orWhere('nisn', 'LIKE', "%{$search}%")
+                           ->orWhere('nis', 'LIKE', "%{$search}%");
+                    })->orWhere('alasan', 'LIKE', "%{$search}%");
+                });
             })
             ->when($tanggal, fn($q) => $q->where('tanggal', $tanggal))
             ->when($id_kelas, fn($q) => $q->whereHas('siswa', fn($qs) => $qs->where('id_kelas', $id_kelas)));
@@ -374,7 +266,8 @@ class WakaSdmDashboardController extends Controller
         $counts = (object) [
             'semua'     => DispensasiSiswa::count(),
             'menunggu'  => DispensasiSiswa::where('status', 'Menunggu')->count(),
-            'disetujui' => DispensasiSiswa::whereIn('status', ['Disetujui', 'Disetujui_Waka'])->count(),
+            'disetujui_piket' => DispensasiSiswa::where('status', 'Disetujui_Piket')->count(),
+            'disetujui' => DispensasiSiswa::final()->count(),
             'ditolak'   => DispensasiSiswa::where('status', 'Ditolak')->count(),
         ];
 
@@ -384,43 +277,7 @@ class WakaSdmDashboardController extends Controller
     }
 
     /**
-     * Update Status Persetujuan Dispensasi Siswa
-     */
-    public function updateStatusDispensasi(Request $request, $id)
-    {
-        $request->validate([
-            'status'  => 'required|in:Disetujui,Disetujui_Waka,Ditolak',
-            'catatan' => 'nullable|string|max:255',
-        ]);
-
-        $dispensasi = DispensasiSiswa::with(['siswa', 'diinputOlehUser'])->findOrFail($id);
-        $finalStatus = ($request->status === 'Disetujui_Waka' || $request->status === 'Disetujui') ? 'Disetujui' : 'Ditolak';
-
-        $dispensasi->update([
-            'status'              => $finalStatus,
-            'disetujui_oleh'      => Auth::id(),
-            'tanggal_persetujuan' => now(),
-        ]);
-
-        // Kirim notifikasi ke penginput dispensasi (misal Guru Piket)
-        if ($dispensasi->diinput_oleh) {
-            Notifikasi::create([
-                'user_id'        => $dispensasi->diinput_oleh,
-                'judul'          => "Dispensasi {$dispensasi->siswa->nama_lengkap} " . ($finalStatus === 'Ditolak' ? 'Ditolak' : 'Disetujui'),
-                'pesan'          => "Pengajuan dispensasi siswa telah {$finalStatus} oleh Waka SDM." . ($request->catatan ? " Catatan: {$request->catatan}" : ""),
-                'tipe'           => 'dispensasi_siswa',
-                'reference_id'   => $dispensasi->id,
-                'reference_type' => DispensasiSiswa::class,
-                'is_read'        => false,
-            ]);
-        }
-
-        $namaSiswa = $dispensasi->siswa->nama_lengkap ?? 'Siswa';
-        return back()->with('success', "Dispensasi siswa {$namaSiswa} berhasil diubah menjadi {$finalStatus}.");
-    }
-
-    /**
-     * Rekap & Laporan Persetujuan
+     * Rekapitulasi Perizinan Guru
      */
     public function laporan(Request $request)
     {
@@ -428,16 +285,25 @@ class WakaSdmDashboardController extends Controller
         $user = Auth::user();
         $waka = $user->waka ?? null;
 
+        $idGuru  = $request->input('id_guru');
+        $jenisIzin = $request->input('jenis_izin');
+        $bulan   = $request->input('bulan');
         $jenis   = $request->input('jenis', 'semua'); // 'semua', 'izin_guru', 'dispensasi'
         $tglAwal = $request->input('tgl_awal', Carbon::today()->startOfMonth()->format('Y-m-d'));
         $tglAkhir= $request->input('tgl_akhir', Carbon::today()->format('Y-m-d'));
 
+        $guruList = Guru::where('status_aktif', true)->orderBy('nama_lengkap')->get();
+
         $izinList = collect();
         if ($jenis === 'semua' || $jenis === 'izin_guru') {
-            $izinList = IzinGuru::with(['guru', 'disetujuiOlehUser'])
-                ->whereBetween('tanggal_mulai', [$tglAwal, $tglAkhir])
-                ->orderByDesc('tanggal_mulai')
-                ->get();
+            $izinQuery = IzinGuru::with(['guru', 'diinputOlehUser', 'dibatalkanOlehUser'])
+                ->when($idGuru, fn($q) => $q->where('id_guru', $idGuru))
+                ->when($jenisIzin && $jenisIzin !== 'semua', fn($q) => $q->where('jenis_izin', $jenisIzin))
+                ->when($bulan, fn($q) => $q->where('tanggal_mulai', 'LIKE', "{$bulan}%"))
+                ->when(!$bulan, fn($q) => $q->whereBetween('tanggal_mulai', [$tglAwal, $tglAkhir]))
+                ->orderByDesc('tanggal_mulai');
+
+            $izinList = $izinQuery->get();
         }
 
         $dispensasiList = collect();
@@ -450,54 +316,65 @@ class WakaSdmDashboardController extends Controller
 
         $summary = (object) [
             'total_izin'        => $izinList->count(),
+            'izin_tercatat'     => $izinList->where('status', 'Tercatat')->count(),
             'izin_disetujui'    => $izinList->where('status', 'Disetujui')->count(),
+            'izin_dibatalkan'   => $izinList->where('status', 'Dibatalkan')->count(),
             'izin_ditolak'      => $izinList->where('status', 'Ditolak')->count(),
             'total_dispensasi'  => $dispensasiList->count(),
-            'disp_disetujui'    => $dispensasiList->whereIn('status', ['Disetujui', 'Disetujui_Waka'])->count(),
+            'disp_disetujui'    => $dispensasiList->filter(fn($d) => in_array($d->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))->count(),
             'disp_ditolak'      => $dispensasiList->where('status', 'Ditolak')->count(),
         ];
 
         return view('waka_sdm.laporan.index', compact(
-            'user', 'waka', 'jenis', 'tglAwal', 'tglAkhir', 'izinList', 'dispensasiList', 'summary'
+            'user', 'waka', 'jenis', 'tglAwal', 'tglAkhir', 'idGuru', 'jenisIzin', 'bulan', 'guruList', 'izinList', 'dispensasiList', 'summary'
         ));
     }
 
     /**
-     * Export Laporan ke Format CSV
+     * Export Laporan Rekapitulasi ke Format CSV
      */
     public function exportLaporan(Request $request)
     {
+        $idGuru  = $request->input('id_guru');
+        $jenisIzin = $request->input('jenis_izin');
+        $bulan   = $request->input('bulan');
         $jenis   = $request->input('jenis', 'semua');
         $tglAwal = $request->input('tgl_awal', Carbon::today()->startOfMonth()->format('Y-m-d'));
         $tglAkhir= $request->input('tgl_akhir', Carbon::today()->format('Y-m-d'));
 
-        $filename = "Laporan_Persetujuan_Waka_SDM_{$tglAwal}_{$tglAkhir}.csv";
+        $filename = "Rekap_Perizinan_Guru_{$tglAwal}_{$tglAkhir}.csv";
         $headers = [
             'Content-Type'        => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
-        $callback = function () use ($jenis, $tglAwal, $tglAkhir) {
+        $callback = function () use ($jenis, $tglAwal, $tglAkhir, $idGuru, $jenisIzin, $bulan) {
             $file = fopen('php://output', 'w');
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
-            fputcsv($file, ['No', 'Jenis Pengajuan', 'Nama', 'Keterangan/Kelas', 'Tanggal', 'Status', 'Disetujui Oleh', 'Catatan']);
+            fputcsv($file, ['No', 'Jenis Pengajuan', 'Nama', 'NIP / Kelas', 'Kategori', 'Keterangan / Alasan', 'Rentang Tanggal', 'Status', 'Catatan / Alasan Batal']);
 
             $no = 1;
 
             if ($jenis === 'semua' || $jenis === 'izin_guru') {
-                $izins = IzinGuru::with(['guru', 'disetujuiOlehUser'])
-                    ->whereBetween('tanggal_mulai', [$tglAwal, $tglAkhir])
+                $izins = IzinGuru::with(['guru', 'dibatalkanOlehUser'])
+                    ->when($idGuru, fn($q) => $q->where('id_guru', $idGuru))
+                    ->when($jenisIzin && $jenisIzin !== 'semua', fn($q) => $q->where('jenis_izin', $jenisIzin))
+                    ->when($bulan, fn($q) => $q->where('tanggal_mulai', 'LIKE', "{$bulan}%"))
+                    ->when(!$bulan, fn($q) => $q->whereBetween('tanggal_mulai', [$tglAwal, $tglAkhir]))
+                    ->orderByDesc('tanggal_mulai')
                     ->get();
+
                 foreach ($izins as $iz) {
                     fputcsv($file, [
                         $no++,
                         'Izin Guru',
                         $iz->guru->nama_lengkap ?? '-',
-                        $iz->jenis_izin . ' - ' . $iz->alasan,
+                        $iz->guru->nip ?? '-',
+                        $iz->jenis_izin,
+                        $iz->alasan,
                         $iz->tanggal_mulai . ' s/d ' . $iz->tanggal_selesai,
                         $iz->status,
-                        $iz->disetujuiOlehUser->name ?? '-',
-                        $iz->catatan_persetujuan ?? '-',
+                        $iz->alasan_batal ?? ($iz->catatan_persetujuan ?? '-'),
                     ]);
                 }
             }
@@ -505,17 +382,19 @@ class WakaSdmDashboardController extends Controller
             if ($jenis === 'semua' || $jenis === 'dispensasi') {
                 $disps = DispensasiSiswa::with(['siswa.kelas', 'disetujuiOlehUser'])
                     ->whereBetween('tanggal', [$tglAwal, $tglAkhir])
+                    ->orderByDesc('tanggal')
                     ->get();
                 foreach ($disps as $ds) {
                     fputcsv($file, [
                         $no++,
                         'Dispensasi Siswa',
                         $ds->siswa->nama_lengkap ?? '-',
-                        ($ds->siswa->kelas->nama_kelas ?? '-') . ' - ' . $ds->alasan,
+                        $ds->siswa->kelas->nama_kelas ?? '-',
+                        'Dispensasi',
+                        $ds->alasan,
                         $ds->tanggal . ' (' . substr($ds->jam_keluar, 0, 5) . '-' . substr($ds->jam_kembali, 0, 5) . ')',
                         $ds->status,
-                        $ds->disetujuiOlehUser->name ?? '-',
-                        '-',
+                        $ds->catatan_waka ?? ($ds->piket_catatan ?? '-'),
                     ]);
                 }
             }
@@ -550,8 +429,10 @@ class WakaSdmDashboardController extends Controller
 
         $query = Guru::query()->with('user')
             ->when($search, function ($q) use ($search) {
-                $q->where('nama_lengkap', 'LIKE', "%{$search}%")
-                  ->orWhere('nip', 'LIKE', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('nama_lengkap', 'LIKE', "%{$search}%")
+                        ->orWhere('nip', 'LIKE', "%{$search}%");
+                });
             });
 
         $guruList = $query->orderBy('nama_lengkap')->paginate(15)->withQueryString();

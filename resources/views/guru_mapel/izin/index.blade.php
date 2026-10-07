@@ -432,8 +432,8 @@
                     <tr>
                         <th>Tanggal & Jenis</th>
                         <th>Alasan & Bukti</th>
-                        <th>Alur 3 Tingkat</th>
                         <th>Status</th>
+                        <th style="text-align: right;">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -448,7 +448,7 @@
                                 <span class="status-badge" style="background: #f1f5f9; color: #334155; font-size: 10.5px;">{{ str_replace('_', ' ', $iz->jenis_izin) }}</span>
                             </div>
                         </td>
-                        <td style="max-width: 170px;">
+                        <td style="max-width: 200px;">
                             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12.5px;" title="{{ $iz->alasan }}">
                                 {{ $iz->alasan }}
                             </div>
@@ -471,54 +471,36 @@
                             </div>
                         </td>
                         <td>
-                            {{-- Visual Stepper Progress 3 Tingkat --}}
-                            <div class="stepper-mini">
-                                {{-- Step 1: Piket --}}
-                                @if($iz->piket_status === 'Disetujui')
-                                    <span class="step-item approved" title="Disetujui Piket"><i class="fa-solid fa-check"></i> Piket</span>
-                                @elseif($iz->piket_status === 'Ditolak')
-                                    <span class="step-item rejected" title="Ditolak Piket"><i class="fa-solid fa-xmark"></i> Piket</span>
-                                @else
-                                    <span class="step-item pending" title="Menunggu Piket"><i class="fa-solid fa-clock"></i> Piket</span>
-                                @endif
-
-                                <i class="fa-solid fa-chevron-right" style="font-size: 8px; color: #cbd5e1;"></i>
-
-                                {{-- Step 2: Waka SDM --}}
-                                @if($iz->waka_status === 'Disetujui')
-                                    <span class="step-item approved" title="Disetujui Waka SDM"><i class="fa-solid fa-check"></i> Waka</span>
-                                @elseif($iz->waka_status === 'Ditolak')
-                                    <span class="step-item rejected" title="Ditolak Waka SDM"><i class="fa-solid fa-xmark"></i> Waka</span>
-                                @else
-                                    <span class="step-item {{ $iz->tahap_approval === 'waka_sdm' ? 'pending' : '' }}" title="Menunggu Waka SDM"><i class="fa-solid fa-clock"></i> Waka</span>
-                                @endif
-
-                                <i class="fa-solid fa-chevron-right" style="font-size: 8px; color: #cbd5e1;"></i>
-
-                                {{-- Step 3: Kepsek --}}
-                                @if($iz->kepsek_status === 'Disetujui')
-                                    <span class="step-item approved" title="Disetujui Kepala Sekolah"><i class="fa-solid fa-check"></i> Kepsek</span>
-                                @elseif($iz->kepsek_status === 'Ditolak')
-                                    <span class="step-item rejected" title="Ditolak Kepala Sekolah"><i class="fa-solid fa-xmark"></i> Kepsek</span>
-                                @else
-                                    <span class="step-item {{ $iz->tahap_approval === 'kepsek' ? 'pending' : '' }}" title="Menunggu Kepala Sekolah"><i class="fa-solid fa-clock"></i> Kepsek</span>
-                                @endif
-                            </div>
-
-                            <button type="button" onclick="showDetailModal({{ $iz->toJson() }})" style="background:none; border:none; color:#2b43b9; font-size:11px; font-weight:700; cursor:pointer; padding:2px 0; margin-top:4px; display:inline-flex; align-items:center; gap:3px;">
-                                <i class="fa-solid fa-circle-info"></i> Detail Alur & Tugas
-                            </button>
-                        </td>
-                        <td>
-                            @if($iz->status === 'Disetujui')
+                            @if($iz->status === 'Tercatat')
+                                <span class="status-badge" style="background: #dbeafe; color: #1e40af;"><i class="fa-solid fa-file-circle-check"></i> Tercatat</span>
+                            @elseif($iz->status === 'Disetujui')
                                 <span class="status-badge disetujui"><i class="fa-solid fa-circle-check"></i> Disetujui</span>
+                            @elseif($iz->status === 'Dibatalkan')
+                                <span class="status-badge" style="background: #f1f5f9; color: #64748b;"><i class="fa-solid fa-ban"></i> Dibatalkan</span>
+                                @if($iz->alasan_batal)
+                                    <div style="font-size: 11px; color: #ef4444; margin-top: 2px;">
+                                        Batal: {{ $iz->alasan_batal }}
+                                    </div>
+                                @endif
                             @elseif($iz->status === 'Ditolak')
                                 <span class="status-badge ditolak"><i class="fa-solid fa-circle-xmark"></i> Ditolak</span>
                                 <div style="font-size: 10px; color: #ef4444; font-weight: 700; margin-top: 2px;">
                                     Wajib Lanjut KBM
                                 </div>
                             @else
-                                <span class="status-badge menunggu"><i class="fa-solid fa-spinner fa-spin"></i> Proses</span>
+                                <span class="status-badge">{{ $iz->status }}</span>
+                            @endif
+                        </td>
+                        <td style="text-align: right;">
+                            @php
+                                $canBatal = !in_array($iz->status, ['Dibatalkan', 'Ditolak']) && \Carbon\Carbon::today()->lt(\Carbon\Carbon::parse($iz->tanggal_mulai));
+                            @endphp
+                            @if($canBatal)
+                                <button type="button" onclick="openBatalModal({{ $iz->id }}, '{{ addslashes($iz->jenis_izin) }}', '{{ \Carbon\Carbon::parse($iz->tanggal_mulai)->format('d/m/Y') }}')" style="background: #fee2e2; color: #b91c1c; border: none; padding: 6px 12px; border-radius: 8px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                    <i class="fa-solid fa-ban"></i> Batalkan
+                                </button>
+                            @else
+                                <span style="color: #94a3b8; font-size: 12px;">-</span>
                             @endif
                         </td>
                     </tr>
@@ -537,6 +519,40 @@
         <div style="margin-top: 16px;">
             {{ $izinList->links() }}
         </div>
+    </div>
+</div>
+
+<!-- Modal Batalkan Izin Guru -->
+<div id="modalBatalIzin" class="modal-backdrop-custom">
+    <div class="modal-box-custom" style="max-width: 440px;">
+        <div class="modal-head-custom">
+            <h4 style="margin: 0; font-size: 16px; font-weight: 800; color: #0f172a;">
+                <i class="fa-solid fa-ban" style="color: #ef4444; margin-right: 6px;"></i> Batalkan Izin
+            </h4>
+            <button type="button" onclick="closeBatalModal()" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #94a3b8;">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <form id="formBatalIzin" method="POST" action="">
+            @csrf
+            <div class="modal-body-custom">
+                <p id="batalDesc" style="font-size: 13px; color: #475569; margin-bottom: 14px; line-height: 1.5;"></p>
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-size: 12.5px; font-weight: 700; color: #1e293b; margin-bottom: 6px;">
+                        Alasan Pembatalan <span style="color: #ef4444;">* (min. 5 karakter)</span>:
+                    </label>
+                    <textarea name="alasan_batal" id="alasanBatalInput" required minlength="5" rows="3" class="form-control" placeholder="Tulis alasan mengapa izin ini dibatalkan..."></textarea>
+                </div>
+            </div>
+            <div style="padding: 14px 24px; background: #f8fafc; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="closeBatalModal()" style="padding: 8px 16px; border-radius: 8px; border: 1.5px solid #cbd5e1; background: #ffffff; color: #475569; font-weight: 700; cursor: pointer;">
+                    Batal
+                </button>
+                <button type="submit" style="padding: 8px 18px; border-radius: 8px; border: none; background: #ef4444; color: #ffffff; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-ban"></i> Ya, Batalkan Izin
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -718,6 +734,25 @@
     document.getElementById('modalDetailIzin').addEventListener('click', function(e) {
         if (e.target === this) {
             closeDetailModal();
+        }
+    });
+
+    function openBatalModal(id, jenis, tgl) {
+        document.getElementById('formBatalIzin').action = `/guru-mapel/izin/${id}/batal`;
+        document.getElementById('batalDesc').innerHTML = `Apakah Anda yakin ingin membatalkan izin <strong>${jenis}</strong> untuk tanggal <strong>${tgl}</strong>?`;
+        document.getElementById('alasanBatalInput').value = '';
+        const modal = document.getElementById('modalBatalIzin');
+        modal.classList.add('active');
+    }
+
+    function closeBatalModal() {
+        const modal = document.getElementById('modalBatalIzin');
+        modal.classList.remove('active');
+    }
+
+    document.getElementById('modalBatalIzin').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeBatalModal();
         }
     });
 </script>

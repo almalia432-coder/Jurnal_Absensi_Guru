@@ -46,4 +46,9 @@ class Kelas extends Model
     {
         return $this->hasMany(JurnalMengajar::class, 'id_kelas', 'id_kelas');
     }
+
+    public function izinTerlambat()
+    {
+        return $this->hasMany(IzinTerlambat::class, 'id_kelas', 'id_kelas');
+    }
 }

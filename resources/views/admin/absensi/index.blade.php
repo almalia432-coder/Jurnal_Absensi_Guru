@@ -250,18 +250,33 @@
         border: 1px solid #bbf7d0; display: inline-block;
     }
 
-    /* Status dot */
-    .status-terisi-badge {
+    /* Status Pills */
+    .status-pill {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        background: #d1fae5;
-        color: #065f46;
-        font-weight: 800;
+        font-weight: 700;
         font-size: 11.5px;
         padding: 5px 12px;
         border-radius: 20px;
+        white-space: nowrap;
     }
+    .status-pill.status-terisi {
+        background: #ecfdf5;
+        color: #059669;
+        border: 1px solid #a7f3d0;
+    }
+    .status-pill.status-berlangsung {
+        background: #eff6ff;
+        color: #2563eb;
+        border: 1px solid #bfdbfe;
+    }
+    .status-pill.status-pending {
+        background: #fffbeb;
+        color: #d97706;
+        border: 1px solid #fde68a;
+    }
+
     .status-dot {
         width: 7px; height: 7px;
         border-radius: 50%;
@@ -288,12 +303,12 @@
     .fill-rose    { background: #ef4444; }
 
     /* Action button */
-    .btn-action-detail {
+    .btn-action-detail, .btn-detail-view {
         background: #eaeff8;
         color: #2b43b9;
-        border: none;
+        border: 1px solid #c7d2fe;
         border-radius: 10px;
-        padding: 8px 16px;
+        padding: 7px 14px;
         font-size: 12.5px;
         font-weight: 700;
         cursor: pointer;
@@ -302,36 +317,41 @@
         align-items: center;
         gap: 6px;
     }
-    .btn-action-detail:hover {
+    .btn-action-detail:hover, .btn-detail-view:hover {
         background: #2b43b9;
         color: #ffffff;
+        border-color: #2b43b9;
         box-shadow: 0 4px 12px rgba(43,67,185,0.25);
         transform: translateY(-1px);
     }
 
     /* ── Modal Design ── */
     .modal-bd {
-        position: fixed; inset: 0;
-        background: rgba(15,23,42,0.6);
-        backdrop-filter: blur(5px);
+        position: fixed;
+        inset: 0;
+        background: rgba(15,23,42,0.65);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
         display: none;
         align-items: center;
         justify-content: center;
-        z-index: 9990;
+        z-index: 99999;
+        padding: 16px;
     }
-    .modal-bd.show { display: flex; }
+    .modal-bd.show { display: flex !important; }
     
     .modal-bx {
         background: #ffffff;
         border-radius: 24px;
-        width: 92%; max-width: 660px;
+        width: 92%; max-width: 680px;
         max-height: 90vh;
         overflow-y: auto;
         padding: 28px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        box-shadow: 0 25px 60px rgba(15,23,42,0.25);
         animation: modalSlideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
     }
-    @keyframes modalSlideUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes modalSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
     .modal-hdr {
         display: flex;
@@ -402,6 +422,7 @@
     .chip-hadir { background: #d1fae5; color: #065f46; }
     .chip-sakit { background: #fef3c7; color: #92400e; }
     .chip-izin  { background: #e0f2fe; color: #0369a1; }
+    .chip-dispensasi { background: #ede9fe; color: #5b21b6; }
     .chip-alpha { background: #fee2e2; color: #991b1b; }
 
     @media (max-width: 768px) {
@@ -574,15 +595,17 @@
                     </div>
                 </td>
                 <td>
-                    @if($j->status === 'terisi')
-                        <span class="status-pill status-terisi"><i class="fa-solid fa-check"></i> Terisi</span>
+                    @if($j->status_jurnal === 'Selesai')
+                        <span class="status-pill status-terisi"><i class="fa-solid fa-circle-check"></i> Selesai</span>
+                    @elseif($j->status_jurnal === 'Sedang Berlangsung')
+                        <span class="status-pill status-berlangsung"><i class="fa-solid fa-spinner fa-spin"></i> Berlangsung</span>
                     @else
                         <span class="status-pill status-pending"><i class="fa-solid fa-clock"></i> Belum Selesai</span>
                     @endif
                 </td>
                 <td>
                     <div style="display:flex;justify-content:center;">
-                        <button class="btn-detail-view" onclick="viewDetail({{ $j->id_jurnal }})">
+                        <button type="button" class="btn-action-detail" onclick="viewDetail({{ $j->id_jurnal }})">
                             <i class="fa-solid fa-eye"></i> Detail
                         </button>
                     </div>
@@ -610,12 +633,18 @@
                 <i class="fa-solid fa-receipt" style="color:#2b43b9;margin-right:8px;"></i>
                 Detail Sesi &amp; Presensi Siswa
             </div>
-            <button class="btn-modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            <button type="button" class="btn-modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
         </div>
 
         <div id="modalLoading" style="text-align:center;padding:36px;color:#64748b;">
             <i class="fa-solid fa-circle-notch fa-spin" style="font-size:28px;color:#2b43b9;"></i>
             <p style="margin-top:10px;font-weight:700;font-size:14px;">Memuat detail jurnal pembelajaran...</p>
+        </div>
+
+        <div id="modalError" style="display:none;text-align:center;padding:32px 20px;color:#dc2626;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:36px;margin-bottom:10px;color:#ef4444;"></i>
+            <p id="modalErrorMessage" style="font-weight:700;font-size:14px;color:#1e293b;">Gagal memuat detail jurnal pembelajaran.</p>
+            <button type="button" class="btn-action-detail" style="margin-top:14px;" onclick="closeModal()">Tutup</button>
         </div>
 
         <div id="modalContent" style="display:none;">
@@ -640,7 +669,7 @@
                 <span style="font-size:12px;font-weight:700;color:#64748b;" id="m_stat_hadir"></span>
             </div>
 
-            <div class="table-responsive-wrap">
+            <div class="table-responsive-wrap" style="max-height: 280px; overflow-y: auto;">
             <table class="data-table">
                 <thead>
                     <tr>
@@ -663,69 +692,108 @@
 @section('scripts')
 <script>
     function closeModal() {
-        document.getElementById('detailModal').classList.remove('show');
+        const modal = document.getElementById('detailModal');
+        if (modal) modal.classList.remove('show');
     }
 
     function viewDetail(id) {
-        document.getElementById('detailModal').classList.add('show');
-        document.getElementById('modalLoading').style.display = 'block';
-        document.getElementById('modalContent').style.display = 'none';
+        const modal = document.getElementById('detailModal');
+        const loading = document.getElementById('modalLoading');
+        const content = document.getElementById('modalContent');
+        const errorBox = document.getElementById('modalError');
 
-        fetch('/admin/absensi/' + id)
-            .then(res => res.json())
-            .then(res => {
-                if (res.status === 'success') {
-                    const d = res.data;
-                    document.getElementById('m_jam').innerText = d.tanggal + ' (' + d.jam_ke + ')';
-                    document.getElementById('m_kelas').innerText = d.kelas;
-                    document.getElementById('m_guru').innerText = d.guru;
-                    document.getElementById('m_mapel').innerText = d.mapel;
-                    document.getElementById('m_materi').innerText = d.materi;
+        if (!modal) return;
 
-                    if (d.catatan && d.catatan !== '-') {
-                        document.getElementById('m_catatan').innerText = d.catatan;
-                        document.getElementById('m_catatan_box').style.display = 'block';
-                    } else {
-                        document.getElementById('m_catatan_box').style.display = 'none';
-                    }
+        modal.classList.add('show');
+        if (loading) loading.style.display = 'block';
+        if (content) content.style.display = 'none';
+        if (errorBox) errorBox.style.display = 'none';
 
-                    document.getElementById('m_stat_hadir').innerText = 'Hadir: ' + d.jumlah_hadir + ' Siswa | Tidak Hadir: ' + d.jumlah_tidak_hadir + ' Siswa';
+        // URL dinamis yang valid di semua environment (artisan serve maupun Laragon subfolder)
+        const detailUrl = "{{ url('/admin/absensi') }}/" + id;
 
-                    const tbody = document.getElementById('m_presensi_body');
-                    tbody.innerHTML = '';
+        fetch(detailUrl, {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => {
+            if (!res.ok) {
+                throw new Error('HTTP ' + res.status + ': Gagal mengambil data jurnal.');
+            }
+            return res.json();
+        })
+        .then(res => {
+            if (res.status === 'success' && res.data) {
+                const d = res.data;
+                document.getElementById('m_jam').innerText = (d.tanggal || '') + ' (' + (d.jam_ke || '') + ')';
+                document.getElementById('m_kelas').innerText = d.kelas || '-';
+                document.getElementById('m_guru').innerText = d.guru || '-';
+                document.getElementById('m_mapel').innerText = d.mapel || '-';
+                document.getElementById('m_materi').innerText = d.materi || 'Tidak ada materi tertulis';
 
-                    if (d.presensi && d.presensi.length > 0) {
-                        d.presensi.forEach(p => {
-                            let chipClass = 'chip-hadir';
-                            if (p.status === 'Sakit') chipClass = 'chip-sakit';
-                            else if (p.status === 'Izin') chipClass = 'chip-izin';
-                            else if (p.status === 'Alpha') chipClass = 'chip-alpha';
-
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td style="font-weight:700;color:#0f172a;">${p.nama_siswa}</td>
-                                    <td style="color:#64748b;font-weight:600;">${p.nis}</td>
-                                    <td><span class="presensi-chip ${chipClass}">${p.status}</span></td>
-                                    <td style="color:#475569;font-weight:500;">${p.keterangan}</td>
-                                </tr>
-                            `;
-                        });
-                    } else {
-                        tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px;font-weight:600;">Semua siswa hadir pada sesi pembelajaran ini.</td></tr>`;
-                    }
-
-                    document.getElementById('modalLoading').style.display = 'none';
-                    document.getElementById('modalContent').style.display = 'block';
+                if (d.catatan && d.catatan !== '-' && d.catatan.trim() !== '') {
+                    document.getElementById('m_catatan').innerText = d.catatan;
+                    document.getElementById('m_catatan_box').style.display = 'block';
+                } else {
+                    document.getElementById('m_catatan_box').style.display = 'none';
                 }
-            })
-            .catch(err => {
-                alert('Gagal memuat detail jurnal');
-                closeModal();
-            });
+
+                document.getElementById('m_stat_hadir').innerText = 'Hadir: ' + (d.jumlah_hadir ?? 0) + ' Siswa | Tidak Hadir: ' + (d.jumlah_tidak_hadir ?? 0) + ' Siswa';
+
+                const tbody = document.getElementById('m_presensi_body');
+                tbody.innerHTML = '';
+
+                if (d.presensi && d.presensi.length > 0) {
+                    d.presensi.forEach(p => {
+                        let chipClass = 'chip-hadir';
+                        if (p.status === 'Sakit') chipClass = 'chip-sakit';
+                        else if (p.status === 'Izin') chipClass = 'chip-izin';
+                        else if (p.status === 'Dispensasi') chipClass = 'chip-dispensasi';
+                        else if (p.status === 'Alpha') chipClass = 'chip-alpha';
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td style="font-weight:700;color:#0f172a;">${escapeHtml(p.nama_siswa)}</td>
+                                <td style="color:#64748b;font-weight:600;">${escapeHtml(p.nis)}</td>
+                                <td><span class="presensi-chip ${chipClass}">${escapeHtml(p.status)}</span></td>
+                                <td style="color:#475569;font-weight:500;">${escapeHtml(p.keterangan || '-')}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;color:#94a3b8;padding:20px;font-weight:600;">Semua siswa hadir pada sesi pembelajaran ini.</td></tr>`;
+                }
+
+                if (loading) loading.style.display = 'none';
+                if (content) content.style.display = 'block';
+            } else {
+                throw new Error(res.message || 'Respon data tidak valid.');
+            }
+        })
+        .catch(err => {
+            console.error('Error viewDetail:', err);
+            if (loading) loading.style.display = 'none';
+            if (errorBox) {
+                document.getElementById('modalErrorMessage').innerText = err.message || 'Gagal memuat detail jurnal pembelajaran.';
+                errorBox.style.display = 'block';
+            }
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
     }
 
     document.getElementById('detailModal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeModal();
     });
 </script>
 @endsection

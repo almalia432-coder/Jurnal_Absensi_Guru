@@ -11,6 +11,8 @@ use App\Models\JurnalMengajar;
 use App\Models\PresensiSiswa;
 use App\Models\DispensasiSiswa;
 use App\Models\IzinGuru;
+use App\Models\LogAktivitas;
+use App\Models\Notifikasi;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -266,5 +268,103 @@ class AdminLaporanController extends Controller
             'guruNama',
             'dataList'
         ));
+    }
+
+    /**
+     * Pembatalan dispensasi oleh Admin
+     */
+    public function batalkanDispensasi(Request $request, $id)
+    {
+        $request->validate([
+            'alasan' => 'required|string|min:5|max:500',
+        ]);
+
+        $disp = DispensasiSiswa::with('siswa')->findOrFail($id);
+        $user = Auth::user();
+        $namaSiswa = $disp->siswa->nama_lengkap ?? 'Siswa';
+
+        DB::transaction(function () use ($disp, $user, $request, $namaSiswa) {
+            $locked = DispensasiSiswa::where('id', $disp->id)->lockForUpdate()->first();
+            $locked->update([
+                'status'          => 'Dibatalkan',
+                'alasan_batal'    => $request->alasan,
+                'dibatalkan_oleh' => $user->id,
+                'dibatalkan_at'   => now(),
+            ]);
+
+            LogAktivitas::catat(
+                'Dispensasi Siswa',
+                "Admin ({$user->name}) MEMBATALKAN dispensasi siswa {$namaSiswa}. Alasan: {$request->alasan}",
+                $locked,
+                $user
+            );
+
+            if ($locked->diinput_oleh) {
+                try {
+                    Notifikasi::create([
+                        'user_id'        => $locked->diinput_oleh,
+                        'judul'          => "Dispensasi {$namaSiswa} Dibatalkan",
+                        'pesan'          => "Dispensasi atas nama {$namaSiswa} telah dibatalkan oleh Administrator. Alasan: {$request->alasan}",
+                        'tipe'           => 'dispensasi_siswa',
+                        'reference_id'   => $locked->id,
+                        'reference_type' => DispensasiSiswa::class,
+                        'is_read'        => false,
+                    ]);
+                } catch (\Exception $e) {}
+            }
+        });
+
+        return back()->with('success', "Dispensasi untuk {$namaSiswa} berhasil dibatalkan.");
+    }
+
+    /**
+     * Pembatalan Izin Guru oleh Administrator
+     */
+    public function batalkanIzinGuru(Request $request, $id)
+    {
+        $request->validate([
+            'alasan' => 'required|string|min:5',
+        ], [
+            'alasan.required' => 'Alasan pembatalan wajib diisi.',
+            'alasan.min'      => 'Alasan pembatalan minimal 5 karakter.',
+        ]);
+
+        $izin = IzinGuru::with('guru')->findOrFail($id);
+        $user = Auth::user();
+        $namaGuru = $izin->guru->nama_lengkap ?? 'Guru';
+
+        DB::transaction(function () use ($izin, $user, $request, $namaGuru) {
+            $locked = IzinGuru::where('id', $izin->id)->lockForUpdate()->first();
+            $locked->update([
+                'status'          => 'Dibatalkan',
+                'alasan_batal'    => $request->alasan,
+                'dibatalkan_oleh' => $user->id,
+                'dibatalkan_at'   => now(),
+            ]);
+
+            LogAktivitas::catat(
+                'Pembatalan Izin Guru',
+                "Admin ({$user->name}) MEMBATALKAN izin guru {$namaGuru}. Alasan: {$request->alasan}",
+                $locked,
+                $user
+            );
+
+            $targetUserId = $locked->guru?->user_id ?? $locked->diinput_oleh;
+            if ($targetUserId) {
+                try {
+                    Notifikasi::create([
+                        'user_id'        => $targetUserId,
+                        'judul'          => "Izin {$namaGuru} Dibatalkan oleh Admin",
+                        'pesan'          => "Izin Anda ({$locked->jenis_izin}) telah dibatalkan oleh Administrator. Alasan: {$request->alasan}",
+                        'tipe'           => 'izin_guru',
+                        'reference_id'   => $locked->id,
+                        'reference_type' => IzinGuru::class,
+                        'is_read'        => false,
+                    ]);
+                } catch (\Exception $e) {}
+            }
+        });
+
+        return back()->with('success', "Izin untuk guru {$namaGuru} berhasil dibatalkan.");
     }
 }

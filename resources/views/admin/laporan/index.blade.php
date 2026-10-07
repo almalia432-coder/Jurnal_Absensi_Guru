@@ -472,7 +472,7 @@
     <div class="kpi-card">
         <div class="kpi-icon emerald"><i class="fa-solid fa-circle-check"></i></div>
         <div>
-            <div class="kpi-val">{{ $dispensasiData->whereIn('status', ['Disetujui_KS', 'Disetujui_Waka'])->count() }}</div>
+            <div class="kpi-val">{{ $dispensasiData->filter(fn($d) => in_array($d->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))->count() }}</div>
             <div class="kpi-lbl">Disetujui</div>
             <div class="kpi-sub">Sudah terverifikasi</div>
         </div>

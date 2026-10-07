@@ -20,7 +20,11 @@ class IzinGuru extends Model
         'tanggal_persetujuan',
         'catatan_persetujuan',
         'diinput_oleh',
-        // Multi-level approval fields
+        // Pembatalan izin
+        'alasan_batal',
+        'dibatalkan_oleh',
+        'dibatalkan_at',
+        // Multi-level approval fields (legacy)
         'piket_approved_by',
         'piket_status',
         'piket_at',
@@ -47,8 +51,17 @@ class IzinGuru extends Model
         'waka_at'             => 'datetime',
         'kepsek_at'           => 'datetime',
         'tanggal_persetujuan' => 'datetime',
+        'dibatalkan_at'       => 'datetime',
         'menitipkan_tugas'    => 'boolean',
     ];
+
+    /**
+     * Scope untuk izin guru yang berlaku (Tercatat atau Disetujui)
+     */
+    public function scopeBerlaku($query)
+    {
+        return $query->whereIn('status', ['Tercatat', 'Disetujui']);
+    }
 
     public function hasTugas(): bool
     {
@@ -62,12 +75,17 @@ class IzinGuru extends Model
 
     public function diinputOlehUser()
     {
-        return $this->belongsTo(User::class, 'diinput_oleh');
+        return $this->belongsTo(User::class, 'diinput_oleh')->withTrashed();
     }
 
     public function disetujuiOlehUser()
     {
-        return $this->belongsTo(User::class, 'disetujui_oleh');
+        return $this->belongsTo(User::class, 'disetujui_oleh')->withTrashed();
+    }
+
+    public function dibatalkanOlehUser()
+    {
+        return $this->belongsTo(User::class, 'dibatalkan_oleh')->withTrashed();
     }
 
     public function piketApprover()
@@ -113,13 +131,15 @@ class IzinGuru extends Model
 
     public function getTahapLabelAttribute(): string
     {
+        if ($this->status === 'Dibatalkan') {
+            return 'Dibatalkan';
+        }
+
+        if ($this->status === 'Tercatat') {
+            return 'Tercatat';
+        }
+
         if ($this->isRejected()) {
-            $roleLabel = match ($this->ditolak_oleh_role) {
-                'guru_piket'     => 'Guru Piket',
-                'waka_sdm'       => 'Waka SDM',
-                'kepala_sekolah' => 'Kepala Sekolah',
-                default          => 'Pihak Sekolah',
-            };
             return 'Ditolak oleh ' . $this->penolak_label;
         }
 
@@ -131,7 +151,7 @@ class IzinGuru extends Model
             'piket'    => 'Menunggu Persetujuan Guru Piket (Tahap 1/3)',
             'waka_sdm' => 'Menunggu Persetujuan Waka SDM (Tahap 2/3)',
             'kepsek'   => 'Menunggu Persetujuan Kepala Sekolah (Tahap 3/3)',
-            default    => 'Menunggu Verifikasi',
+            default    => $this->status ?? 'Tercatat',
         };
     }
 

@@ -544,10 +544,11 @@
     <div class="chart-card">
         <div class="chart-card-header">
             <h3 class="chart-card-title">Tren Kehadiran Siswa — 7 Hari Terakhir</h3>
-            <select class="class-select">
-                <option value="all">semua Kelas</option>
-                <option value="rpl">RPL</option>
-                <option value="tkj">TKJ</option>
+            <select class="class-select" id="selectJurusanTrend" onchange="updateTrendChart(this.value)">
+                <option value="all">Semua Jurusan</option>
+                @foreach($jurusanList as $jur)
+                    <option value="{{ $jur->kode_jurusan }}">{{ $jur->kode_jurusan }} ({{ $jur->nama_jurusan }})</option>
+                @endforeach
             </select>
         </div>
         <div class="line-chart-container">
@@ -638,7 +639,9 @@
         gradient.addColorStop(0, 'rgba(43, 67, 185, 0.25)');
         gradient.addColorStop(1, 'rgba(43, 67, 185, 0.0)');
 
-        new Chart(ctxTrend, {
+        window.trendDatasets = {!! json_encode($trendDatasets) !!};
+
+        window.trendChartInstance = new Chart(ctxTrend, {
             type: 'line',
             data: {
                 labels: {!! json_encode($trend7Hari['labels']) !!},
@@ -675,6 +678,15 @@
                 }
             }
         });
+
+        // Interaktif: Update data chart saat jurusan dipilih
+        window.updateTrendChart = function (kodeJurusan) {
+            if (window.trendChartInstance && window.trendDatasets) {
+                const newData = window.trendDatasets[kodeJurusan] || window.trendDatasets['all'];
+                window.trendChartInstance.data.datasets[0].data = newData;
+                window.trendChartInstance.update();
+            }
+        };
 
         // Donut Chart - Komposisi Hari Ini
         const ctxDonut = document.getElementById('donutChart').getContext('2d');

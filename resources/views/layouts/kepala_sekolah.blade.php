@@ -724,6 +724,12 @@
                         <span>Monitoring Dispensasi</span>
                     </a>
                 </li>
+                <li class="{{ request()->routeIs('kepala-sekolah.rekap-terlambat*') ? 'active' : '' }}">
+                    <a href="{{ route('kepala-sekolah.rekap-terlambat') }}">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Siswa Terlambat</span>
+                    </a>
+                </li>
 
                 @if(Auth::user()->role === 'admin')
                 <li class="sidebar-category-header">
@@ -766,6 +772,9 @@
                         <span class="notif-badge">{{ $notifCount }}</span>
                     @endif
                 </div>
+
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
 
                 {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">

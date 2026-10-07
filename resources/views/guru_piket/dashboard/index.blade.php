@@ -962,31 +962,7 @@
                                 Tidak ada siswa yang cocok dengan filter.
                             </div>
                             <div id="dispensasiSiswaOptions">
-                                @foreach($siswaSelectOption as $s)
-                                    <div class="dispensasi-siswa-item" 
-                                         data-id="{{ $s->id_siswa }}" 
-                                         data-name="{{ $s->nama_lengkap }}" 
-                                         data-kelas="{{ $s->kelas->nama_kelas ?? '-' }}" 
-                                         data-id-kelas="{{ $s->id_kelas }}"
-                                         data-tingkat="{{ $s->kelas->tingkat ?? '' }}"
-                                         data-nisn="{{ $s->nisn }}"
-                                         data-jurusan="{{ strtolower($s->kelas->jurusan ?? '') }}"
-                                         data-search="{{ strtolower($s->nama_lengkap . ' ' . ($s->kelas->nama_kelas ?? '') . ' ' . $s->nisn) }}"
-                                         onclick="selectSiswaDispensasi(this)"
-                                         style="padding: 9px 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s ease; border-bottom: 1px solid #f8fafc;">
-                                        <div>
-                                            <div class="siswa-name" style="font-weight: 700; font-size: 13px; color: #1b2559;">{{ $s->nama_lengkap }}</div>
-                                            <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
-                                                <span style="background: #eef2ff; color: #2b43b9; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">{{ $s->kelas->nama_kelas ?? '-' }}</span>
-                                                @if($s->kelas->jurusan ?? null)
-                                                    <span style="background: #fff7ed; color: #c2410c; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 10px; margin-left: 4px;">{{ $s->kelas->jurusan }}</span>
-                                                @endif
-                                                <span style="margin-left: 6px;">NISN: {{ $s->nisn }}</span>
-                                            </div>
-                                        </div>
-                                        <i class="fa-solid fa-chevron-right" style="font-size: 11px; color: #cbd5e1; transition: all 0.15s ease;"></i>
-                                    </div>
-                                @endforeach
+                                <!-- Rendered dynamically via JavaScript from allSiswaDispensasi -->
                             </div>
                         </div>
                     </div>
@@ -1070,6 +1046,7 @@
 <script>
     function openDispensasiModal() {
         document.getElementById('dispensasiModal').classList.add('show');
+        filterSiswaDispensasi();
         setTimeout(() => {
             const searchInput = document.getElementById('dispensasiSearchInput');
             if (searchInput && document.getElementById('dispensasiSearchSection').style.display !== 'none') {
@@ -1087,12 +1064,29 @@
         document.getElementById('laporanModal').classList.remove('show');
     }
 
+    const allSiswaDispensasi = {!! json_encode($siswaSelectOption->map(fn($s) => [
+        'id'   => $s->id_siswa,
+        'name' => $s->nama_lengkap,
+        'k'    => $s->kelas->nama_kelas ?? '-',
+        'ik'   => (string)$s->id_kelas,
+        't'    => (string)($s->kelas->tingkat ?? ''),
+        'n'    => (string)($s->nisn ?? ''),
+        'j'    => strtolower($s->kelas->jurusan ?? ''),
+        's'    => strtolower($s->nama_lengkap . ' ' . ($s->kelas->nama_kelas ?? '') . ' ' . ($s->nisn ?? ''))
+    ])) !!};
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+    }
+
     function filterSiswaDispensasi() {
         const term = (document.getElementById('dispensasiSearchInput')?.value || '').toLowerCase().trim();
         const filterTingkat = document.getElementById('dispensasiFilterTingkat')?.value || '';
         const filterKelas = document.getElementById('dispensasiFilterKelas')?.value || '';
 
-        const items = document.querySelectorAll('.dispensasi-siswa-item');
+        const container = document.getElementById('dispensasiSiswaOptions');
         const emptyMsg = document.getElementById('dispensasiSiswaEmpty');
         const counter = document.getElementById('dispensasiSiswaCount');
         const clearBtn = document.getElementById('dispensasiClearSearchBtn');
@@ -1120,28 +1114,50 @@
         const activeKelas = document.getElementById('dispensasiFilterKelas')?.value || '';
 
         let matchCount = 0;
-        items.forEach(item => {
-            const searchText  = item.getAttribute('data-search') || '';
-            const itemTingkat = item.getAttribute('data-tingkat') || '';
-            const itemIdKelas = item.getAttribute('data-id-kelas') || '';
+        const matches = [];
 
-            const matchText    = !term          || searchText.includes(term);
-            const matchTingkat = !filterTingkat || itemTingkat === filterTingkat;
-            const matchKelas   = !activeKelas   || itemIdKelas === activeKelas;
+        for (let i = 0; i < allSiswaDispensasi.length; i++) {
+            const item = allSiswaDispensasi[i];
+            const matchText    = !term          || item.s.includes(term);
+            const matchTingkat = !filterTingkat || item.t === filterTingkat;
+            const matchKelas   = !activeKelas   || item.ik === activeKelas;
 
             if (matchText && matchTingkat && matchKelas) {
-                item.style.display = 'flex';
                 matchCount++;
-            } else {
-                item.style.display = 'none';
+                if (matches.length < 50) {
+                    matches.push(item);
+                }
             }
-        });
+        }
 
         if (emptyMsg) emptyMsg.style.display = matchCount === 0 ? 'block' : 'none';
         if (counter) {
             counter.innerText = hasAnyFilter
                 ? `Ditemukan ${matchCount} siswa`
                 : `Menampilkan ${matchCount} siswa`;
+        }
+
+        if (container) {
+            container.innerHTML = matches.map(s => `
+                <div class="dispensasi-siswa-item" 
+                     data-id="${s.id}" 
+                     data-name="${escapeHtml(s.name)}" 
+                     data-kelas="${escapeHtml(s.k)}" 
+                     data-nisn="${escapeHtml(s.n)}" 
+                     data-jurusan="${escapeHtml(s.j)}" 
+                     onclick="selectSiswaDispensasi(this)"
+                     style="padding: 9px 12px; border-radius: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.15s ease; border-bottom: 1px solid #f8fafc;">
+                    <div>
+                        <div class="siswa-name" style="font-weight: 700; font-size: 13px; color: #1b2559;">${escapeHtml(s.name)}</div>
+                        <div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">
+                            <span style="background: #eef2ff; color: #2b43b9; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 10.5px;">${escapeHtml(s.k)}</span>
+                            ${s.j ? `<span style="background: #fff7ed; color: #c2410c; padding: 1px 7px; border-radius: 4px; font-weight: 700; font-size: 10px; margin-left: 4px;">${escapeHtml(s.j.toUpperCase())}</span>` : ''}
+                            <span style="margin-left: 6px;">NISN: ${escapeHtml(s.n)}</span>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right" style="font-size: 11px; color: #cbd5e1; transition: all 0.15s ease;"></i>
+                </div>
+            `).join('');
         }
     }
 

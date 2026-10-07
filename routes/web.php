@@ -29,9 +29,24 @@ use App\Http\Controllers\WakaSdmDashboardController;
 use App\Http\Controllers\WaliMuridDashboardController;
 use App\Http\Controllers\KepalaSekolahDashboardController;
 use App\Http\Controllers\WakaPiketController;
+use App\Http\Controllers\WakaKesiswaanDashboardController;
+use App\Http\Controllers\IzinTerlambatController;
 
 Route::get('/', function () {
-    return redirect()->route('admin.dashboard');
+    if (!Auth::check()) {
+        return redirect()->route('login');
+    }
+    $user = Auth::user();
+    $defaultKey = $user->defaultPortal();
+    if (!$defaultKey) {
+        return response()->view('errors.403_portal', [
+            'user'             => $user,
+            'requiredPortals'  => [],
+            'availablePortals' => [],
+        ], 403);
+    }
+    $route = config("portal.portals.{$defaultKey}.route", 'login');
+    return redirect()->route($route);
 });
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
@@ -39,7 +54,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Admin Routes (auth protected)
-Route::prefix('admin')->middleware('auth')->group(function () {
+Route::prefix('admin')->middleware(['auth', 'portal:admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
 
     // Notifikasi API Endpoints
@@ -120,6 +135,8 @@ Route::prefix('admin')->middleware('auth')->group(function () {
     Route::get('/laporan', [AdminLaporanController::class, 'index'])->name('admin.laporan');
     Route::get('/laporan/export', [AdminLaporanController::class, 'exportCsv'])->name('admin.laporan.export');
     Route::get('/laporan/print', [AdminLaporanController::class, 'printView'])->name('admin.laporan.print');
+    Route::post('/dispensasi/{id}/batal', [AdminLaporanController::class, 'batalkanDispensasi'])->name('admin.dispensasi.batal');
+    Route::post('/izin-guru/{id}/batal', [AdminLaporanController::class, 'batalkanIzinGuru'])->name('admin.izin-guru.batal');
 
     Route::get('/help', [AdminDashboardController::class, 'help'])->name('admin.help');
 
@@ -131,14 +148,15 @@ Route::prefix('admin')->middleware('auth')->group(function () {
 });
 
 // Wali Kelas Routes (auth protected)
-Route::prefix('wali-kelas')->middleware('auth')->group(function () {
+Route::prefix('wali-kelas')->middleware(['auth', 'portal:wali_kelas'])->group(function () {
     Route::get('/dashboard', [WaliKelasDashboardController::class, 'index'])->name('wali-kelas.dashboard');
     Route::get('/siswa', [WaliKelasDashboardController::class, 'siswa'])->name('wali-kelas.siswa');
     Route::get('/jurnal', [WaliKelasDashboardController::class, 'jurnal'])->name('wali-kelas.jurnal');
+    Route::get('/terlambat', [IzinTerlambatController::class, 'waliKelasIndex'])->name('wali-kelas.terlambat');
 });
 
 // Guru Piket Routes (auth protected)
-Route::prefix('guru-piket')->name('guru-piket.')->middleware('auth')->group(function () {
+Route::prefix('guru-piket')->name('guru-piket.')->middleware(['auth', 'portal:piket'])->group(function () {
     Route::get('/dashboard', [GuruPiketDashboardController::class, 'index'])->name('dashboard');
     Route::get('/monitoring-kelas', [GuruPiketDashboardController::class, 'monitoringKelas'])->name('monitoring');
     
@@ -148,14 +166,20 @@ Route::prefix('guru-piket')->name('guru-piket.')->middleware('auth')->group(func
     Route::post('/dispensasi/{id}/status', [GuruPiketDashboardController::class, 'updateDispensasiStatus'])->name('dispensasi.status');
     Route::get('/dispensasi/{id}/cetak', [GuruPiketDashboardController::class, 'cetakDispensasi'])->name('dispensasi.cetak');
     
+    // Izin Masuk Kelas Siswa Terlambat
+    Route::get('/terlambat', [IzinTerlambatController::class, 'index'])->name('terlambat.index');
+    Route::post('/terlambat', [IzinTerlambatController::class, 'store'])->name('terlambat.store');
+    Route::put('/terlambat/{id}', [IzinTerlambatController::class, 'update'])->name('terlambat.update');
+    Route::delete('/terlambat/{id}', [IzinTerlambatController::class, 'destroy'])->name('terlambat.destroy');
+    Route::get('/terlambat/{id}/cetak', [IzinTerlambatController::class, 'cetak'])->name('terlambat.cetak');
+
     // Perizinan Siswa (Sakit, Izin, Dispen)
     Route::get('/izin-siswa', [GuruPiketDashboardController::class, 'izinSiswa'])->name('izin-siswa');
     Route::post('/izin-siswa', [GuruPiketDashboardController::class, 'storeIzinSiswa'])->name('izin-siswa.store');
     Route::delete('/izin-siswa/{id}', [GuruPiketDashboardController::class, 'destroyIzinSiswa'])->name('izin-siswa.destroy');
     
-    // Izin Guru & Kelas Terdampak
+    // Izin Guru & Kelas Terdampak (Read-only monitoring)
     Route::get('/izin-guru', [GuruPiketDashboardController::class, 'izinGuru'])->name('izin-guru');
-    Route::post('/izin-guru/{id}/status', [GuruPiketDashboardController::class, 'updateStatusIzin'])->name('izin-guru.status');
     Route::get('/jurnal-pendampingan/{id_jadwal}', [GuruPiketDashboardController::class, 'formJurnalPendampingan'])->name('jurnal.pendampingan');
     Route::post('/jurnal-pendampingan/{id_jadwal}', [GuruPiketDashboardController::class, 'storeJurnalPendampingan'])->name('jurnal.pendampingan.store');
     
@@ -179,7 +203,7 @@ Route::prefix('guru-piket')->name('guru-piket.')->middleware('auth')->group(func
 });
 
 // Guru Mapel Routes (auth protected)
-Route::prefix('guru-mapel')->name('guru-mapel.')->middleware('auth')->group(function () {
+Route::prefix('guru-mapel')->name('guru-mapel.')->middleware(['auth', 'portal:guru_mengajar'])->group(function () {
     Route::get('/dashboard', [GuruMapelDashboardController::class, 'index'])->name('dashboard');
     Route::get('/jadwal', [GuruMapelDashboardController::class, 'jadwal'])->name('jadwal');
     
@@ -195,15 +219,19 @@ Route::prefix('guru-mapel')->name('guru-mapel.')->middleware('auth')->group(func
     // Izin Tidak Mengajar
     Route::get('/izin', [GuruMapelDashboardController::class, 'izin'])->name('izin');
     Route::post('/izin', [GuruMapelDashboardController::class, 'storeIzin'])->name('izin.store');
+    Route::post('/izin/{id}/batal', [GuruMapelDashboardController::class, 'batalkanIzin'])->name('izin.batal');
     
     // Panduan Guru Mapel
     Route::get('/help', [GuruMapelDashboardController::class, 'help'])->name('help');
 });
 
 // Satpam / Pos Jaga Routes (auth protected)
-Route::prefix('satpam')->name('satpam.')->middleware('auth')->group(function () {
+Route::prefix('satpam')->name('satpam.')->middleware(['auth', 'portal:satpam'])->group(function () {
     Route::get('/dashboard', [SatpamDashboardController::class, 'index'])->name('dashboard');
     Route::get('/monitoring', [SatpamDashboardController::class, 'monitoring'])->name('monitoring');
+    
+    // Monitoring Siswa Terlambat Hari Ini
+    Route::get('/terlambat', [IzinTerlambatController::class, 'satpamIndex'])->name('terlambat');
     
     // Verifikasi & Konfirmasi Dispensasi
     Route::get('/dispensasi', [SatpamDashboardController::class, 'dispensasi'])->name('dispensasi');
@@ -223,7 +251,7 @@ Route::prefix('satpam')->name('satpam.')->middleware('auth')->group(function () 
 });
 
 // Waka Kurikulum Routes (auth protected)
-Route::prefix('waka-kurikulum')->name('waka-kurikulum.')->middleware('auth')->group(function () {
+Route::prefix('waka-kurikulum')->name('waka-kurikulum.')->middleware(['auth', 'portal:waka_kurikulum'])->group(function () {
     Route::get('/dashboard', [WakaKurikulumDashboardController::class, 'index'])->name('dashboard');
     Route::get('/jurnal', [WakaKurikulumDashboardController::class, 'jurnal'])->name('jurnal');
 
@@ -257,17 +285,15 @@ Route::prefix('waka-kurikulum')->name('waka-kurikulum.')->middleware('auth')->gr
 });
 
 // Waka SDM / Kepegawaian Routes (auth protected)
-Route::prefix('waka-sdm')->name('waka-sdm.')->middleware('auth')->group(function () {
+Route::prefix('waka-sdm')->name('waka-sdm.')->middleware(['auth', 'portal:waka_sdm'])->group(function () {
     Route::get('/dashboard', [WakaSdmDashboardController::class, 'index'])->name('dashboard');
     Route::get('/guru', [WakaSdmDashboardController::class, 'guru'])->name('guru');
 
-    // Persetujuan Izin Guru
+    // Data & Rekap Izin Guru (Read-only)
     Route::get('/izin', [WakaSdmDashboardController::class, 'izin'])->name('izin');
-    Route::post('/izin/{id}/status', [WakaSdmDashboardController::class, 'updateStatusIzin'])->name('izin.status');
 
-    // Persetujuan Dispensasi Siswa
+    // Persetujuan Dispensasi Siswa (read-only — persetujuan dipindah ke Guru Piket + Waka Piket)
     Route::get('/dispensasi', [WakaSdmDashboardController::class, 'dispensasi'])->name('dispensasi');
-    Route::post('/dispensasi/{id}/status', [WakaSdmDashboardController::class, 'updateStatusDispensasi'])->name('dispensasi.status');
 
     // Laporan Rekapitulasi Persetujuan
     Route::get('/laporan', [WakaSdmDashboardController::class, 'laporan'])->name('laporan');
@@ -277,8 +303,17 @@ Route::prefix('waka-sdm')->name('waka-sdm.')->middleware('auth')->group(function
     Route::get('/help', [WakaSdmDashboardController::class, 'help'])->name('help');
 });
 
+// Waka Kesiswaan & Kedisiplinan Routes (auth protected)
+Route::prefix('waka-kesiswaan')->name('waka-kesiswaan.')->middleware(['auth', 'portal:waka_kesiswaan'])->group(function () {
+    Route::get('/dashboard', [WakaKesiswaanDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/presensi', [WakaKesiswaanDashboardController::class, 'presensi'])->name('presensi');
+    Route::get('/dispensasi', [WakaKesiswaanDashboardController::class, 'dispensasi'])->name('dispensasi');
+    Route::get('/kedisiplinan', [WakaKesiswaanDashboardController::class, 'rekapKedisiplinan'])->name('kedisiplinan');
+    Route::get('/rekap-terlambat', [IzinTerlambatController::class, 'rekap'])->name('rekap-terlambat');
+});
+
 // Wali Murid / Siswa Portal Routes (auth protected)
-Route::prefix('wali-murid')->name('wali-murid.')->middleware('auth')->group(function () {
+Route::prefix('wali-murid')->name('wali-murid.')->middleware(['auth', 'portal:wali_murid'])->group(function () {
     Route::get('/dashboard', [WaliMuridDashboardController::class, 'index'])->name('dashboard');
     Route::get('/presensi', [WaliMuridDashboardController::class, 'presensi'])->name('presensi');
     Route::get('/jurnal', [WaliMuridDashboardController::class, 'jurnal'])->name('jurnal');
@@ -287,17 +322,21 @@ Route::prefix('wali-murid')->name('wali-murid.')->middleware('auth')->group(func
 });
 
 // Kepala Sekolah Routes (auth protected)
-Route::prefix('kepala-sekolah')->name('kepala-sekolah.')->middleware('auth')->group(function () {
+Route::prefix('kepala-sekolah')->name('kepala-sekolah.')->middleware(['auth', 'portal:kepala_sekolah'])->group(function () {
     Route::get('/dashboard', [KepalaSekolahDashboardController::class, 'dashboard'])->name('dashboard');
     Route::get('/izin-guru',  [KepalaSekolahDashboardController::class, 'izinGuru'])->name('izin-guru');
-    Route::post('/izin-guru/{id}/status', [KepalaSekolahDashboardController::class, 'updateStatusIzin'])->name('izin-guru.status');
     Route::get('/dispensasi', [KepalaSekolahDashboardController::class, 'dispensasi'])->name('dispensasi');
+    Route::get('/rekap-terlambat', [IzinTerlambatController::class, 'rekap'])->name('rekap-terlambat');
 });
 
-// Waka Piket KBM Routes (Persetujuan Dispensasi Siswa Harian)
-Route::prefix('waka-piket')->name('waka-piket.')->middleware('auth')->group(function () {
+// Waka Piket KBM Routes (Persetujuan Dispensasi Siswa Harian & Izin Terlambat)
+Route::prefix('waka-piket')->name('waka-piket.')->middleware(['auth', 'portal:piket_waka'])->group(function () {
     Route::get('/dispensasi', [WakaPiketController::class, 'dispensasi'])->name('dispensasi');
     Route::post('/dispensasi/{id}/status', [WakaPiketController::class, 'updateStatus'])->name('dispensasi.status');
+
+    // Persetujuan Izin Masuk Kelas Siswa Terlambat
+    Route::get('/terlambat', [IzinTerlambatController::class, 'wakaIndex'])->name('terlambat.index');
+    Route::post('/terlambat/{id}/konfirmasi', [IzinTerlambatController::class, 'konfirmasi'])->name('terlambat.konfirmasi');
 });
 
-Route::resource('jurnal', JurnalMengajarController::class);
+Route::resource('jurnal', JurnalMengajarController::class)->middleware(['auth', 'portal:guru_mengajar,admin']);

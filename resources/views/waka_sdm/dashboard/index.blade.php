@@ -734,7 +734,7 @@
                         </div>
                         <div class="sub-item-right">
                             <span class="sub-item-date">{{ $ds->tanggal }}</span>
-                            @if($ds->status === 'Disetujui' || $ds->status === 'Disetujui_Waka' || $ds->status === 'Selesai')
+                            @if(in_array($ds->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))
                                 <span class="status-pill disetujui" style="font-size:11px; padding:3px 12px;">Disetujui</span>
                             @elseif($ds->status === 'Ditolak')
                                 <span class="status-pill ditolak" style="font-size:11px; padding:3px 12px;">Ditolak</span>

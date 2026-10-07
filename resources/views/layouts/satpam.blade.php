@@ -748,6 +748,12 @@
                 </li>
 
                 <li class="sidebar-category-header">Layanan Keamanan & Gate</li>
+                <li class="{{ request()->routeIs('satpam.terlambat*') ? 'active' : '' }}">
+                    <a href="{{ route('satpam.terlambat') }}">
+                        <i class="fa-solid fa-person-walking-dashed-line-arrow-right"></i>
+                        <span>Siswa Terlambat</span>
+                    </a>
+                </li>
                 <li class="{{ request()->routeIs('satpam.dispensasi*') ? 'active' : '' }}">
                     <a href="{{ route('satpam.dispensasi') }}">
                         <i class="fa-solid fa-ticket-simple"></i>
@@ -801,6 +807,9 @@
             </div>
             <div class="header-user-nav">
                 @yield('header_extra')
+
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
 
                 {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">

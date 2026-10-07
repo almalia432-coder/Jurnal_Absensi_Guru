@@ -413,13 +413,13 @@
     </div>
 
     <div class="kpi-card">
-        <div class="kpi-icon orange">
-            <i class="fa-solid fa-hourglass-half"></i>
+        <div class="kpi-icon indigo">
+            <i class="fa-solid fa-file-circle-check"></i>
         </div>
         <div>
-            <div class="kpi-val">{{ $kepsekIzinMenunggu }}</div>
-            <div class="kpi-lbl">Menunggu Persetujuan Kepsek</div>
-            <div class="kpi-sub">Persetujuan final (Tahap 3)</div>
+            <div class="kpi-val">{{ $tabCounts->tercatat ?? 0 }}</div>
+            <div class="kpi-lbl">Izin Tercatat</div>
+            <div class="kpi-sub">Alur langsung tercatat</div>
         </div>
     </div>
 
@@ -447,20 +447,23 @@
 </div>
 
 <!-- Page Action & Filter Bar (Admin 1:1) -->
-<!-- Page Action & Filter Bar (Admin 1:1) -->
 <div class="page-action-card">
     <div class="status-tabs">
-        <a href="{{ route('kepala-sekolah.izin-guru') }}" class="tab-pill {{ empty(request('status')) ? 'active' : '' }}">
+        <a href="{{ route('kepala-sekolah.izin-guru') }}" class="tab-pill {{ empty(request('status')) || request('status') === 'semua' ? 'active' : '' }}">
             <span>Semua Data</span>
             <span class="tab-count">{{ $tabCounts->semua ?? $izinList->total() }}</span>
         </a>
-        <a href="{{ route('kepala-sekolah.izin-guru', ['status' => 'menunggu_kepsek']) }}" class="tab-pill {{ request('status') === 'menunggu_kepsek' || request('status') === 'Menunggu' ? 'active' : '' }}">
-            <span><i class="fa-solid fa-hourglass-half" style="color:#f59e0b;"></i> Menunggu Kepsek</span>
-            <span class="tab-count" style="background:#fef3c7; color:#b45309;">{{ $tabCounts->menunggu_kepsek ?? 0 }}</span>
+        <a href="{{ route('kepala-sekolah.izin-guru', ['status' => 'Tercatat']) }}" class="tab-pill {{ request('status') === 'Tercatat' ? 'active' : '' }}">
+            <span><i class="fa-solid fa-file-circle-check" style="color:#2563eb;"></i> Tercatat</span>
+            <span class="tab-count" style="background:#dbeafe; color:#1e40af;">{{ $tabCounts->tercatat ?? 0 }}</span>
         </a>
         <a href="{{ route('kepala-sekolah.izin-guru', ['status' => 'Disetujui']) }}" class="tab-pill {{ request('status') === 'Disetujui' ? 'active' : '' }}">
-            <span><i class="fa-solid fa-circle-check" style="color:#10b981;"></i> Disetujui Penuh</span>
+            <span><i class="fa-solid fa-circle-check" style="color:#10b981;"></i> Disetujui</span>
             <span class="tab-count" style="background:#d1fae5; color:#065f46;">{{ $tabCounts->disetujui ?? 0 }}</span>
+        </a>
+        <a href="{{ route('kepala-sekolah.izin-guru', ['status' => 'Dibatalkan']) }}" class="tab-pill {{ request('status') === 'Dibatalkan' ? 'active' : '' }}">
+            <span><i class="fa-solid fa-ban" style="color:#64748b;"></i> Dibatalkan</span>
+            <span class="tab-count" style="background:#f1f5f9; color:#475569;">{{ $tabCounts->dibatalkan ?? 0 }}</span>
         </a>
         <a href="{{ route('kepala-sekolah.izin-guru', ['status' => 'Ditolak']) }}" class="tab-pill {{ request('status') === 'Ditolak' ? 'active' : '' }}">
             <span><i class="fa-solid fa-circle-xmark" style="color:#ef4444;"></i> Ditolak</span>
@@ -481,9 +484,10 @@
             <span class="filter-label">Status Izin</span>
             <select name="status" class="filter-select">
                 <option value="">Semua Status</option>
-                <option value="menunggu_kepsek" {{ request('status')=='menunggu_kepsek' || request('status')=='Menunggu' ? 'selected':'' }}>Menunggu Kepsek</option>
-                <option value="Disetujui"       {{ request('status')=='Disetujui' ? 'selected':'' }}>Disetujui Penuh</option>
-                <option value="Ditolak"         {{ request('status')=='Ditolak'   ? 'selected':'' }}>Ditolak</option>
+                <option value="Tercatat"   {{ request('status')=='Tercatat'   ? 'selected':'' }}>Tercatat</option>
+                <option value="Disetujui"  {{ request('status')=='Disetujui'  ? 'selected':'' }}>Disetujui</option>
+                <option value="Dibatalkan" {{ request('status')=='Dibatalkan' ? 'selected':'' }}>Dibatalkan</option>
+                <option value="Ditolak"    {{ request('status')=='Ditolak'    ? 'selected':'' }}>Ditolak</option>
             </select>
         </div>
 
@@ -532,9 +536,8 @@
                     <th>Identitas Guru</th>
                     <th>Kategori & Tanggal</th>
                     <th>Alasan</th>
-                    <th>Persetujuan Berjenjang</th>
-                    <th>Status Akhir</th>
-                    <th style="text-align: right;">Aksi Final Kepsek</th>
+                    <th>Status</th>
+                    <th>Keterangan</th>
                 </tr>
             </thead>
             <tbody>
@@ -543,7 +546,6 @@
                     $nama = $item->guru->nama_lengkap ?? 'Guru';
                     $words = preg_split('/\s+/', trim(preg_replace('/[^a-zA-Z\s]/', '', $nama)));
                     $init = count($words) >= 2 ? strtoupper(substr($words[0],0,1).substr($words[1],0,1)) : strtoupper(substr($nama,0,2));
-                    $stl = strtolower($item->status);
                 @endphp
                 <tr>
                     <td style="font-weight:700; color:#94a3b8;">{{ $izinList->firstItem() + $idx }}</td>
@@ -574,73 +576,40 @@
                         <span title="{{ $item->alasan }}">{{ Str::limit($item->alasan, 55) }}</span>
                     </td>
                     <td>
-                        <div style="font-size:11.5px; line-height:1.4;">
-                            <div><strong>1. Piket:</strong> 
-                                @if($item->piket_status === 'Disetujui')
-                                    <span style="color:#10b981; font-weight:700;">Disetujui</span>
-                                @elseif($item->piket_status === 'Ditolak')
-                                    <span style="color:#ef4444; font-weight:700;">Ditolak</span>
-                                @else
-                                    <span style="color:#94a3b8;">Menunggu</span>
-                                @endif
-                            </div>
-                            <div><strong>2. Waka SDM:</strong> 
-                                @if($item->waka_status === 'Disetujui')
-                                    <span style="color:#10b981; font-weight:700;">Disetujui</span>
-                                @elseif($item->waka_status === 'Ditolak')
-                                    <span style="color:#ef4444; font-weight:700;">Ditolak</span>
-                                @else
-                                    <span style="color:#94a3b8;">Menunggu</span>
-                                @endif
-                            </div>
-                            <div><strong>3. Kepsek:</strong> 
-                                @if($item->kepsek_status === 'Disetujui')
-                                    <span style="color:#10b981; font-weight:700;">Disetujui</span>
-                                @elseif($item->kepsek_status === 'Ditolak')
-                                    <span style="color:#ef4444; font-weight:700;">Ditolak</span>
-                                @else
-                                    <span style="color:#f59e0b; font-weight:700;">Menunggu Kepsek</span>
-                                @endif
-                            </div>
-                        </div>
-                    </td>
-                    <td>
-                        @if($item->status === 'Disetujui')
-                            <span class="status-badge disetujui"><i class="fa-solid fa-circle-check"></i> Disetujui Penuh</span>
+                        @if($item->status === 'Tercatat')
+                            <span class="status-badge" style="background:#dbeafe; color:#1e40af;"><i class="fa-solid fa-file-circle-check"></i> Tercatat</span>
+                        @elseif($item->status === 'Disetujui')
+                            <span class="status-badge disetujui"><i class="fa-solid fa-circle-check"></i> Disetujui</span>
+                        @elseif($item->status === 'Dibatalkan')
+                            <span class="status-badge" style="background:#f1f5f9; color:#64748b;"><i class="fa-solid fa-ban"></i> Dibatalkan</span>
                         @elseif($item->status === 'Ditolak')
                             <span class="status-badge ditolak"><i class="fa-solid fa-circle-xmark"></i> Ditolak</span>
                         @else
-                            <span class="status-badge menunggu"><i class="fa-solid fa-clock"></i> Dalam Proses</span>
+                            <span class="status-badge">{{ $item->status }}</span>
                         @endif
                     </td>
-                    <td style="text-align: right;">
-                        @if($item->tahap_approval === 'kepsek')
-                            <div style="display:flex; justify-content:flex-end; gap:6px;">
-                                <button type="button" class="btn-act-approve" onclick="openApprovalModalKepsek({{ $item->id }}, '{{ addslashes($nama) }}', 'Disetujui')">
-                                    <i class="fa-solid fa-check"></i> Setujui Final
-                                </button>
-                                <button type="button" class="btn-act-reject" onclick="openApprovalModalKepsek({{ $item->id }}, '{{ addslashes($nama) }}', 'Ditolak')">
-                                    <i class="fa-solid fa-xmark"></i> Tolak
-                                </button>
+                    <td>
+                        @if($item->status === 'Dibatalkan' && $item->alasan_batal)
+                            <div style="font-size:12px; color:#ef4444;">
+                                <strong>Batal:</strong> {{ $item->alasan_batal }}
                             </div>
-                        @elseif($item->status === 'Disetujui')
-                            <span style="font-size:11.5px; font-weight:700; color:#065f46; background:#d1fae5; padding:4px 8px; border-radius:6px;">
-                                Resmi Disetujui
-                            </span>
-                        @elseif($item->status === 'Ditolak')
-                            <span style="font-size:11.5px; font-weight:700; color:#991b1b; background:#fee2e2; padding:4px 8px; border-radius:6px;">
-                                Ditolak ({{ $item->ditolak_oleh_role ?? 'Sekolah' }})
-                            </span>
+                            @if($item->dibatalkanOlehUser)
+                                <div style="font-size:11px; color:#94a3b8;">
+                                    Oleh: {{ $item->dibatalkanOlehUser->name }} ({{ \Carbon\Carbon::parse($item->dibatalkan_at)->format('d/m/Y H:i') }})
+                                </div>
+                            @endif
+                        @elseif($item->catatan)
+                            <div style="font-size:12px; color:#64748b; font-style:italic;">
+                                {{ $item->catatan }}
+                            </div>
                         @else
-                            <span style="font-size:11.5px; font-weight:600; color:#64748b;">
-                                Menunggu Tahap Sebelumnya
-                            </span>
+                            <span style="color:#94a3b8; font-size:12px;">-</span>
                         @endif
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" style="text-align:center; padding:48px 16px; color:#94a3b8;">
+                    <td colspan="6" style="text-align:center; padding:48px 16px; color:#94a3b8;">
                         <i class="fa-solid fa-folder-open" style="font-size:36px; margin-bottom:10px; display:block;"></i>
                         <span style="font-weight:600;">Tidak ada data izin guru yang cocok dengan filter</span>
                     </td>
@@ -679,92 +648,4 @@
     </div>
     @endif
 </div>
-
-<!-- Modal Approval Kepala Sekolah -->
-<div id="modalApprovalKepsek" class="modal-backdrop-kepsek">
-    <div class="modal-box-kepsek">
-        <div class="modal-head-kepsek">
-            <h4 id="kepsekModalTitle" style="margin:0; font-size:16px; font-weight:800; color:#0f172a;">Persetujuan Akhir Izin Guru</h4>
-            <button type="button" onclick="closeApprovalModalKepsek()" style="background:none; border:none; font-size:18px; cursor:pointer; color:#94a3b8;">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-        <form id="formApprovalKepsek" method="POST" action="">
-            @csrf
-            <div class="modal-body-kepsek">
-                <input type="hidden" name="status" id="kepsekModalStatusInput" value="">
-                
-                <p id="kepsekModalDesc" style="font-size:13.5px; color:#334155; margin-bottom:16px;"></p>
-
-                <div id="kepsekAlertReject" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:12px; margin-bottom:14px; font-size:12.5px; color:#991b1b;">
-                    <i class="fa-solid fa-circle-exclamation"></i> <strong>Pemberitahuan Penolakan:</strong> Izin ini akan ditolak secara resmi. Sistem akan langsung mengirim notifikasi kepada guru pengampu bahwa permohonan ditolak dan <strong>diwajibkan untuk tetap melaksanakan / melanjutkan KBM</strong>.
-                </div>
-
-                <div id="kepsekAlertApprove" style="display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:12px; margin-bottom:14px; font-size:12.5px; color:#166534;">
-                    <i class="fa-solid fa-circle-check"></i> <strong>Persetujuan Lengkap:</strong> Izin ini telah disetujui Guru Piket dan Waka SDM. Persetujuan Kepala Sekolah akan meresmikan izin dan mengirim notifikasi persetujuan penuh ke guru mapel.
-                </div>
-
-                <div style="margin-bottom:12px;">
-                    <label style="display:block; font-size:12.5px; font-weight:700; color:#1e293b; margin-bottom:6px;">
-                        Catatan Kepala Sekolah (Opsional):
-                    </label>
-                    <textarea name="catatan" id="kepsekModalCatatanInput" rows="3" class="filter-input" style="width:100%; box-sizing:border-box;" placeholder="Tambahkan instruksi atau catatan keputusan..."></textarea>
-                </div>
-            </div>
-            <div class="modal-foot-kepsek">
-                <button type="button" onclick="closeApprovalModalKepsek()" style="padding:8px 16px; border-radius:8px; border:1.5px solid #cbd5e1; background:#ffffff; color:#475569; font-weight:700; cursor:pointer;">
-                    Batal
-                </button>
-                <button type="submit" id="kepsekModalSubmitBtn" class="btn-act-approve" style="padding:8px 18px;">
-                    Konfirmasi
-                </button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-    function openApprovalModalKepsek(id, namaGuru, status) {
-        const form = document.getElementById('formApprovalKepsek');
-        form.action = `/kepala-sekolah/izin-guru/${id}/status`;
-
-        const statusInput = document.getElementById('kepsekModalStatusInput');
-        statusInput.value = status;
-
-        const title = document.getElementById('kepsekModalTitle');
-        const desc = document.getElementById('kepsekModalDesc');
-        const alertApprove = document.getElementById('kepsekAlertApprove');
-        const alertReject = document.getElementById('kepsekAlertReject');
-        const submitBtn = document.getElementById('kepsekModalSubmitBtn');
-        document.getElementById('kepsekModalCatatanInput').value = '';
-
-        if (status === 'Disetujui') {
-            title.textContent = 'Persetujuan Final Izin Guru';
-            desc.innerHTML = `Setujui secara final pengajuan izin dari <strong>${namaGuru}</strong>?`;
-            alertApprove.style.display = 'block';
-            alertReject.style.display = 'none';
-            submitBtn.className = 'btn-act-approve';
-            submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Ya, Setujui Penuh';
-        } else {
-            title.textContent = 'Tolak Izin Guru';
-            desc.innerHTML = `Tolak pengajuan izin dari <strong>${namaGuru}</strong>?`;
-            alertApprove.style.display = 'none';
-            alertReject.style.display = 'block';
-            submitBtn.className = 'btn-act-reject';
-            submitBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> Tolak (Wajib Lanjut KBM)';
-        }
-
-        document.getElementById('modalApprovalKepsek').classList.add('active');
-    }
-
-    function closeApprovalModalKepsek() {
-        document.getElementById('modalApprovalKepsek').classList.remove('active');
-    }
-
-    document.getElementById('modalApprovalKepsek').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeApprovalModalKepsek();
-        }
-    });
-</script>
 @endsection

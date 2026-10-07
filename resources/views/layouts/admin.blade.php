@@ -1268,6 +1268,12 @@
                         <span>Jadwal Guru Piket</span>
                     </a>
                 </li>
+                <li class="{{ request()->routeIs('guru-piket.terlambat*') ? 'active' : '' }}">
+                    <a href="{{ route('guru-piket.terlambat.index') }}">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Izin Siswa Terlambat</span>
+                    </a>
+                </li>
 
                 {{-- Kategori: Master Data --}}
                 <li class="sidebar-category-header">
@@ -1397,7 +1403,9 @@
                     </div>
                 </div>
 
-                {{-- User Profile Dropdown --}}
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
+
                 {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">
                     <div class="user-profile-badge" onclick="toggleProfileDropdown()">

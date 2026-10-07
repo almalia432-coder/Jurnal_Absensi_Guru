@@ -55,6 +55,11 @@ class Siswa extends Model
         return $this->hasMany(IzinSiswa::class, 'id_siswa', 'id_siswa');
     }
 
+    public function izinTerlambat()
+    {
+        return $this->hasMany(IzinTerlambat::class, 'id_siswa', 'id_siswa');
+    }
+
     public function scopeAktif($query)
     {
         return $query->where('status_aktif', true);

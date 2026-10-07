@@ -57,4 +57,51 @@ class JurnalMengajar extends Model
     {
         return $this->hasMany(PresensiSiswa::class, 'id_jurnal', 'id_jurnal');
     }
+
+    /**
+     * Menentukan status sesi KBM secara dinamis berdasarkan jam & tanggal.
+     */
+    public function getStatusJurnalAttribute(): string
+    {
+        if (empty($this->materi) && $this->jumlah_siswa_hadir == 0 && $this->jumlah_siswa_tidak_hadir == 0) {
+            return 'Belum Selesai';
+        }
+
+        $now = \Carbon\Carbon::now();
+        $tanggalStr = $this->tanggal ? \Carbon\Carbon::parse($this->tanggal)->format('Y-m-d') : null;
+        $todayStr = $now->format('Y-m-d');
+
+        // Jika tanggal KBM adalah hari-hari sebelumnya
+        if ($tanggalStr && $tanggalStr < $todayStr) {
+            return 'Selesai';
+        }
+
+        // Jika tanggal KBM adalah hari esok / masa depan
+        if ($tanggalStr && $tanggalStr > $todayStr) {
+            return 'Belum Selesai';
+        }
+
+        // Jika tanggal KBM adalah hari ini
+        if ($tanggalStr === $todayStr) {
+            if ($this->jam_selesai) {
+                $selesaiCarbon = \Carbon\Carbon::parse($todayStr . ' ' . $this->jam_selesai);
+                if ($now->gte($selesaiCarbon)) {
+                    return 'Selesai';
+                }
+            }
+
+            if ($this->jam_mulai && $this->jam_selesai) {
+                $mulaiCarbon = \Carbon\Carbon::parse($todayStr . ' ' . $this->jam_mulai);
+                $selesaiCarbon = \Carbon\Carbon::parse($todayStr . ' ' . $this->jam_selesai);
+                if ($now->between($mulaiCarbon, $selesaiCarbon)) {
+                    return 'Sedang Berlangsung';
+                }
+                if ($now->lt($mulaiCarbon)) {
+                    return 'Belum Selesai';
+                }
+            }
+        }
+
+        return 'Selesai';
+    }
 }

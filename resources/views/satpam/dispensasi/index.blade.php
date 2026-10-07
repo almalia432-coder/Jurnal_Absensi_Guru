@@ -140,9 +140,16 @@
                 @forelse($dispensasiList as $d)
                 <tr>
                     <td>
-                        <strong style="color: #1b2559;">{{ Carbon\Carbon::parse($d->jam_keluar)->format('H:i') }} WIB</strong>
-                        @if($d->jam_kembali)
-                            <div style="font-size: 11px; color: #10b981;">Kembali: {{ Carbon\Carbon::parse($d->jam_kembali)->format('H:i') }}</div>
+                        <strong style="color: #1b2559;">Rencana: {{ Carbon\Carbon::parse($d->jam_keluar)->format('H:i') }} WIB</strong>
+                        @if($d->jam_keluar_aktual)
+                            <div style="font-size: 11px; color: #f97316;">
+                                <i class="fa-solid fa-arrow-right-from-bracket"></i> Keluar: <strong>{{ Carbon\Carbon::parse($d->jam_keluar_aktual)->format('H:i') }}</strong>
+                            </div>
+                        @endif
+                        @if($d->jam_kembali_aktual || $d->jam_kembali)
+                            <div style="font-size: 11px; color: #10b981;">
+                                <i class="fa-solid fa-arrow-right-to-bracket"></i> Kembali: <strong>{{ Carbon\Carbon::parse($d->jam_kembali_aktual ?? $d->jam_kembali)->format('H:i') }}</strong>
+                            </div>
                         @endif
                     </td>
                     <td>
@@ -163,30 +170,32 @@
                         </span>
                     </td>
                     <td>
-                        @if(empty($d->jam_kembali) && $d->status === 'Disetujui')
-                            <span class="status-badge disetujui">Di Luar</span>
-                        @elseif(!empty($d->jam_kembali) || $d->status === 'Selesai')
+                        @if(!$d->jam_keluar_aktual && $d->status === 'Disetujui')
+                            <span class="status-badge menunggu" style="background:#fef3c7; color:#b45309;">Belum Keluar</span>
+                        @elseif($d->jam_keluar_aktual && !$d->jam_kembali_aktual && $d->status === 'Disetujui')
+                            <span class="status-badge disetujui">Sedang di Luar</span>
+                        @elseif($d->status === 'Selesai' || $d->jam_kembali_aktual)
                             <span class="status-badge selesai">Selesai Kembali</span>
                         @else
-                            <span class="status-badge menunggu">{{ $d->status }}</span>
+                            <span class="status-badge disetujui">{{ $d->status }}</span>
                         @endif
                     </td>
                     <td>
                         <div style="display: flex; gap: 6px;">
-                            @if(empty($d->jam_kembali) && $d->status === 'Disetujui')
-                                <form action="{{ route('satpam.dispensasi.status', $d->id) }}" method="POST">
-                                    @csrf
-                                    <input type="hidden" name="action" value="kembali">
-                                    <button type="submit" class="btn-action-primary" style="background: #10b981; padding: 4px 10px; font-size: 11.5px;">
-                                        <i class="fa-solid fa-check"></i> Masuk
-                                    </button>
-                                </form>
-                            @elseif($d->status === 'Menunggu')
+                            @if(!$d->jam_keluar_aktual && $d->status === 'Disetujui')
                                 <form action="{{ route('satpam.dispensasi.status', $d->id) }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="action" value="keluar">
                                     <button type="submit" class="btn-action-primary" style="background: #f97316; padding: 4px 10px; font-size: 11.5px;">
-                                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Keluar
+                                        <i class="fa-solid fa-arrow-right-from-bracket"></i> Keluar Gate
+                                    </button>
+                                </form>
+                            @elseif($d->jam_keluar_aktual && !$d->jam_kembali_aktual && $d->status === 'Disetujui')
+                                <form action="{{ route('satpam.dispensasi.status', $d->id) }}" method="POST">
+                                    @csrf
+                                    <input type="hidden" name="action" value="kembali">
+                                    <button type="submit" class="btn-action-primary" style="background: #10b981; padding: 4px 10px; font-size: 11.5px;">
+                                        <i class="fa-solid fa-arrow-right-to-bracket"></i> Masuk Gate
                                     </button>
                                 </form>
                             @else
