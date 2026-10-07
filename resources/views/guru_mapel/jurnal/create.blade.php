@@ -107,14 +107,14 @@
     .radio-pill {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 11px;
+        gap: 5px;
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-size: 12px;
         font-weight: 800;
         cursor: pointer;
         user-select: none;
-        border: 1px solid #cbd5e1;
+        border: 1.5px solid #cbd5e1;
         background: #ffffff;
         color: #64748b;
         transition: all 0.15s ease;
@@ -122,11 +122,88 @@
 
     .radio-pill input { display: none; }
 
-    .radio-pill.hadir.checked { background: #e6f9f0; color: #10b981; border-color: #10b981; }
-    .radio-pill.sakit.checked { background: #e0f2fe; color: #0369a1; border-color: #0369a1; }
-    .radio-pill.izin.checked  { background: #fff7ed; color: #f97316; border-color: #f97316; }
-    .radio-pill.alpha.checked { background: #fef2f2; color: #ef4444; border-color: #ef4444; }
-    .radio-pill.disp.checked  { background: #eef2ff; color: #2b43b9; border-color: #2b43b9; }
+    .radio-pill.hadir.checked { 
+        background: #e6f9f0; 
+        color: #059669; 
+        border-color: #10b981; 
+        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2); 
+    }
+    .radio-pill.alpha.checked { 
+        background: #fef2f2; 
+        color: #dc2626; 
+        border-color: #ef4444; 
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2); 
+    }
+    .radio-pill.hadir:not(.checked):hover {
+        border-color: #10b981;
+        color: #059669;
+        background: #f0fdf4;
+    }
+    .radio-pill.alpha:not(.checked):hover {
+        border-color: #ef4444;
+        color: #dc2626;
+        background: #fef2f2;
+    }
+
+    .tr-alpha {
+        background-color: #fff5f5 !important;
+        transition: background-color 0.2s ease;
+    }
+
+    .badge-piket-locked {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11.5px;
+        font-weight: 800;
+        padding: 5px 12px;
+        border-radius: 8px;
+        white-space: nowrap;
+    }
+    .badge-piket-locked.status-saki { background: #e0f2fe; color: #0284c7; border: 1.5px solid #7dd3fc; }
+    .badge-piket-locked.status-izin { background: #fff7ed; color: #ea580c; border: 1.5px solid #fdba74; }
+    .badge-piket-locked.status-disp { background: #fdf4ff; color: #9333ea; border: 1.5px solid #d8b4fe; }
+
+    .presensi-summary-bar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 8px 12px;
+    }
+    .summary-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 6px;
+    }
+    .summary-chip.chip-hadir {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+    .summary-chip.chip-alpha {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+    .summary-chip.chip-piket {
+        background: #f5f3ff;
+        color: #6d28d9;
+        border: 1px solid #ddd6fe;
+    }
+    .summary-chip.chip-total {
+        background: #ffffff;
+        color: #475569;
+        border: 1px solid #cbd5e1;
+    }
 
     .badge-piket {
         display: inline-flex;
@@ -141,6 +218,22 @@
     .badge-piket.status-saki { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
     .badge-piket.status-izin { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
     .badge-piket.status-disp { background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; }
+    .badge-piket.status-terlambat { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+
+    .badge-piket-locked {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 5px 10px;
+        border-radius: 8px;
+    }
+    .badge-piket-locked.status-saki { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
+    .badge-piket-locked.status-izin { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+    .badge-piket-locked.status-disp { background: #fdf4ff; color: #7e22ce; border: 1px solid #f5d0fe; }
+    .badge-piket-locked.status-terlambat { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+    .badge-piket-locked.status-alpha { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
 
     .piket-alert-box {
         background: #f0fdf4;
@@ -383,27 +476,54 @@
 
         <!-- Right: Presensi Siswa Per Rombel -->
         <div class="form-card">
-            <div class="form-card-head" style="justify-content: space-between;">
+            <div class="form-card-head" style="justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <i class="fa-solid fa-users-viewfinder" style="font-size: 18px; color: #2b43b9;"></i>
                     <div>
-                        <h3>Presensi Siswa ({{ $siswaList->count() }} Siswa)</h3>
+                        <h3 style="margin: 0;">Presensi Siswa ({{ $siswaList->count() }} Siswa)</h3>
                     </div>
                 </div>
 
-                <div style="display: flex; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <div style="position: relative;">
+                        <input type="text" id="searchSiswaInput" placeholder="Cari siswa..." onkeyup="filterSiswa()" style="padding: 6px 10px 6px 28px; font-size: 12px; border-radius: 8px; border: 1px solid #cbd5e1; width: 140px; outline: none;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 9px; top: 50%; transform: translateY(-50%); font-size: 11px; color: #94a3b8;"></i>
+                    </div>
                     <button type="button" class="btn-quick" onclick="setAllAttendance('Hadir')">
                         <i class="fa-solid fa-check-double" style="color: #10b981;"></i> Semua Hadir
                     </button>
                 </div>
             </div>
 
+            <!-- Presensi Live Summary Bar -->
+            <div class="presensi-summary-bar">
+                <span class="summary-chip chip-total">
+                    <i class="fa-solid fa-users"></i> Total: <strong>{{ $siswaList->count() }}</strong>
+                </span>
+                <span class="summary-chip chip-hadir">
+                    <i class="fa-solid fa-circle-check"></i> Hadir: <strong id="statHadirCount">0</strong>
+                </span>
+                <span class="summary-chip chip-alpha">
+                    <i class="fa-solid fa-circle-xmark"></i> Alpha: <strong id="statAlphaCount">0</strong>
+                </span>
+                @if(isset($piketAbsenceCount) && $piketAbsenceCount > 0)
+                <span class="summary-chip chip-piket">
+                    <i class="fa-solid fa-shield-halved"></i> Piket: <strong id="statPiketCount">{{ $piketAbsenceCount }}</strong>
+                </span>
+                @endif
+            </div>
+
             @if(isset($piketAbsenceCount) && $piketAbsenceCount > 0)
             <div class="piket-alert-box">
                 <i class="fa-solid fa-bell-concierge" style="font-size: 20px; color: #16a34a; flex-shrink: 0;"></i>
-                <div style="font-size: 12.5px; color: #166534; line-height: 1.45;">
-                    <strong>Informasi Guru Piket:</strong> Terdapat <strong>{{ $piketAbsenceCount }} siswa</strong> di kelas ini yang berhalangan hadir dan telah dicatat oleh Guru Piket ({{ !empty($piketDetails['sakit']) ? $piketDetails['sakit'] . ' Sakit' : '' }}{{ !empty($piketDetails['sakit']) && (!empty($piketDetails['izin']) || !empty($piketDetails['dispensasi'])) ? ', ' : '' }}{{ !empty($piketDetails['izin']) ? $piketDetails['izin'] . ' Izin' : '' }}{{ !empty($piketDetails['izin']) && !empty($piketDetails['dispensasi']) ? ', ' : '' }}{{ !empty($piketDetails['dispensasi']) ? $piketDetails['dispensasi'] . ' Dispen' : '' }}). Status kehadiran mereka telah otomatis disetel. Anda tinggal menandai siswa yang <strong>Alpha</strong> jika ada.
+                <div style="font-size: 12px; color: #166534; line-height: 1.45;">
+                    <strong>Informasi Guru Piket:</strong> Terdapat <strong>{{ $piketAbsenceCount }} siswa</strong> yang berhalangan hadir dan telah dicatat oleh Guru Piket ({{ !empty($piketDetails['sakit']) ? $piketDetails['sakit'] . ' Sakit' : '' }}{{ !empty($piketDetails['sakit']) && (!empty($piketDetails['izin']) || !empty($piketDetails['dispensasi'])) ? ', ' : '' }}{{ !empty($piketDetails['izin']) ? $piketDetails['izin'] . ' Izin' : '' }}{{ !empty($piketDetails['izin']) && !empty($piketDetails['dispensasi']) ? ', ' : '' }}{{ !empty($piketDetails['dispensasi']) ? $piketDetails['dispensasi'] . ' Dispen' : '' }}). Status kehadiran mereka otomatis terkunci dengan izin resmi. Guru Mapel hanya perlu menandai siswa yang <strong>Alpha</strong> jika ada.
                 </div>
+            </div>
+            @else
+            <div style="font-size: 12px; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-circle-info" style="color: #2b43b9;"></i>
+                <span><strong>SOP Presensi:</strong> Siswa Sakit, Izin, & Dispensasi dicatat terpusat oleh Guru Piket. Guru Pengajar hanya mengabsen siswa <strong>Hadir</strong> dan <strong>Alpha</strong>.</span>
             </div>
             @endif
 
@@ -411,73 +531,80 @@
                 <table class="attendance-table">
                     <thead>
                         <tr>
-                            <th style="width: 40px;">No</th>
+                            <th style="width: 40px; text-align: center;">No</th>
                             <th>Nama Siswa & NISN</th>
-                            <th>Status Kehadiran</th>
+                            <th style="min-width: 170px;">Status Kehadiran</th>
                             <th>Keterangan</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($siswaList as $idx => $s)
-                        @php
-                            $currStatus = $s->piket_status ?? 'Hadir';
-                        @endphp
                         <tr data-from-piket="{{ !empty($s->piket_status) ? 'true' : 'false' }}">
-                            <td>{{ $idx + 1 }}</td>
-                            <td>
+                            <td style="color: #707e94; font-weight: 700; text-align: center;">{{ $idx + 1 }}</td>
+                            <td class="nama-siswa-cell">
                                 <strong style="color: #1b2559; font-size: 13px;">{{ $s->nama_lengkap }}</strong>
                                 <div style="font-size: 11px; color: #707e94;">NISN: {{ $s->nisn ?? '-' }}</div>
+                            </td>
+                            <td>
                                 @if(!empty($s->piket_status))
                                     @php
                                         $badgeClass = match($s->piket_status) {
                                             'Sakit' => 'status-saki',
                                             'Izin' => 'status-izin',
-                                            default => 'status-disp'
+                                            'Terlambat' => 'status-terlambat',
+                                            'Dispensasi' => 'status-disp',
+                                            default => 'status-alpha'
                                         };
                                         $badgeIcon = match($s->piket_status) {
                                             'Sakit' => 'fa-notes-medical',
                                             'Izin' => 'fa-envelope-open-text',
-                                            default => 'fa-ticket-simple'
+                                            'Terlambat' => 'fa-clock-rotate-left',
+                                            'Dispensasi' => 'fa-ticket-simple',
+                                            default => 'fa-clock'
                                         };
+                                        $piketLabel = $s->piket_status . ' (Piket)';
+                                        if ($s->piket_status === 'Terlambat' && $s->piket_jam_ke_mulai) {
+                                            $piketLabel = 'Terlambat (Jam Ke-' . $s->piket_jam_ke_mulai . ')';
+                                        }
                                     @endphp
-                                    <div>
-                                        <span class="badge-piket {{ $badgeClass }}">
-                                            <i class="fa-solid {{ $badgeIcon }}"></i> Piket: {{ $s->piket_status }}
+                                    {{-- Terkunci dari Catatan Guru Piket --}}
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="badge-piket-locked {{ $badgeClass }}" title="{{ $s->piket_keterangan ?: 'Tercatat resmi oleh Guru Piket' }}">
+                                            <i class="fa-solid {{ $badgeIcon }}"></i> {{ $piketLabel }}
+                                            <i class="fa-solid fa-lock" style="font-size: 10px; opacity: 0.65; margin-left: 2px;"></i>
                                         </span>
+                                        <input type="hidden" name="presensi[{{ $s->id_siswa }}]" value="{{ $s->piket_status }}">
+                                    </div>
+                                @else
+                                    {{-- Guru Mapel hanya mengabsen Hadir atau Alpha --}}
+                                    <div class="radio-group">
+                                        <label class="radio-pill hadir checked" onclick="selectRadio(this)" title="Hadir Mengikuti KBM">
+                                            <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Hadir" checked>
+                                            <i class="fa-solid fa-check"></i>
+                                            <span>Hadir</span>
+                                        </label>
+                                        <label class="radio-pill alpha" onclick="selectRadio(this)" title="Alpha / Tidak Hadir Tanpa Keterangan">
+                                            <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Alpha">
+                                            <i class="fa-solid fa-xmark"></i>
+                                            <span>Alpha</span>
+                                        </label>
                                     </div>
                                 @endif
                             </td>
                             <td>
-                                <div class="radio-group">
-                                    <label class="radio-pill hadir {{ $currStatus === 'Hadir' ? 'checked' : '' }}" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Hadir" {{ $currStatus === 'Hadir' ? 'checked' : '' }}>
-                                        <span>H</span>
-                                    </label>
-                                    <label class="radio-pill sakit {{ $currStatus === 'Sakit' ? 'checked' : '' }}" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Sakit" {{ $currStatus === 'Sakit' ? 'checked' : '' }}>
-                                        <span>S</span>
-                                    </label>
-                                    <label class="radio-pill izin {{ $currStatus === 'Izin' ? 'checked' : '' }}" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Izin" {{ $currStatus === 'Izin' ? 'checked' : '' }}>
-                                        <span>I</span>
-                                    </label>
-                                    <label class="radio-pill alpha {{ $currStatus === 'Alpha' ? 'checked' : '' }}" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Alpha" {{ $currStatus === 'Alpha' ? 'checked' : '' }}>
-                                        <span>A</span>
-                                    </label>
-                                    <label class="radio-pill disp {{ $currStatus === 'Dispensasi' ? 'checked' : '' }}" onclick="selectRadio(this)">
-                                        <input type="radio" name="presensi[{{ $s->id_siswa }}]" value="Dispensasi" {{ $currStatus === 'Dispensasi' ? 'checked' : '' }}>
-                                        <span>D</span>
-                                    </label>
-                                </div>
-                            </td>
-                            <td>
-                                <input type="text" 
-                                       name="keterangan[{{ $s->id_siswa }}]" 
-                                       placeholder="Catatan..." 
-                                       value="{{ !empty($s->piket_keterangan) ? '(Piket: ' . $s->piket_status . ') ' . $s->piket_keterangan : '' }}"
-                                       class="form-control" 
-                                       style="padding: 4px 8px; font-size: 12px; border-radius: 8px;">
+                                @if(!empty($s->piket_status))
+                                    <div style="font-size: 12px; color: #475569; font-style: italic; background: #f8fafc; padding: 6px 10px; border-radius: 8px; border: 1px dashed #cbd5e1; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fa-solid fa-clipboard-check" style="color: #10b981;"></i>
+                                        <span>{{ $s->piket_keterangan ?: 'Dicatat oleh Guru Piket' }}</span>
+                                    </div>
+                                    <input type="hidden" name="keterangan[{{ $s->id_siswa }}]" value="(Piket: {{ $s->piket_status }}) {{ $s->piket_keterangan }}">
+                                @else
+                                    <input type="text" 
+                                           name="keterangan[{{ $s->id_siswa }}]" 
+                                           placeholder="Catatan jika alpha / kendala..." 
+                                           class="form-control" 
+                                           style="padding: 6px 10px; font-size: 12px; border-radius: 8px;">
+                                @endif
                             </td>
                         </tr>
                         @empty
@@ -509,13 +636,22 @@
         parent.querySelectorAll('.radio-pill').forEach(el => el.classList.remove('checked'));
         label.classList.add('checked');
         const input = label.querySelector('input');
-        if (input) input.checked = true;
+        if (input) {
+            input.checked = true;
+            const tr = label.closest('tr');
+            if (input.value === 'Alpha') {
+                tr.classList.add('tr-alpha');
+            } else {
+                tr.classList.remove('tr-alpha');
+            }
+        }
+        updateAttendanceStats();
     }
 
     function setAllAttendance(status) {
         document.querySelectorAll('.attendance-table tbody tr').forEach(row => {
             // Jangan timpa siswa yang sudah tercatat izin dari piket saat menekan tombol Semua Hadir
-            if (status === 'Hadir' && row.getAttribute('data-from-piket') === 'true') {
+            if (row.getAttribute('data-from-piket') === 'true') {
                 return;
             }
 
@@ -525,6 +661,52 @@
                 const parent = radio.closest('.radio-group');
                 parent.querySelectorAll('.radio-pill').forEach(el => el.classList.remove('checked'));
                 radio.closest('.radio-pill').classList.add('checked');
+                if (status === 'Alpha') {
+                    row.classList.add('tr-alpha');
+                } else {
+                    row.classList.remove('tr-alpha');
+                }
+            }
+        });
+        updateAttendanceStats();
+    }
+
+    function updateAttendanceStats() {
+        let hadir = 0;
+        let alpha = 0;
+        let piket = 0;
+
+        document.querySelectorAll('.attendance-table tbody tr').forEach(row => {
+            if (row.getAttribute('data-from-piket') === 'true') {
+                piket++;
+            } else {
+                const checked = row.querySelector('input[type="radio"]:checked');
+                if (checked && checked.value === 'Alpha') {
+                    alpha++;
+                } else {
+                    hadir++;
+                }
+            }
+        });
+
+        const elHadir = document.getElementById('statHadirCount');
+        const elAlpha = document.getElementById('statAlphaCount');
+        const elPiket = document.getElementById('statPiketCount');
+        if (elHadir) elHadir.innerText = hadir;
+        if (elAlpha) elAlpha.innerText = alpha;
+        if (elPiket) elPiket.innerText = piket;
+    }
+
+    function filterSiswa() {
+        const query = (document.getElementById('searchSiswaInput')?.value || '').toLowerCase().trim();
+        document.querySelectorAll('.attendance-table tbody tr').forEach(row => {
+            const cell = row.querySelector('.nama-siswa-cell');
+            if (!cell) return;
+            const text = cell.innerText.toLowerCase();
+            if (text.includes(query)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
             }
         });
     }
@@ -536,5 +718,9 @@
             materiArea.focus();
         }
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateAttendanceStats();
+    });
 </script>
 @endsection

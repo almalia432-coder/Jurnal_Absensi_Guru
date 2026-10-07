@@ -668,6 +668,7 @@ class GuruPiketDashboardController extends Controller
     {
         $izin = IzinSiswa::with('siswa')->findOrFail($id);
         $namaSiswa = $izin->siswa->nama_lengkap ?? 'Siswa';
+        $jenis = $izin->jenis_izin ?? 'Izin';
         if ($izin->bukti_file && Storage::disk('public')->exists($izin->bukti_file)) {
             Storage::disk('public')->delete($izin->bukti_file);
         }

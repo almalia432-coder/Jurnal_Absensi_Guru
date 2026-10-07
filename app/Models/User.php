@@ -98,49 +98,107 @@ class User extends Authenticatable
         return in_array($this->role, $roles);
     }
 
+    /**
+     * Dapatkan daftar portal yang dapat diakses oleh user beserta metadata.
+     *
+     * @param \Carbon\Carbon|null $date
+     * @return array
+     */
+    public function availablePortals(?\Carbon\Carbon $date = null): array
+    {
+        return \App\Support\PortalResolver::resolve($this, $date);
+    }
+
+    /**
+     * Dapatkan hanya daftar kunci portal (string array) milik user.
+     *
+     * @param \Carbon\Carbon|null $date
+     * @return array
+     */
+    public function availablePortalKeys(?\Carbon\Carbon $date = null): array
+    {
+        return \App\Support\PortalResolver::getPortalKeys($this, $date);
+    }
+
+    /**
+     * Periksa apakah user memiliki akses ke salah satu portal yang ditentukan.
+     * Admin selalu bernilai true.
+     *
+     * @param string ...$portals
+     * @return bool
+     */
+    public function hasPortal(string ...$portals): bool
+    {
+        return \App\Support\PortalResolver::hasAccess($this, $portals);
+    }
+
+    /**
+     * Dapatkan portal utama (default) bagi user saat pertama kali login / redirect /.
+     *
+     * @return string|null
+     */
+    public function defaultPortal(): ?string
+    {
+        return \App\Support\PortalResolver::getDefaultPortal($this);
+    }
+
+    public function isWaka(): bool
+    {
+        return $this->hasPortal('waka_kurikulum', 'waka_sdm', 'waka_kesiswaan')
+            || in_array($this->role, ['waka', 'waka_kurikulum', 'waka_sdm'])
+            || $this->waka()->exists();
+    }
+
     public function isWakaKurikulum(): bool
     {
-        return $this->role === 'waka_kurikulum' || ($this->role === 'waka' && $this->waka?->bidang === 'Kurikulum');
+        return $this->hasPortal('waka_kurikulum')
+            || $this->role === 'waka_kurikulum'
+            || ($this->isWaka() && str_contains(strtolower($this->waka?->bidang ?? ''), 'kurikulum'));
     }
 
     public function isWakaSdm(): bool
     {
-        return $this->role === 'waka_sdm' || ($this->role === 'waka' && $this->waka?->bidang === 'SDM');
+        return $this->hasPortal('waka_sdm')
+            || $this->role === 'waka_sdm'
+            || ($this->isWaka() && str_contains(strtolower($this->waka?->bidang ?? ''), 'sdm'));
+    }
+
+    public function isWakaKesiswaan(): bool
+    {
+        return $this->hasPortal('waka_kesiswaan')
+            || ($this->isWaka() && (str_contains(strtolower($this->waka?->bidang ?? ''), 'kesiswaan') || str_contains(strtolower($this->waka?->bidang ?? ''), 'kedisiplinan')));
     }
 
     public function isWaliMurid(): bool
     {
-        return $this->role === 'wali_murid';
+        return $this->hasPortal('wali_murid') || $this->role === 'wali_murid';
     }
 
     public function isWaliKelas(): bool
     {
-        if ($this->role === 'wali_kelas') {
-            return true;
-        }
-
-        if ($this->waliKelas && $this->waliKelas->kelas()->exists()) {
-            return true;
-        }
-
-        if ($this->guru) {
-            return Kelas::whereHas('waliKelas', function ($q) {
-                $q->where('nip', $this->guru->nip);
-            })->exists();
-        }
-
-        return false;
+        return $this->hasPortal('wali_kelas');
     }
 
     public function isGuru(): bool
     {
-        return in_array($this->role, ['guru_mapel', 'wali_kelas', 'guru_piket'])
+        // Akun bersama meja piket tidak mengajar
+        if ($this->email === 'waka.piket@smkn1boyolangu.sch.id' || ($this->waka && $this->waka->bidang === 'Piket KBM')) {
+            return false;
+        }
+
+        return in_array($this->role, ['guru_mapel', 'wali_kelas', 'guru_piket', 'waka', 'waka_kurikulum', 'waka_sdm'])
             || $this->guru()->exists()
+            || ($this->waka && Guru::where('nip', $this->waka->nip)->exists())
             || ($this->waliKelas && Guru::where('nip', $this->waliKelas->nip)->exists());
     }
 
     public function hasTeachingDuty(): bool
     {
+        // Akun dinas / bersama Waka Piket tidak memiliki tugas mengajar
+        if ($this->email === 'waka.piket@smkn1boyolangu.sch.id' || ($this->waka && $this->waka->bidang === 'Piket KBM')) {
+            return false;
+        }
+
         if ($this->role === 'admin') {
             return true;
         }
@@ -150,6 +208,10 @@ class User extends Authenticatable
         }
 
         if ($this->guru()->exists()) {
+            return true;
+        }
+
+        if ($this->isWaka()) {
             return true;
         }
 

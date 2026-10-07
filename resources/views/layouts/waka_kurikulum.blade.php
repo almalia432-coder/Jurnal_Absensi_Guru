@@ -842,6 +842,42 @@
             }
         }
 
+        /* ── Portal Switch Button ── */
+        .btn-portal-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 15px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+            white-space: nowrap;
+        }
+        .btn-portal-switch:hover {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .btn-portal-switch i {
+            font-size: 13px;
+        }
+        @media (max-width: 640px) {
+            .btn-portal-switch span {
+                display: none;
+            }
+            .btn-portal-switch {
+                padding: 7px 10px;
+            }
+        }
+
         /* ── Alerts ── */
         .alert-box {
             display: flex;
@@ -1091,6 +1127,13 @@
             <div class="header-user-nav">
                 @yield('header_extra')
 
+                @if(Auth::user()->hasTeachingDuty())
+                <a href="{{ route('guru-mapel.dashboard') }}" class="btn-portal-switch" title="Beralih ke Portal Guru Mapel">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Portal Guru Mapel</span>
+                </a>
+                @endif
+
                 {{-- Interactive Notification Dropdown --}}
                 <div class="notif-dropdown-wrap" id="notifDropdownWrap">
                     <div class="notif-bell" id="notifBellBtn" onclick="toggleNotifDropdown()">
@@ -1122,6 +1165,9 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
 
                 {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">

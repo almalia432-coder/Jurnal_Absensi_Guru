@@ -155,10 +155,12 @@ class SatpamDashboardController extends Controller
         $query = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser'])
             ->where('tanggal', $tanggal)
             ->when($search, function ($q) use ($search) {
-                $q->whereHas('siswa', function ($sq) use ($search) {
-                    $sq->where('nama_lengkap', 'like', "%{$search}%")
-                       ->orWhere('nisn', 'like', "%{$search}%");
-                })->orWhere('alasan', 'like', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereHas('siswa', function ($sq) use ($search) {
+                        $sq->where('nama_lengkap', 'like', "%{$search}%")
+                           ->orWhere('nisn', 'like', "%{$search}%");
+                    })->orWhere('alasan', 'like', "%{$search}%");
+                });
             })
             ->orderBy('created_at', 'desc');
 

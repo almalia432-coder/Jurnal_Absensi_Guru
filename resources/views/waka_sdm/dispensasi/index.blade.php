@@ -1,8 +1,8 @@
 @extends('layouts.waka_sdm')
 
-@section('title', 'Persetujuan Dispensasi Siswa - Waka SDM')
-@section('header_title', 'Persetujuan Dispensasi Siswa')
-@section('header_subtitle', 'Verifikasi izin meninggalkan sekolah untuk lomba, kegiatan dinas, atau keperluan siswa')
+@section('title', 'Monitoring Dispensasi Siswa - Waka SDM')
+@section('header_title', 'Monitoring Dispensasi Siswa')
+@section('header_subtitle', 'Rekapitulasi dan pemantauan izin dispensasi siswa KBM (Persetujuan operasional harian diproses oleh Waka Piket KBM)')
 
 @section('styles')
 <style>
@@ -83,6 +83,19 @@
 
 @section('content')
 <div>
+    {{-- Info SOP Notice Banner --}}
+    <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-left: 5px solid #16a34a; border-radius: 14px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.05);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa-solid fa-circle-info" style="font-size: 20px; color: #16a34a;"></i>
+            <div style="font-size: 13px; color: #166534; line-height: 1.45;">
+                <strong>Ketentuan SOP Sekolah:</strong> Persetujuan operasional harian dispensasi siswa diproses langsung oleh <strong>Waka Piket KBM</strong> yang bertugas hari itu. Halaman ini berfungsi sebagai arsip monitoring, rekapitulasi pelaporan, dan audit ketertiban KBM sekolah.
+            </div>
+        </div>
+        <a href="{{ route('waka-sdm.izin') }}" style="background: #16a34a; color: white; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-user-check"></i> Kelola Izin Guru
+        </a>
+    </div>
+
     {{-- Filter Bar --}}
     <div class="filter-card">
         <div class="status-tabs">
@@ -210,11 +223,13 @@
                             </td>
                             <td style="text-align: right;">
                                 <div class="action-btns" style="justify-content: flex-end;">
-                                    <button type="button" class="btn-act approve" onclick="openDispensasiActionModal({{ $ds->id }}, '{{ addslashes($nama) }}', 'Disetujui')">
-                                        <i class="fa-solid fa-check"></i> Setujui
-                                    </button>
-                                    <button type="button" class="btn-act reject" onclick="openDispensasiActionModal({{ $ds->id }}, '{{ addslashes($nama) }}', 'Ditolak')">
-                                        <i class="fa-solid fa-xmark"></i> Tolak
+                                    @if($ds->status === 'Disetujui' || $ds->status === 'Disetujui_Waka' || $ds->status === 'Selesai')
+                                        <a href="{{ route('guru-piket.dispensasi.cetak', $ds->id) }}" target="_blank" class="btn-act approve" style="text-decoration:none;" title="Cetak Surat Izin Keluar">
+                                            <i class="fa-solid fa-print"></i> Slip
+                                        </a>
+                                    @endif
+                                    <button type="button" class="btn-act" style="background:#f1f5f9; color:#475569;" onclick="openDispensasiActionModal({{ $ds->id }}, '{{ addslashes($nama) }}', '{{ $ds->status }}')" title="Detail / Tinjau">
+                                        <i class="fa-solid fa-eye"></i> Tinjau
                                     </button>
                                 </div>
                             </td>

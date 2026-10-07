@@ -114,12 +114,6 @@ class IzinGuru extends Model
     public function getTahapLabelAttribute(): string
     {
         if ($this->isRejected()) {
-            $roleLabel = match ($this->ditolak_oleh_role) {
-                'guru_piket'     => 'Guru Piket',
-                'waka_sdm'       => 'Waka SDM',
-                'kepala_sekolah' => 'Kepala Sekolah',
-                default          => 'Pihak Sekolah',
-            };
             return 'Ditolak oleh ' . $this->penolak_label;
         }
 

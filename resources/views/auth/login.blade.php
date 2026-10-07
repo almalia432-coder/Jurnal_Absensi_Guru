@@ -164,8 +164,8 @@
                             <option value="wali_kelas" {{ old('role') == 'wali_kelas' ? 'selected' : '' }}>Wali Kelas</option>
                             <option value="guru_piket" {{ old('role') == 'guru_piket' ? 'selected' : '' }}>Guru Piket</option>
                             <option value="guru_mapel" {{ old('role') == 'guru_mapel' ? 'selected' : '' }}>Guru Mapel</option>
-                            <option value="waka_kurikulum" {{ old('role') == 'waka_kurikulum' ? 'selected' : '' }}>Waka Kurikulum</option>
-                            <option value="waka_sdm" {{ old('role') == 'waka_sdm' ? 'selected' : '' }}>Waka SDM / Kepegawaian</option>
+                            <option value="waka" {{ old('role') == 'waka' ? 'selected' : '' }}>Waka (Wakil Kepala Sekolah)</option>
+                            <option value="waka_piket" {{ old('role') == 'waka_piket' ? 'selected' : '' }}>Waka Piket (Akun Bersama Meja Piket)</option>
                             <option value="wali_murid" {{ old('role') == 'wali_murid' ? 'selected' : '' }}>Wali Murid / Siswa</option>
                             <option value="satpam" {{ old('role') == 'satpam' ? 'selected' : '' }}>Satpam (Keamanan Gate)</option>
                             <option value="kepala_sekolah" {{ old('role') == 'kepala_sekolah' ? 'selected' : '' }}>Kepala Sekolah</option>
@@ -297,24 +297,24 @@
                     <div class="demo-desc">Pengisian jurnal mengajar & presensi jam ke</div>
                 </div>
 
-                <!-- Waka Kurikulum -->
-                <div class="demo-account-card" onclick="selectDemoRole('waka_kurikulum')">
+                <!-- Waka (Wakil Kepala Sekolah) -->
+                <div class="demo-account-card" onclick="selectDemoRole('waka')">
                     <div class="demo-role-badge">
-                        <span>Waka Kurikulum</span>
-                        <i class="bi bi-calendar-week-fill"></i>
+                        <span>Waka (Waka Sekolah)</span>
+                        <i class="bi bi-person-workspace"></i>
                     </div>
                     <div class="demo-email">wakakurikulum@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Monitoring jadwal pelajaran & KBM sekolah</div>
+                    <div class="demo-desc">Portal Kurikulum, SDM, atau Kesiswaan sesuai bidang tugas</div>
                 </div>
 
-                <!-- Waka SDM -->
-                <div class="demo-account-card" onclick="selectDemoRole('waka_sdm')">
+                <!-- Waka Piket (Akun Dinas Bersama) -->
+                <div class="demo-account-card" onclick="selectDemoRole('waka_piket')">
                     <div class="demo-role-badge">
-                        <span>Waka SDM</span>
-                        <i class="bi bi-person-lines-fill"></i>
+                        <span>Waka Piket (Akun Bersama)</span>
+                        <i class="bi bi-shield-check"></i>
                     </div>
-                    <div class="demo-email">wakasdm@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Monitoring kedisiplinan & jam mengajar guru</div>
+                    <div class="demo-email">waka.piket@smkn1boyolangu.sch.id</div>
+                    <div class="demo-desc">Akun dinas pos piket & persetujuan dispensasi harian</div>
                 </div>
 
                 <!-- Wali Murid -->
@@ -403,8 +403,10 @@
         'wali_kelas': 'walikelas@smkn1boyolangu.sch.id',
         'guru_piket': 'gurupiket@smkn1boyolangu.sch.id',
         'guru_mapel': 'gurumapel@smkn1boyolangu.sch.id',
+        'waka': 'wakakurikulum@smkn1boyolangu.sch.id',
         'waka_kurikulum': 'wakakurikulum@smkn1boyolangu.sch.id',
         'waka_sdm': 'wakasdm@smkn1boyolangu.sch.id',
+        'waka_piket': 'waka.piket@smkn1boyolangu.sch.id',
         'wali_murid': 'walimurid@smkn1boyolangu.sch.id',
         'satpam': 'satpam@smkn1boyolangu.sch.id',
         'kepala_sekolah': 'kepsek@smkn1boyolangu.sch.id'

@@ -77,6 +77,36 @@
 
         .header-user-nav { display: flex; align-items: center; gap: 14px; z-index: 2; }
 
+        /* Portal Switch Button */
+        .btn-portal-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 15px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+            white-space: nowrap;
+        }
+        .btn-portal-switch:hover {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .btn-portal-switch i { font-size: 13px; }
+        @media (max-width: 640px) {
+            .btn-portal-switch span { display: none; }
+            .btn-portal-switch { padding: 7px 10px; }
+        }
+
         /* School Mini Card */
         .header-badge-school {
             display: flex; align-items: center; gap: 10px; padding: 7px 14px;
@@ -262,7 +292,7 @@
                 <li class="{{ request()->routeIs('waka-sdm.dispensasi*') ? 'active' : '' }}">
                     <a href="{{ route('waka-sdm.dispensasi') }}">
                         <i class="fa-solid fa-graduation-cap"></i>
-                        <span>Persetujuan Dispensasi</span>
+                        <span>Monitoring Dispensasi</span>
                     </a>
                 </li>
 
@@ -307,6 +337,13 @@
                 <p>@yield('header_subtitle', 'Ringkasan operasional dan persetujuan hari ini, ' . \Carbon\Carbon::now()->translatedFormat('d F Y'))</p>
             </div>
             <div class="header-user-nav">
+                @if(Auth::user()->hasTeachingDuty())
+                <a href="{{ route('guru-mapel.dashboard') }}" class="btn-portal-switch" title="Beralih ke Portal Guru Mapel">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Portal Guru Mapel</span>
+                </a>
+                @endif
+
                 <div class="header-badge-school">
                     <i class="fa-solid fa-school"></i>
                     <div class="header-badge-text">
@@ -333,6 +370,10 @@
                         $initials = strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
                     }
                 @endphp
+
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
+
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">
                     <div class="user-profile-badge" onclick="toggleProfileDropdown()">
                         <div class="avatar-circle">{{ $initials }}</div>

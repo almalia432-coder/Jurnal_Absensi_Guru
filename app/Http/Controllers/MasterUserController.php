@@ -35,7 +35,11 @@ class MasterUserController extends Controller
                 });
             })
             ->when($role && $role !== 'all', function ($q) use ($role) {
-                $q->where('role', $role);
+                if ($role === 'waka') {
+                    $q->whereIn('role', ['waka', 'waka_kurikulum', 'waka_sdm']);
+                } else {
+                    $q->where('role', $role);
+                }
             })
             ->when($status !== null && $status !== '', function ($q) use ($status) {
                 $q->where('is_active', (bool) $status);
@@ -58,12 +62,10 @@ class MasterUserController extends Controller
             'wali_kelas'     => User::where('role', 'wali_kelas')->count(),
             'guru_mapel'     => User::where('role', 'guru_mapel')->count(),
             'guru_piket'     => User::where('role', 'guru_piket')->count(),
-            'waka_kurikulum' => User::where('role', 'waka_kurikulum')->count(),
-            'waka_sdm'       => User::where('role', 'waka_sdm')->count(),
+            'waka'           => User::whereIn('role', ['waka', 'waka_kurikulum', 'waka_sdm'])->count(),
             'wali_murid'     => User::where('role', 'wali_murid')->count(),
             'kepala_sekolah' => User::where('role', 'kepala_sekolah')->count(),
             'satpam'         => User::where('role', 'satpam')->count(),
-            'waka'           => User::where('role', 'waka')->count(),
         ];
 
         $siswaList = Siswa::with('kelas')->where('status_aktif', true)->orderBy('nama_lengkap')->get(['id_siswa', 'nama_lengkap', 'nisn', 'id_kelas']);
@@ -79,14 +81,17 @@ class MasterUserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name'      => 'required|string|max:255',
-            'email'     => 'required|email|max:255|unique:users,email',
-            'password'  => 'required|string|min:6',
-            'role'      => 'required|in:admin,wali_kelas,guru_mapel,guru_piket,kepala_sekolah,waka,waka_sdm,waka_kurikulum,wali_murid,satpam',
-            'is_active' => 'nullable|boolean',
-            'nip'       => 'nullable|string|max:30',
-            'no_hp'     => 'nullable|string|max:20',
-            'id_siswa'  => 'nullable|exists:siswa,id_siswa',
+            'name'        => 'required|string|max:255',
+            'email'       => 'required|email|max:255|unique:users,email',
+            'password'    => 'required|string|min:6',
+            'role'               => 'required|in:admin,wali_kelas,guru_mapel,guru_piket,kepala_sekolah,waka,waka_sdm,waka_kurikulum,wali_murid,satpam',
+            'waka_bidang'        => 'nullable|string|max:100',
+            'waka_bidang_kode'   => 'nullable|array',
+            'waka_bidang_kode.*' => 'in:kurikulum,sdm,kesiswaan,kedisiplinan,sarpras,bk',
+            'is_active'          => 'nullable|boolean',
+            'nip'                => 'nullable|string|max:30',
+            'no_hp'              => 'nullable|string|max:20',
+            'id_siswa'           => 'nullable|exists:siswa,id_siswa',
         ]);
 
         DB::beginTransaction();
@@ -187,25 +192,34 @@ class MasterUserController extends Controller
 
                 case 'waka':
                 case 'waka_kurikulum':
-                    Waka::create([
-                        'user_id'      => $user->id,
-                        'nip'          => $nip,
-                        'nama_lengkap' => $validated['name'],
-                        'jenis_kelamin'=> 'L',
-                        'no_hp'        => $noHp,
-                        'bidang'       => 'Kurikulum',
-                    ]);
-                    break;
-
                 case 'waka_sdm':
-                    Waka::create([
-                        'user_id'      => $user->id,
-                        'nip'          => $nip,
-                        'nama_lengkap' => $validated['name'],
-                        'jenis_kelamin'=> 'L',
-                        'no_hp'        => $noHp,
-                        'bidang'       => 'SDM',
-                    ]);
+                    $wakaBidang = $request->input('waka_bidang');
+                    if (!$wakaBidang) {
+                        $wakaBidang = ($validated['role'] === 'waka_sdm') ? 'SDM' : (($validated['role'] === 'waka_kurikulum') ? 'Kurikulum' : 'Kurikulum');
+                    }
+                    $bidangKode = $request->input('waka_bidang_kode');
+                    Waka::updateOrCreate(
+                        ['user_id' => $user->id],
+                        [
+                            'nip'          => $nip,
+                            'nama_lengkap' => $validated['name'],
+                            'jenis_kelamin'=> 'L',
+                            'no_hp'        => $noHp,
+                            'bidang'       => $wakaBidang,
+                            'bidang_kode'  => !empty($bidangKode) ? array_values($bidangKode) : null,
+                            'status_aktif' => true,
+                        ]
+                    );
+                    Guru::firstOrCreate(
+                        ['nip' => $nip],
+                        [
+                            'user_id'      => $user->id,
+                            'nama_lengkap' => $validated['name'],
+                            'jenis_kelamin'=> 'L',
+                            'no_hp'        => $noHp,
+                            'status_aktif' => true,
+                        ]
+                    );
                     break;
 
                 case 'wali_murid':
@@ -252,10 +266,13 @@ class MasterUserController extends Controller
             'name'      => 'required|string|max:255',
             'email'     => "required|email|max:255|unique:users,email,{$user->id}",
             'password'  => 'nullable|string|min:6',
-            'role'      => 'required|in:admin,wali_kelas,guru_mapel,guru_piket,kepala_sekolah,waka,waka_sdm,waka_kurikulum,wali_murid,satpam',
-            'is_active' => 'nullable|boolean',
-            'no_hp'     => 'nullable|string|max:20',
-            'id_siswa'  => 'nullable|exists:siswa,id_siswa',
+            'role'               => 'required|in:admin,wali_kelas,guru_mapel,guru_piket,kepala_sekolah,waka,waka_sdm,waka_kurikulum,wali_murid,satpam',
+            'waka_bidang'        => 'nullable|string|max:100',
+            'waka_bidang_kode'   => 'nullable|array',
+            'waka_bidang_kode.*' => 'in:kurikulum,sdm,kesiswaan,kedisiplinan,sarpras,bk',
+            'is_active'          => 'nullable|boolean',
+            'no_hp'              => 'nullable|string|max:20',
+            'id_siswa'           => 'nullable|exists:siswa,id_siswa',
         ]);
 
         $updateData = [
@@ -292,9 +309,24 @@ class MasterUserController extends Controller
         if ($user->kepalaSekolah) {
             $user->kepalaSekolah->update(['nama_lengkap' => $cleanName]);
         }
-        if ($user->waka) {
-            $bidang = ($validated['role'] === 'waka_sdm') ? 'SDM' : 'Kurikulum';
-            $user->waka->update(['nama_lengkap' => $cleanName, 'bidang' => $bidang]);
+        $existingWaka = $user->waka ?? ($user->guru ? Waka::where('nip', $user->guru->nip)->first() : null);
+        if ($existingWaka || in_array($validated['role'], ['waka', 'waka_kurikulum', 'waka_sdm']) || $request->has('waka_bidang_kode')) {
+            $defaultBidang = $existingWaka->bidang ?? 'Kurikulum';
+            $bidang = ($validated['role'] === 'waka_sdm') ? 'SDM' : (($validated['role'] === 'waka_kurikulum') ? 'Kurikulum' : $request->input('waka_bidang', $defaultBidang));
+            $wakaPayload = [
+                'nip'          => $user->guru->nip ?? ($existingWaka->nip ?? ('WAKA-' . $user->id)),
+                'nama_lengkap' => $cleanName,
+                'bidang'       => $bidang,
+                'status_aktif' => true,
+            ];
+            if ($request->has('waka_bidang_kode')) {
+                $bidangKode = $request->input('waka_bidang_kode');
+                $wakaPayload['bidang_kode'] = !empty($bidangKode) ? array_values($bidangKode) : null;
+            }
+            Waka::updateOrCreate(
+                ['user_id' => $user->id],
+                $wakaPayload
+            );
         }
         if ($user->satpam) {
             $user->satpam->update(['nama_lengkap' => $cleanName]);

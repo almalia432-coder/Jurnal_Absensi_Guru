@@ -866,10 +866,34 @@
             .kpi-grid, .stats-grid {
                 grid-template-columns: 1fr !important;
             }
-            .action-btns-group {
-                flex-wrap: wrap !important;
-                gap: 6px !important;
-            }
+        /* Portal Switch Button */
+        .btn-portal-switch {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 15px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            color: #1d4ed8;
+            border: 1px solid #bfdbfe;
+            border-radius: 20px;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+            white-space: nowrap;
+        }
+        .btn-portal-switch:hover {
+            background: #2563eb;
+            color: #ffffff;
+            border-color: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+        .btn-portal-switch i { font-size: 13px; }
+        @media (max-width: 640px) {
+            .btn-portal-switch span { display: none; }
+            .btn-portal-switch { padding: 7px 10px; }
         }
     </style>
     @yield('styles')
@@ -914,7 +938,7 @@
                 <img src="{{ asset('asset/logo.png') }}" alt="Logo Jurnal Absensi" class="sidebar-logo-img">
                 <div class="sidebar-brand-text">
                     <span class="sidebar-title">JURNAL<br>ABSENSI</span>
-                    <span class="sidebar-subtitle">SMKN 1 BOYOLANGU</span>
+                    <span class="sidebar-subtitle">{{ Auth::user()->isWaka() ? 'WAKA PIKET KBM' : 'SMKN 1 BOYOLANGU' }}</span>
                 </div>
             </div>
 
@@ -946,11 +970,31 @@
                         <span>Izin & Sakit Siswa</span>
                     </a>
                 </li>
-                <li class="{{ request()->routeIs('guru-piket.dispensasi*') ? 'active' : '' }}">
+                <li class="{{ request()->routeIs('guru-piket.terlambat*') || request()->routeIs('waka-piket.terlambat*') ? 'active' : '' }}">
+                    @if(Auth::user()->isWaka() || Auth::user()->email === 'waka.piket@smkn1boyolangu.sch.id')
+                    <a href="{{ route('waka-piket.terlambat.index') }}">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Persetujuan Siswa Terlambat</span>
+                    </a>
+                    @else
+                    <a href="{{ route('guru-piket.terlambat.index') }}">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Izin Siswa Terlambat</span>
+                    </a>
+                    @endif
+                </li>
+                <li class="{{ request()->routeIs('guru-piket.dispensasi*') || request()->routeIs('waka-piket.dispensasi*') ? 'active' : '' }}">
+                    @if(Auth::user()->isWaka() || Auth::user()->role === 'admin')
+                    <a href="{{ route('waka-piket.dispensasi') }}">
+                        <i class="fa-solid fa-ticket-simple"></i>
+                        <span>Dispensasi Siswa (Waka)</span>
+                    </a>
+                    @else
                     <a href="{{ route('guru-piket.dispensasi') }}">
                         <i class="fa-solid fa-ticket-simple"></i>
                         <span>Dispensasi Siswa</span>
                     </a>
+                    @endif
                 </li>
                 <li class="{{ request()->routeIs('guru-piket.izin-guru') ? 'active' : '' }}">
                     <a href="{{ route('guru-piket.izin-guru') }}">
@@ -1008,6 +1052,37 @@
             <div class="header-user-nav">
                 @yield('header_extra')
 
+                @if(Auth::user()->isWaka() && Auth::user()->email !== 'waka.piket@smkn1boyolangu.sch.id')
+                @php
+                    $wakaBidang = Auth::user()->waka->bidang ?? '';
+                    $wakaRoute = null;
+                    $wakaName = 'Portal Utama Waka';
+                    if (Auth::user()->isWakaKurikulum()) {
+                        $wakaRoute = route('waka-kurikulum.dashboard');
+                        $wakaName = 'Portal Waka Kurikulum';
+                    } elseif (Auth::user()->isWakaSdm()) {
+                        $wakaRoute = route('waka-sdm.dashboard');
+                        $wakaName = 'Portal Waka SDM';
+                    } elseif (Auth::user()->isWakaKesiswaan()) {
+                        $wakaRoute = route('waka-kesiswaan.dashboard');
+                        $wakaName = 'Portal Waka Kesiswaan';
+                    }
+                @endphp
+                @if($wakaRoute)
+                <a href="{{ $wakaRoute }}" class="btn-portal-switch" title="Kembali ke {{ $wakaName }}">
+                    <i class="fa-solid fa-user-shield"></i>
+                    <span>{{ $wakaName }}</span>
+                </a>
+                @endif
+                @endif
+
+                @if(Auth::user()->hasTeachingDuty() && Auth::user()->email !== 'waka.piket@smkn1boyolangu.sch.id')
+                <a href="{{ route('guru-mapel.dashboard') }}" class="btn-portal-switch" title="Beralih ke Portal Guru Mapel">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                    <span>Portal Guru Mapel</span>
+                </a>
+                @endif
+
                 {{-- Notification Bell --}}
                 <div class="notif-dropdown-wrap" id="notifDropdownWrap">
                     <div class="notif-bell" id="notifBellBtn" onclick="toggleNotifDropdown()">
@@ -1034,6 +1109,9 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
 
                 {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">

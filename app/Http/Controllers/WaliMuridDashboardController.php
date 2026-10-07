@@ -146,9 +146,11 @@ class WaliMuridDashboardController extends Controller
             ->where('id_kelas', $siswa->id_kelas)
             ->when($tanggal, fn($q) => $q->where('tanggal', $tanggal))
             ->when($search, function ($q) use ($search) {
-                $q->where('materi', 'LIKE', "%{$search}%")
-                  ->orWhere('catatan', 'LIKE', "%{$search}%")
-                  ->orWhereHas('mapel', fn($qm) => $qm->where('nama_mapel', 'LIKE', "%{$search}%"));
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('materi', 'LIKE', "%{$search}%")
+                        ->orWhere('catatan', 'LIKE', "%{$search}%")
+                        ->orWhereHas('mapel', fn($qm) => $qm->where('nama_mapel', 'LIKE', "%{$search}%"));
+                });
             })
             ->orderBy('jam_ke')
             ->paginate(10)

@@ -126,7 +126,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Budi Santoso, M.T (Waka Kurikulum)',
             'email' => 'wakakurikulum@smkn1boyolangu.sch.id',
             'password' => Hash::make('password'),
-            'role' => 'waka_kurikulum',
+            'role' => 'waka',
             'is_active' => true,
         ]);
         Waka::create([
@@ -143,7 +143,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Dr. Hendra Wijaya, M.Pd (Waka SDM)',
             'email' => 'wakasdm@smkn1boyolangu.sch.id',
             'password' => Hash::make('password'),
-            'role' => 'waka_sdm',
+            'role' => 'waka',
             'is_active' => true,
         ]);
         Waka::create([

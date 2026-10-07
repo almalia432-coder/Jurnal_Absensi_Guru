@@ -231,9 +231,11 @@ class WakaSdmDashboardController extends Controller
                 }
             })
             ->when($search, function ($q) use ($search) {
-                $q->whereHas('guru', fn($qg) => $qg->where('nama_lengkap', 'LIKE', "%{$search}%")->orWhere('nip', 'LIKE', "%{$search}%"))
-                  ->orWhere('alasan', 'LIKE', "%{$search}%")
-                  ->orWhere('jenis_izin', 'LIKE', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereHas('guru', fn($qg) => $qg->where('nama_lengkap', 'LIKE', "%{$search}%")->orWhere('nip', 'LIKE', "%{$search}%"))
+                        ->orWhere('alasan', 'LIKE', "%{$search}%")
+                        ->orWhere('jenis_izin', 'LIKE', "%{$search}%");
+                });
             })
             ->when($bulan, function ($q) use ($bulan) {
                 $q->where('tanggal_mulai', 'LIKE', "{$bulan}%");
@@ -359,11 +361,13 @@ class WakaSdmDashboardController extends Controller
                 }
             })
             ->when($search, function ($q) use ($search) {
-                $q->whereHas('siswa', function ($qs) use ($search) {
-                    $qs->where('nama_lengkap', 'LIKE', "%{$search}%")
-                       ->orWhere('nisn', 'LIKE', "%{$search}%")
-                       ->orWhere('nis', 'LIKE', "%{$search}%");
-                })->orWhere('alasan', 'LIKE', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->whereHas('siswa', function ($qs) use ($search) {
+                        $qs->where('nama_lengkap', 'LIKE', "%{$search}%")
+                           ->orWhere('nisn', 'LIKE', "%{$search}%")
+                           ->orWhere('nis', 'LIKE', "%{$search}%");
+                    })->orWhere('alasan', 'LIKE', "%{$search}%");
+                });
             })
             ->when($tanggal, fn($q) => $q->where('tanggal', $tanggal))
             ->when($id_kelas, fn($q) => $q->whereHas('siswa', fn($qs) => $qs->where('id_kelas', $id_kelas)));
@@ -550,8 +554,10 @@ class WakaSdmDashboardController extends Controller
 
         $query = Guru::query()->with('user')
             ->when($search, function ($q) use ($search) {
-                $q->where('nama_lengkap', 'LIKE', "%{$search}%")
-                  ->orWhere('nip', 'LIKE', "%{$search}%");
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('nama_lengkap', 'LIKE', "%{$search}%")
+                        ->orWhere('nip', 'LIKE', "%{$search}%");
+                });
             });
 
         $guruList = $query->orderBy('nama_lengkap')->paginate(15)->withQueryString();

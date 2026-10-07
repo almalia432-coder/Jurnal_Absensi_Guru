@@ -14,6 +14,7 @@ use App\Models\TahunAjaran;
 use App\Models\IzinGuru;
 use App\Models\IzinSiswa;
 use App\Models\DispensasiSiswa;
+use App\Models\IzinTerlambat;
 use App\Models\Notifikasi;
 use App\Models\User;
 use App\Models\LogAktivitas;
@@ -43,6 +44,22 @@ class GuruMapelDashboardController extends Controller
         // If user is registered via wali_kelas, try finding guru by NIP
         if ($user->waliKelas && $user->waliKelas->nip) {
             $guru = Guru::where('nip', $user->waliKelas->nip)->first();
+            if ($guru) {
+                return $guru;
+            }
+        }
+
+        // If user is registered via waka, try finding guru by NIP
+        if ($user->waka && $user->waka->nip) {
+            $guru = Guru::where('nip', $user->waka->nip)->first();
+            if ($guru) {
+                return $guru;
+            }
+        }
+
+        // If user is registered via guru_mapel, try finding guru by NIP
+        if ($user->guruMapel && $user->guruMapel->nip) {
+            $guru = Guru::where('nip', $user->guruMapel->nip)->first();
             if ($guru) {
                 return $guru;
             }
@@ -459,12 +476,29 @@ class GuruMapelDashboardController extends Controller
                     ->get()
                     ->keyBy('id_siswa');
 
+                // Ambil izin terlambat siswa yang disetujui pada tanggal ini
+                $izinTerlambatMap = IzinTerlambat::whereIn('id_siswa', $siswaIds)
+                    ->whereDate('tanggal', $tanggal)
+                    ->where('status', 'Disetujui')
+                    ->get()
+                    ->keyBy('id_siswa');
+
+                $sessionJamKe = $jamKeSuggestion ?? ($selectedJadwal->jam_ke ?? '1-2');
+
                 // Pasangkan ke data setiap siswa untuk otomatisasi presensi di jurnal
-                $siswaList->transform(function ($s) use ($izinSiswaMap, $dispensasiSiswaMap, &$piketAbsenceCount, &$piketDetails) {
+                $siswaList->transform(function ($s) use ($izinSiswaMap, $dispensasiSiswaMap, $izinTerlambatMap, $sessionJamKe, &$piketAbsenceCount, &$piketDetails) {
                     $s->piket_status = null;
                     $s->piket_keterangan = null;
+                    $s->piket_jam_ke_mulai = null;
 
-                    if ($izin = $izinSiswaMap->get($s->id_siswa)) {
+                    // Prioritas 1: Dispensasi Siswa
+                    if ($disp = $dispensasiSiswaMap->get($s->id_siswa)) {
+                        $s->piket_status = 'Dispensasi';
+                        $s->piket_keterangan = $disp->alasan;
+                        $piketAbsenceCount++;
+                        $piketDetails['dispensasi']++;
+                    // Prioritas 2: Izin / Sakit Siswa
+                    } elseif ($izin = $izinSiswaMap->get($s->id_siswa)) {
                         $s->piket_status = $izin->jenis_izin; // 'Sakit', 'Izin', 'Dispensasi'
                         $s->piket_keterangan = $izin->alasan;
                         $piketAbsenceCount++;
@@ -475,11 +509,20 @@ class GuruMapelDashboardController extends Controller
                         } else {
                             $piketDetails['dispensasi']++;
                         }
-                    } elseif ($disp = $dispensasiSiswaMap->get($s->id_siswa)) {
-                        $s->piket_status = 'Dispensasi';
-                        $s->piket_keterangan = $disp->alasan;
-                        $piketAbsenceCount++;
-                        $piketDetails['dispensasi']++;
+                    // Prioritas 3: Izin Siswa Terlambat
+                    } elseif ($terlambat = $izinTerlambatMap->get($s->id_siswa)) {
+                        $res = $terlambat->resolveStatusForTeachingHour($sessionJamKe);
+                        if ($res['is_locked']) {
+                            $s->piket_status = $res['status'];
+                            $s->piket_keterangan = $res['keterangan'];
+                            $s->piket_jam_ke_mulai = $terlambat->jam_ke_mulai;
+                            $piketAbsenceCount++;
+                            if ($res['status'] === 'Terlambat') {
+                                $piketDetails['terlambat'] = ($piketDetails['terlambat'] ?? 0) + 1;
+                            } else {
+                                $piketDetails['alpha_terlambat'] = ($piketDetails['alpha_terlambat'] ?? 0) + 1;
+                            }
+                        }
                     }
 
                     return $s;
@@ -552,18 +595,75 @@ class GuruMapelDashboardController extends Controller
         ]);
 
         $today = Carbon::today()->format('Y-m-d');
+        $idKelas = $validated['id_kelas'];
         $presensiData = $request->input('presensi', []);
         $keteranganData = $request->input('keterangan', []);
 
+        // Ambil izin/sakit siswa dari Guru Piket yang aktif hari ini untuk rombel ini
+        $izinSiswaMap = IzinSiswa::whereHas('siswa', fn($q) => $q->where('id_kelas', $idKelas))
+            ->whereDate('tanggal_mulai', '<=', $today)
+            ->whereDate('tanggal_selesai', '>=', $today)
+            ->where('status', '!=', 'Ditolak')
+            ->get()
+            ->keyBy('id_siswa');
+
+        // Ambil dispensasi siswa yang disetujui pada hari ini
+        $dispensasiSiswaMap = DispensasiSiswa::whereHas('siswa', fn($q) => $q->where('id_kelas', $idKelas))
+            ->whereDate('tanggal', $today)
+            ->whereIn('status', ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai'])
+            ->get()
+            ->keyBy('id_siswa');
+
+        // Ambil izin terlambat siswa yang disetujui pada hari ini
+        $izinTerlambatMap = IzinTerlambat::whereHas('siswa', fn($q) => $q->where('id_kelas', $idKelas))
+            ->whereDate('tanggal', $today)
+            ->where('status', 'Disetujui')
+            ->get()
+            ->keyBy('id_siswa');
+
+        $sessionJamKe = $validated['jam_ke'];
         $hadirCount = 0;
         $tidakHadirCount = 0;
+        $processedPresensi = [];
 
-        foreach ($presensiData as $status) {
-            if ($status === 'Hadir') {
+        foreach ($presensiData as $idSiswa => $status) {
+            $ket = $keteranganData[$idSiswa] ?? null;
+
+            // Prioritas 1: Dispensasi Piket
+            if ($disp = $dispensasiSiswaMap->get($idSiswa)) {
+                $finalStatus = 'Dispensasi';
+                $finalKet = "(Piket: Dispensasi) " . ($disp->alasan ?: '');
+            // Prioritas 2: Sakit / Izin Piket
+            } elseif ($izin = $izinSiswaMap->get($idSiswa)) {
+                $finalStatus = $izin->jenis_izin;
+                $finalKet = "(Piket: {$izin->jenis_izin}) " . ($izin->alasan ?: '');
+            // Prioritas 3: Izin Siswa Terlambat
+            } elseif ($terlambat = $izinTerlambatMap->get($idSiswa)) {
+                $res = $terlambat->resolveStatusForTeachingHour($sessionJamKe);
+                if ($res['is_locked']) {
+                    $finalStatus = $res['status'];
+                    $finalKet = "(Piket: " . $res['keterangan'] . ")";
+                } else {
+                    // Sesi KBM setelah siswa tiba di sekolah
+                    $finalStatus = ($status === 'Alpha') ? 'Alpha' : 'Hadir';
+                    $finalKet = $ket;
+                }
+            // Prioritas 4: Presensi Reguler Guru Mapel
+            } else {
+                $finalStatus = ($status === 'Alpha') ? 'Alpha' : 'Hadir';
+                $finalKet = $ket;
+            }
+
+            if (in_array($finalStatus, ['Hadir', 'Terlambat'])) {
                 $hadirCount++;
             } else {
                 $tidakHadirCount++;
             }
+
+            $processedPresensi[$idSiswa] = [
+                'status' => $finalStatus,
+                'keterangan' => $finalKet,
+            ];
         }
 
         DB::beginTransaction();
@@ -585,12 +685,12 @@ class GuruMapelDashboardController extends Controller
             ]);
 
             // Save individual student attendance
-            foreach ($presensiData as $idSiswa => $status) {
+            foreach ($processedPresensi as $idSiswa => $pData) {
                 PresensiSiswa::create([
                     'id_jurnal'   => $jurnal->id_jurnal,
                     'id_siswa'    => $idSiswa,
-                    'status'      => $status,
-                    'keterangan'  => $keteranganData[$idSiswa] ?? null,
+                    'status'      => $pData['status'],
+                    'keterangan'  => $pData['keterangan'],
                 ]);
             }
 
@@ -604,7 +704,7 @@ class GuruMapelDashboardController extends Controller
             );
 
             return redirect()->route('guru-mapel.jurnal.riwayat')
-                ->with('success', "Jurnal mengajar dan presensi {$hadirCount} siswa hadir berhasil disimpan.");
+                ->with('success', "Jurnal mengajar dan presensi ({$hadirCount} Hadir, {$tidakHadirCount} Tidak Hadir) berhasil disimpan.");
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()

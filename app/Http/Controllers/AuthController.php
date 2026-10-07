@@ -34,7 +34,7 @@ class AuthController extends Controller
             'role' => 'nullable|string',
         ]);
 
-        $loginInput = $credentials['username'];
+        $loginInput = trim($credentials['username']);
         $password = $credentials['password'];
         $selectedRole = $request->input('role');
         $remember = $request->has('remember');
@@ -55,6 +55,8 @@ class AuthController extends Controller
             if ($selectedRole === 'guru_mapel' && $user->isGuru()) {
                 $isCompatible = true;
             } elseif ($selectedRole === 'wali_kelas' && $user->isWaliKelas()) {
+                $isCompatible = true;
+            } elseif ($selectedRole === 'waka_piket' && ($user->waka()->exists() || in_array($user->role, ['waka', 'waka_kurikulum', 'waka_sdm', 'admin']) || \App\Models\JadwalPiketKbm::where('piket_waka_nip', $user->guru?->nip)->exists())) {
                 $isCompatible = true;
             }
 
@@ -79,6 +81,15 @@ class AuthController extends Controller
             $request->session()->regenerate();
 
             // If user explicitly picked a valid dual role during login, redirect to that portal
+            if ($selectedRole === 'waka_piket') {
+                if ($user->email === 'waka.piket@smkn1boyolangu.sch.id' || $user->role === 'admin') {
+                    return redirect()->route('waka-piket.dispensasi');
+                }
+                return $this->redirectUser(Auth::user());
+            }
+            if (in_array($selectedRole, ['waka', 'waka_kurikulum', 'waka_sdm']) && $user->isWaka()) {
+                return $this->redirectUser(Auth::user());
+            }
             if ($selectedRole === 'guru_mapel' && $user->isGuru()) {
                 return redirect()->route('guru-mapel.dashboard');
             }
@@ -166,10 +177,20 @@ class AuthController extends Controller
             case 'wali_murid':
                 return redirect()->route('wali-murid.dashboard');
             case 'waka':
-                if ($user->waka?->bidang === 'SDM') {
+                if ($user->email === 'waka.piket@smkn1boyolangu.sch.id') {
+                    return redirect()->route('waka-piket.dispensasi');
+                }
+                $bidangLower = strtolower($user->waka?->bidang ?? '');
+                if (str_contains($bidangLower, 'sdm')) {
                     return redirect()->route('waka-sdm.dashboard');
                 }
-                return redirect()->route('waka-kurikulum.dashboard');
+                if (str_contains($bidangLower, 'kurikulum')) {
+                    return redirect()->route('waka-kurikulum.dashboard');
+                }
+                if (str_contains($bidangLower, 'kesiswaan') || str_contains($bidangLower, 'kedisiplinan')) {
+                    return redirect()->route('waka-kesiswaan.dashboard');
+                }
+                return redirect()->route('waka-kesiswaan.dashboard');
             case 'kepala_sekolah':
                 return redirect()->route('kepala-sekolah.dashboard');
             default:

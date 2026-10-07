@@ -8,6 +8,7 @@ use App\Models\Guru;
 use App\Models\Kelas;
 use App\Models\Mapel;
 use App\Models\User;
+use App\Models\Jurusan;
 use App\Models\LogAktivitas;
 use App\Models\JurnalMengajar;
 use App\Models\PresensiSiswa;
@@ -64,21 +65,49 @@ class AdminDashboardController extends Controller
             ? (100 - $pctHadir - $pctIzinSakit)
             : 0;
 
-        // ── Trend Kehadiran 7 Hari Terakhir (Real Data) ────────
-        $trendLabels = [];
-        $trendData   = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $day   = Carbon::today()->subDays($i);
-            $count = PresensiSiswa::whereHas('jurnal', fn($q) => $q->where('tanggal', $day->format('Y-m-d')))
-                ->where('status', 'Hadir')->count();
+        // ── Trend Kehadiran 7 Hari Terakhir Dinamis per Jurusan ────────
+        $jurusanList = Jurusan::orderBy('kode_jurusan')->get();
 
+        $dates7 = [];
+        $trendLabels = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = Carbon::today()->subDays($i);
+            $dates7[] = $day->format('Y-m-d');
             $trendLabels[] = $day->translatedFormat('D');
-            $trendData[]   = $count;
+        }
+
+        $trendDatasets = [];
+        $trendDatasets['all'] = array_fill(0, 7, 0);
+        foreach ($jurusanList as $jur) {
+            $trendDatasets[$jur->kode_jurusan] = array_fill(0, 7, 0);
+        }
+
+        $dateIndexMap = array_flip($dates7);
+
+        $presensi7Days = PresensiSiswa::where('status', 'Hadir')
+            ->whereHas('jurnal', fn($q) => $q->whereIn('tanggal', $dates7))
+            ->with(['jurnal', 'siswa.kelas'])
+            ->get();
+
+        foreach ($presensi7Days as $p) {
+            $rawTgl = $p->jurnal->tanggal ?? null;
+            if ($rawTgl) {
+                $tglStr = Carbon::parse($rawTgl)->format('Y-m-d');
+                if (isset($dateIndexMap[$tglStr])) {
+                    $idx = $dateIndexMap[$tglStr];
+                    $trendDatasets['all'][$idx]++;
+
+                    $jurKode = $p->siswa->kelas->jurusan ?? null;
+                    if ($jurKode && isset($trendDatasets[$jurKode])) {
+                        $trendDatasets[$jurKode][$idx]++;
+                    }
+                }
+            }
         }
 
         $trend7Hari = [
             'labels' => $trendLabels,
-            'data'   => $trendData,
+            'data'   => $trendDatasets['all'],
         ];
 
         // ── Aktivitas Terbaru (Khusus Aktivitas Administrator & Sistem) ──────────
@@ -324,6 +353,8 @@ class AdminDashboardController extends Controller
             'jurnalTerisiCount',
             'jurnalTargetCount',
             'trend7Hari',
+            'jurusanList',
+            'trendDatasets',
             'perluPerhatian',
             'aktivitasTerbaru',
             'dateFormatted',

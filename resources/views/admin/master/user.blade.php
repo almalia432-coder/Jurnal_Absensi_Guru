@@ -709,15 +709,10 @@
             <span>Guru Piket</span>
             <span class="role-tab-count">{{ $roleCounts['guru_piket'] }}</span>
         </a>
-        <a href="{{ route('admin.master.user', array_merge(request()->except('role', 'page'), ['role' => 'waka_kurikulum'])) }}" class="role-tab-btn {{ $role === 'waka_kurikulum' ? 'active' : '' }}">
-            <i class="fa-solid fa-book-bookmark"></i>
-            <span>Waka Kurikulum</span>
-            <span class="role-tab-count">{{ $roleCounts['waka_kurikulum'] }}</span>
-        </a>
-        <a href="{{ route('admin.master.user', array_merge(request()->except('role', 'page'), ['role' => 'waka_sdm'])) }}" class="role-tab-btn {{ $role === 'waka_sdm' ? 'active' : '' }}">
-            <i class="fa-solid fa-user-gear"></i>
-            <span>Waka SDM</span>
-            <span class="role-tab-count">{{ $roleCounts['waka_sdm'] }}</span>
+        <a href="{{ route('admin.master.user', array_merge(request()->except('role', 'page'), ['role' => 'waka'])) }}" class="role-tab-btn {{ $role === 'waka' ? 'active' : '' }}">
+            <i class="fa-solid fa-user-shield"></i>
+            <span>Waka</span>
+            <span class="role-tab-count">{{ $roleCounts['waka'] }}</span>
         </a>
         <a href="{{ route('admin.master.user', array_merge(request()->except('role', 'page'), ['role' => 'wali_murid'])) }}" class="role-tab-btn {{ $role === 'wali_murid' ? 'active' : '' }}">
             <i class="fa-solid fa-users"></i>
@@ -805,16 +800,15 @@
                 <tbody>
                     @forelse($userList as $index => $u)
                         @php
+                            $wakaBidangText = ($u->waka && $u->waka->bidang) ? ' (' . $u->waka->bidang . ')' : '';
                             $roleLabel = match($u->role) {
                                 'admin'          => 'Administrator',
                                 'wali_kelas'     => 'Wali Kelas',
                                 'guru_mapel'     => 'Guru Mapel',
                                 'guru_piket'     => 'Guru Piket',
-                                'waka_kurikulum' => 'Waka Kurikulum',
-                                'waka_sdm'       => 'Waka SDM',
+                                'waka', 'waka_kurikulum', 'waka_sdm' => 'Waka' . $wakaBidangText,
                                 'wali_murid'     => 'Wali Murid',
                                 'kepala_sekolah' => 'Kepala Sekolah',
-                                'waka'           => 'Waka',
                                 'satpam'         => 'Satpam',
                                 default          => ucfirst(str_replace('_', ' ', $u->role))
                             };
@@ -824,11 +818,9 @@
                                 'wali_kelas'     => 'fa-user-tie',
                                 'guru_mapel'     => 'fa-book-open-reader',
                                 'guru_piket'     => 'fa-clipboard-check',
-                                'waka_kurikulum' => 'fa-book-bookmark',
-                                'waka_sdm'       => 'fa-user-gear',
+                                'waka', 'waka_kurikulum', 'waka_sdm' => 'fa-user-shield',
                                 'wali_murid'     => 'fa-users',
                                 'kepala_sekolah' => 'fa-graduation-cap',
-                                'waka'           => 'fa-briefcase',
                                 'satpam'         => 'fa-shield-halved',
                                 default          => 'fa-user'
                             };
@@ -988,8 +980,7 @@
                             <option value="wali_kelas">Wali Kelas</option>
                             <option value="guru_mapel" selected>Guru Mapel</option>
                             <option value="guru_piket">Guru Piket</option>
-                            <option value="waka_kurikulum">Waka Kurikulum</option>
-                            <option value="waka_sdm">Waka SDM / Kepegawaian</option>
+                            <option value="waka">Wakil Kepala Sekolah (Waka)</option>
                             <option value="wali_murid">Wali Murid / Siswa</option>
                             <option value="kepala_sekolah">Kepala Sekolah</option>
                             <option value="satpam">Satpam</option>
@@ -1001,6 +992,45 @@
                             <option value="1" selected>Aktif (Bisa Login)</option>
                             <option value="0">Non-Aktif (Ditangguhkan)</option>
                         </select>
+                    </div>
+                </div>
+
+                {{-- Waka Bidang Selection --}}
+                <div class="form-group-custom" id="add_waka_bidang_wrap" style="display: none;">
+                    <label class="form-label-custom">Bidang / Penugasan Waka</label>
+                    <select name="waka_bidang" class="form-ctrl-custom">
+                        <option value="Kurikulum">Waka Kurikulum</option>
+                        <option value="SDM">Waka SDM / Kepegawaian</option>
+                        <option value="Kesiswaan">Waka Kesiswaan</option>
+                        <option value="Sarana & Prasarana">Waka Sarana & Prasarana</option>
+                        <option value="Humas & Hubungan Industri">Waka Hubungan Industri (Hubinmas)</option>
+                        <option value="Kedisiplinan">Waka Kedisiplinan</option>
+                        <option value="Piket KBM">Waka Piket KBM (Akun Meja Piket)</option>
+                    </select>
+
+                    <div style="margin-top: 10px;">
+                        <label class="form-label-custom" style="margin-bottom: 6px;">Hak Portal Bidang Waka (Pilihan Baku)</label>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="kurikulum" id="add_waka_kode_kurikulum"> Kurikulum
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="sdm" id="add_waka_kode_sdm"> SDM
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="kesiswaan" id="add_waka_kode_kesiswaan"> Kesiswaan
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="kedisiplinan" id="add_waka_kode_kedisiplinan"> Kedisiplinan
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="sarpras" id="add_waka_kode_sarpras"> Sarpras
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="bk" id="add_waka_kode_bk"> BK
+                            </label>
+                        </div>
+                        <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">Pilih satu atau lebih kode bidang. Menentukan hak portal secara otomatis.</small>
                     </div>
                 </div>
 
@@ -1076,8 +1106,7 @@
                             <option value="wali_kelas">Wali Kelas</option>
                             <option value="guru_mapel">Guru Mapel</option>
                             <option value="guru_piket">Guru Piket</option>
-                            <option value="waka_kurikulum">Waka Kurikulum</option>
-                            <option value="waka_sdm">Waka SDM / Kepegawaian</option>
+                            <option value="waka">Wakil Kepala Sekolah (Waka)</option>
                             <option value="wali_murid">Wali Murid / Siswa</option>
                             <option value="kepala_sekolah">Kepala Sekolah</option>
                             <option value="satpam">Satpam</option>
@@ -1089,6 +1118,45 @@
                             <option value="1">Aktif (Bisa Login)</option>
                             <option value="0">Non-Aktif (Ditangguhkan)</option>
                         </select>
+                    </div>
+                </div>
+
+                {{-- Waka Bidang Selection for Edit Modal --}}
+                <div class="form-group-custom" id="edit_waka_bidang_wrap" style="display: none;">
+                    <label class="form-label-custom">Bidang / Penugasan Waka</label>
+                    <select name="waka_bidang" id="edit_waka_bidang" class="form-ctrl-custom">
+                        <option value="Kurikulum">Waka Kurikulum</option>
+                        <option value="SDM">Waka SDM / Kepegawaian</option>
+                        <option value="Kesiswaan">Waka Kesiswaan</option>
+                        <option value="Sarana & Prasarana">Waka Sarana & Prasarana</option>
+                        <option value="Humas & Hubungan Industri">Waka Hubungan Industri (Hubinmas)</option>
+                        <option value="Kedisiplinan">Waka Kedisiplinan</option>
+                        <option value="Piket KBM">Waka Piket KBM (Akun Meja Piket)</option>
+                    </select>
+
+                    <div style="margin-top: 10px;">
+                        <label class="form-label-custom" style="margin-bottom: 6px;">Hak Portal Bidang Waka (Pilihan Baku)</label>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="kurikulum" id="edit_waka_kode_kurikulum"> Kurikulum
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="sdm" id="edit_waka_kode_sdm"> SDM
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="kesiswaan" id="edit_waka_kode_kesiswaan"> Kesiswaan
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="kedisiplinan" id="edit_waka_kode_kedisiplinan"> Kedisiplinan
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="sarpras" id="edit_waka_kode_sarpras"> Sarpras
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer;">
+                                <input type="checkbox" name="waka_bidang_kode[]" value="bk" id="edit_waka_kode_bk"> BK
+                            </label>
+                        </div>
+                        <small style="color: #64748b; font-size: 11px; display: block; margin-top: 4px;">Pilih satu atau lebih kode bidang. Menentukan hak portal secara otomatis.</small>
                     </div>
                 </div>
 
@@ -1272,10 +1340,18 @@
             verified: {{ $userItem->email_verified_at ? 1 : 0 }},
             avatarUrl: @json($avUrl),
             id_siswa: @json($userItem->siswa->id_siswa ?? null),
-            nama_siswa: @json($userItem->siswa->nama_lengkap ?? null)
+            nama_siswa: @json($userItem->siswa->nama_lengkap ?? null),
+            @php
+                $userWakaRecord = $userItem->waka ?? ($userItem->guru ? \App\Models\Waka::where('nip', $userItem->guru->nip)->first() : null);
+            @endphp
+            waka_bidang: @json($userWakaRecord->bidang ?? null),
+            waka_bidang_kode: @json($userWakaRecord->bidang_kode ?? []),
+            has_waka: @json($userWakaRecord !== null)
         },
         @endforeach
     };
+
+    let currentEditingUser = null;
 
     function onRoleChange(type) {
         const select = document.getElementById(type + '_role');
@@ -1283,10 +1359,19 @@
         if (select && wrap) {
             wrap.style.display = (select.value === 'wali_murid') ? 'block' : 'none';
         }
+        const wakaWrap = document.getElementById(type + '_waka_bidang_wrap');
+        if (select && wakaWrap) {
+            let isWaka = ['waka', 'waka_kurikulum', 'waka_sdm'].includes(select.value);
+            if (type === 'edit' && currentEditingUser && currentEditingUser.has_waka) {
+                isWaka = true;
+            }
+            wakaWrap.style.display = isWaka ? 'block' : 'none';
+        }
     }
 
     // Modal Add
     function openAddModal() {
+        currentEditingUser = null;
         document.getElementById('add_role').value = 'guru_mapel';
         onRoleChange('add');
         document.getElementById('addUserModal').classList.add('show');
@@ -1299,12 +1384,27 @@
     function openEditModal(userId) {
         const user = usersData[userId];
         if (!user) return;
+        currentEditingUser = user;
 
         document.getElementById('edit_name').value = user.name || '';
         document.getElementById('edit_email').value = user.email || '';
         document.getElementById('edit_password').value = '';
         document.getElementById('edit_role').value = user.role || 'guru_mapel';
         document.getElementById('edit_is_active').value = user.is_active ? '1' : '0';
+
+        const hasWaka = user.has_waka || ['waka', 'waka_kurikulum', 'waka_sdm'].includes(user.role);
+        if (hasWaka) {
+            const editWakaBidang = document.getElementById('edit_waka_bidang');
+            if (editWakaBidang && user.waka_bidang) editWakaBidang.value = user.waka_bidang;
+
+            const kodeList = user.waka_bidang_kode || [];
+            ['kurikulum', 'sdm', 'kesiswaan', 'kedisiplinan', 'sarpras', 'bk'].forEach(k => {
+                const el = document.getElementById('edit_waka_kode_' + k);
+                if (el) {
+                    el.checked = Array.isArray(kodeList) && kodeList.includes(k);
+                }
+            });
+        }
 
         if (user.role === 'wali_murid' && user.id_siswa) {
             document.getElementById('edit_id_siswa').value = user.id_siswa;

@@ -923,6 +923,12 @@
                         <span>Data Siswa Kelas</span>
                     </a>
                 </li>
+                <li class="{{ request()->routeIs('wali-kelas.terlambat*') ? 'active' : '' }}">
+                    <a href="{{ route('wali-kelas.terlambat') }}">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <span>Siswa Terlambat</span>
+                    </a>
+                </li>
 
                 @if(Auth::user()->role === 'admin')
                 <li class="sidebar-category-header">
@@ -1000,6 +1006,9 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- Portal Switcher --}}
+                <x-portal-switcher />
 
                 {{-- User Profile Dropdown --}}
                 <div class="profile-dropdown-wrap" id="profileDropdownWrap">

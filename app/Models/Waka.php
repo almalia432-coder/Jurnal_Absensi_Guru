@@ -15,11 +15,13 @@ class Waka extends Model
         'jenis_kelamin',
         'no_hp',
         'bidang',
+        'bidang_kode',
         'status_aktif',
     ];
 
     protected $casts = [
         'status_aktif' => 'boolean',
+        'bidang_kode' => 'array',
     ];
 
     public function user()
