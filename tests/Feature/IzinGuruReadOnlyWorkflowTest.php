@@ -75,7 +75,7 @@ class IzinGuruReadOnlyWorkflowTest extends TestCase
             'name'      => 'Guru Mapel Test ' . $rand,
             'email'     => 'gurumapel' . $rand . '@test.id',
             'password'  => Hash::make('password'),
-            'role'      => 'guru',
+            'role'      => 'guru_mapel',
             'is_active' => true,
         ]);
         $this->guru = Guru::create([
@@ -123,7 +123,7 @@ class IzinGuruReadOnlyWorkflowTest extends TestCase
             'name'      => 'Waka Piket Petugas ' . $rand,
             'email'     => 'wakapiket' . $rand . '@test.id',
             'password'  => Hash::make('password'),
-            'role'      => 'piket_waka',
+            'role'      => 'waka',
             'is_active' => true,
         ]);
         $wakaPiketGuru = Guru::create([
@@ -415,7 +415,7 @@ class IzinGuruReadOnlyWorkflowTest extends TestCase
             'name'      => 'Guru Lain Test',
             'email'     => 'gurulain' . rand(1000, 9999) . '@test.id',
             'password'  => Hash::make('password'),
-            'role'      => 'guru',
+            'role'      => 'guru_mapel',
             'is_active' => true,
         ]);
         $otherGuru = Guru::create([
