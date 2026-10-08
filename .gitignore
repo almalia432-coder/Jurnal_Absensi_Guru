@@ -25,3 +25,8 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+hasil_tes*.txt
+migrate*.txt
+diff_stat.txt
+scratch/
