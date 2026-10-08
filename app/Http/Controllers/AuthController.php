@@ -52,9 +52,16 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
+<<<<<<< HEAD
         $loginInput = trim($request->input('username'));
         $password   = $request->input('password');
         $remember   = $request->boolean('remember');
+=======
+        $loginInput = trim($credentials['username']);
+        $password = $credentials['password'];
+        $selectedRole = $request->input('role');
+        $remember = $request->has('remember');
+>>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
 
         // --- Rate Limiting ---
         $throttleKey = $this->throttleKey($loginInput, $request->ip());
@@ -66,8 +73,23 @@ class AuthController extends Controller
             ])->onlyInput('username');
         }
 
+<<<<<<< HEAD
         // --- Temukan User ---
         $user = $this->findUser($loginInput);
+=======
+        // 3. If user found and role selected, verify role match with dual-role flexibility
+        if ($user && $selectedRole && $selectedRole !== 'semua' && $user->role !== $selectedRole) {
+            $isCompatible = false;
+            // Guru Mapel & Wali Kelas interoperability:
+            // A Wali Kelas is also a Guru Mapel, and a Guru Mapel assigned to a class is a Wali Kelas
+            if ($selectedRole === 'guru_mapel' && $user->isGuru()) {
+                $isCompatible = true;
+            } elseif ($selectedRole === 'wali_kelas' && $user->isWaliKelas()) {
+                $isCompatible = true;
+            } elseif ($selectedRole === 'waka_piket' && ($user->waka()->exists() || in_array($user->role, ['waka', 'waka_kurikulum', 'waka_sdm', 'admin']) || \App\Models\JadwalPiketKbm::where('piket_waka_nip', $user->guru?->nip)->exists())) {
+                $isCompatible = true;
+            }
+>>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
 
         // --- Cek Password ---
         if (!$user || !Hash::check($password, $user->password)) {
@@ -89,8 +111,27 @@ class AuthController extends Controller
         Auth::login($user, $remember);
         $request->session()->regenerate();
 
+<<<<<<< HEAD
         // Reset throttle setelah login berhasil
         RateLimiter::clear($throttleKey);
+=======
+            // If user explicitly picked a valid dual role during login, redirect to that portal
+            if ($selectedRole === 'waka_piket') {
+                if ($user->email === 'waka.piket@smkn1boyolangu.sch.id' || $user->role === 'admin') {
+                    return redirect()->route('waka-piket.dispensasi');
+                }
+                return $this->redirectUser(Auth::user());
+            }
+            if (in_array($selectedRole, ['waka', 'waka_kurikulum', 'waka_sdm']) && $user->isWaka()) {
+                return $this->redirectUser(Auth::user());
+            }
+            if ($selectedRole === 'guru_mapel' && $user->isGuru()) {
+                return redirect()->route('guru-mapel.dashboard');
+            }
+            if ($selectedRole === 'wali_kelas' && $user->isWaliKelas()) {
+                return redirect()->route('wali-kelas.dashboard');
+            }
+>>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
 
         return $this->redirectUser($user);
     }
@@ -116,6 +157,7 @@ class AuthController extends Controller
      */
     protected function throttleKey(string $username, string $ip): string
     {
+<<<<<<< HEAD
         return 'login|' . Str::lower(trim($username)) . '|' . $ip;
     }
 
@@ -136,6 +178,44 @@ class AuthController extends Controller
         $user = User::where('email', $input)->first();
         if ($user) {
             return $user;
+=======
+        switch ($user->role) {
+            case 'admin':
+                return redirect()->route('admin.dashboard');
+            case 'wali_kelas':
+                return redirect()->route('wali-kelas.dashboard');
+            case 'guru_piket':
+                return redirect()->route('guru-piket.dashboard');
+            case 'guru_mapel':
+                return redirect()->route('guru-mapel.dashboard');
+            case 'satpam':
+                return redirect()->route('satpam.dashboard');
+            case 'waka_kurikulum':
+                return redirect()->route('waka-kurikulum.dashboard');
+            case 'waka_sdm':
+                return redirect()->route('waka-sdm.dashboard');
+            case 'wali_murid':
+                return redirect()->route('wali-murid.dashboard');
+            case 'waka':
+                if ($user->email === 'waka.piket@smkn1boyolangu.sch.id') {
+                    return redirect()->route('waka-piket.dispensasi');
+                }
+                $bidangLower = strtolower($user->waka?->bidang ?? '');
+                if (str_contains($bidangLower, 'sdm')) {
+                    return redirect()->route('waka-sdm.dashboard');
+                }
+                if (str_contains($bidangLower, 'kurikulum')) {
+                    return redirect()->route('waka-kurikulum.dashboard');
+                }
+                if (str_contains($bidangLower, 'kesiswaan') || str_contains($bidangLower, 'kedisiplinan')) {
+                    return redirect()->route('waka-kesiswaan.dashboard');
+                }
+                return redirect()->route('waka-kesiswaan.dashboard');
+            case 'kepala_sekolah':
+                return redirect()->route('kepala-sekolah.dashboard');
+            default:
+                return redirect()->route('jurnal.index');
+>>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
         }
 
         // Kumpulkan matching user_id dari guru dan tabel non-guru

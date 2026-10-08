@@ -227,7 +227,11 @@
                             </td>
                             <td style="text-align: right;">
                                 <div class="action-btns" style="justify-content: flex-end;">
+<<<<<<< HEAD
                                     @if(in_array($ds->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))
+=======
+                                    @if($ds->status === 'Disetujui' || $ds->status === 'Disetujui_Waka' || $ds->status === 'Selesai')
+>>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
                                         <a href="{{ route('guru-piket.dispensasi.cetak', $ds->id) }}" target="_blank" class="btn-act approve" style="text-decoration:none;" title="Cetak Surat Izin Keluar">
                                             <i class="fa-solid fa-print"></i> Slip
                                         </a>
