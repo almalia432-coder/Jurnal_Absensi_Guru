@@ -608,17 +608,10 @@ class GuruMapelDashboardController extends Controller
             ->get()
             ->keyBy('id_siswa');
 
-<<<<<<< HEAD
         // Ambil dispensasi siswa yang disetujui final pada hari ini
         $dispensasiSiswaMap = DispensasiSiswa::whereHas('siswa', fn($q) => $q->where('id_kelas', $idKelas))
             ->whereDate('tanggal', $today)
             ->final()
-=======
-        // Ambil dispensasi siswa yang disetujui pada hari ini
-        $dispensasiSiswaMap = DispensasiSiswa::whereHas('siswa', fn($q) => $q->where('id_kelas', $idKelas))
-            ->whereDate('tanggal', $today)
-            ->whereIn('status', ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai'])
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
             ->get()
             ->keyBy('id_siswa');
 

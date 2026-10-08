@@ -49,11 +49,7 @@ class WakaKesiswaanDashboardController extends Controller
         $dispensasiHariIni = DispensasiSiswa::whereDate('tanggal', $today)->get();
         $dispensasiCount = $dispensasiHariIni->count();
         $dispensasiMenunggu = $dispensasiHariIni->where('status', 'Menunggu')->count();
-<<<<<<< HEAD
         $dispensasiDisetujui = $dispensasiHariIni->filter(fn($d) => in_array($d->status, ['Disetujui', 'Disetujui_KS', 'Disetujui_Waka', 'Selesai']))->count();
-=======
-        $dispensasiDisetujui = $dispensasiHariIni->whereIn('status', ['Disetujui', 'Disetujui_Waka', 'Selesai'])->count();
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
 
         // 2. Daftar Dispensasi Aktif Hari Ini (untuk pemantauan kesiswaan)
         $dispensasiList = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser', 'disetujuiOlehUser'])
@@ -173,20 +169,12 @@ class WakaKesiswaanDashboardController extends Controller
         $dispensasiList = $query->orderByDesc('id')->paginate(15)->withQueryString();
 
         $metrics = [
-<<<<<<< HEAD
             'total'            => DispensasiSiswa::count(),
             'menunggu'         => DispensasiSiswa::where('status', 'Menunggu')->count(),
             'disetujui_piket'  => DispensasiSiswa::where('status', 'Disetujui_Piket')->count(),
             'disetujui'        => DispensasiSiswa::final()->count(),
             'selesai'          => DispensasiSiswa::where('status', 'Selesai')->count(),
             'ditolak'          => DispensasiSiswa::where('status', 'Ditolak')->count(),
-=======
-            'total'     => DispensasiSiswa::count(),
-            'menunggu'  => DispensasiSiswa::where('status', 'Menunggu')->count(),
-            'disetujui' => DispensasiSiswa::whereIn('status', ['Disetujui', 'Disetujui_Waka'])->count(),
-            'selesai'   => DispensasiSiswa::where('status', 'Selesai')->count(),
-            'ditolak'   => DispensasiSiswa::where('status', 'Ditolak')->count(),
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
         ];
 
         return view('waka_kesiswaan.dispensasi.index', compact(

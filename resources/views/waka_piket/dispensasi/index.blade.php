@@ -434,13 +434,8 @@
                         @endif
                     </td>
                     <td style="text-align: center;">
-<<<<<<< HEAD
                         @if($item->status === 'Disetujui_Piket')
                             @if($isWakaPiketToday || Auth::user()->role === 'admin')
-=======
-                        @if($item->status === 'Menunggu')
-                            @if($isWakaPiketToday || Auth::user()->email === 'waka.piket@smkn1boyolangu.sch.id' || Auth::user()->role === 'admin')
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
                                 <div style="display: flex; gap: 6px; justify-content: center;">
                                     <form action="{{ route('waka-piket.dispensasi.status', $item->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin MENYETUJUI dispensasi untuk {{ addslashes($item->siswa->nama_lengkap ?? 'Siswa') }}?');">
                                         @csrf
@@ -458,7 +453,6 @@
                                     <i class="fa-solid fa-lock" style="color: #cbd5e1;"></i> Khusus Waka Piket
                                 </span>
                             @endif
-<<<<<<< HEAD
                         @elseif($item->status === 'Menunggu')
                             <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
                                 <span style="font-size: 11.5px; color: #b45309; font-weight: 600;">Tahap 1 Guru Piket</span>
@@ -469,9 +463,6 @@
                                 @endif
                             </div>
                         @elseif($item->status === 'Disetujui' || $item->status === 'Selesai')
-=======
-                        @elseif($item->status === 'Disetujui')
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
                             <div style="display: flex; gap: 6px; justify-content: center; align-items: center;">
                                 <a href="{{ route('guru-piket.dispensasi.cetak', $item->id) }}" target="_blank" class="btn-print-slip" title="Cetak Surat Izin">
                                     <i class="fa-solid fa-print"></i> Slip

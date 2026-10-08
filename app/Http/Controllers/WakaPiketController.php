@@ -34,21 +34,8 @@ class WakaPiketController extends Controller
         $rosterToday = JadwalPiketKbm::getRosterForDate($targetDate);
         $wakaPiketInfo = $rosterToday['waka'] ?? null;
 
-<<<<<<< HEAD
         // Cek apakah user yang login adalah Waka Piket pada tanggal terpilih via PortalResolver
         $isWakaPiketToday = PortalResolver::hasDuty($user, 'piket_waka', $targetDate);
-=======
-        // Cek apakah user yang login adalah Waka Piket hari ini
-        $isWakaPiketToday = false;
-        if ($user->email === 'waka.piket@smkn1boyolangu.sch.id' || $user->role === 'admin') {
-            $isWakaPiketToday = true;
-        } elseif ($wakaPiketInfo) {
-            $userNip = $user->guru->nip ?? ($user->waka->nip ?? null);
-            if ($userNip && $userNip === $wakaPiketInfo['nip']) {
-                $isWakaPiketToday = true;
-            }
-        }
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
 
         // Query Dispensasi
         $query = DispensasiSiswa::with(['siswa.kelas', 'diinputOlehUser', 'disetujuiOlehUser', 'piketApprovedByUser'])
@@ -101,32 +88,12 @@ class WakaPiketController extends Controller
         $disp = DispensasiSiswa::with('siswa')->findOrFail($id);
         $user = Auth::user();
 
-<<<<<<< HEAD
         // Validasi Otoritas: Waka Piket bertugas pada tanggal dispensasi via PortalResolver (atau admin)
         $dispDate = Carbon::parse($disp->tanggal);
         $isAuthorized = PortalResolver::hasDuty($user, 'piket_waka', $dispDate);
 
         if (!$isAuthorized) {
             return back()->with('error', "Akses Ditolak! Anda tidak bertugas sebagai Waka Piket KBM pada tanggal " . $dispDate->translatedFormat('d F Y') . ".");
-=======
-        // Validasi Otoritas: Hanya Waka Piket yang bertugas pada hari tersebut (atau akun bersama/admin) yang berhak approve
-        $rosterTarget = JadwalPiketKbm::getRosterForDate(Carbon::parse($disp->tanggal));
-        $wakaDuty = $rosterTarget['waka'] ?? null;
-        $isAuthorized = false;
-
-        if ($user->email === 'waka.piket@smkn1boyolangu.sch.id' || $user->role === 'admin') {
-            $isAuthorized = true;
-        } elseif ($wakaDuty) {
-            $userNip = $user->guru->nip ?? ($user->waka->nip ?? null);
-            if ($userNip && $userNip === $wakaDuty['nip']) {
-                $isAuthorized = true;
-            }
-        }
-
-        if (!$isAuthorized) {
-            $petugasNama = $wakaDuty['nama'] ?? 'Waka Piket Lain';
-            return back()->with('error', "Akses Ditolak! Anda tidak bertugas sebagai Waka Piket KBM pada tanggal " . Carbon::parse($disp->tanggal)->translatedFormat('d F Y') . ". Penanggung jawab piket adalah {$petugasNama}.");
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
         }
 
         $namaWaka = $user->name;

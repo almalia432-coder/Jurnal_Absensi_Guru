@@ -153,29 +153,6 @@
             <form action="{{ route('login') }}" method="POST" class="auth-form" id="loginForm">
                 @csrf
 
-<<<<<<< HEAD
-=======
-                <!-- Role Access Selection -->
-                <div class="input-field-group">
-                    <label class="input-field-label" for="role">Hak Akses / Role</label>
-                    <div class="input-box-wrapper">
-                        <i class="bi bi-person-badge field-icon-left"></i>
-                        <select name="role" id="role" class="field-control field-select" onchange="quickFillDemoCredential()">
-                            <option value="">-- Pilih Role (Otomatis) --</option>
-                            <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin (Pengelola Sistem)</option>
-                            <option value="wali_kelas" {{ old('role') == 'wali_kelas' ? 'selected' : '' }}>Wali Kelas</option>
-                            <option value="guru_piket" {{ old('role') == 'guru_piket' ? 'selected' : '' }}>Guru Piket</option>
-                            <option value="guru_mapel" {{ old('role') == 'guru_mapel' ? 'selected' : '' }}>Guru Mapel</option>
-                            <option value="waka" {{ old('role') == 'waka' ? 'selected' : '' }}>Waka (Wakil Kepala Sekolah)</option>
-                            <option value="waka_piket" {{ old('role') == 'waka_piket' ? 'selected' : '' }}>Waka Piket (Akun Bersama Meja Piket)</option>
-                            <option value="wali_murid" {{ old('role') == 'wali_murid' ? 'selected' : '' }}>Wali Murid / Siswa</option>
-                            <option value="satpam" {{ old('role') == 'satpam' ? 'selected' : '' }}>Satpam (Keamanan Gate)</option>
-                            <option value="kepala_sekolah" {{ old('role') == 'kepala_sekolah' ? 'selected' : '' }}>Kepala Sekolah</option>
-                        </select>
-                    </div>
-                </div>
-
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
                 <!-- Username / NIP / Email Input -->
                 <div class="input-field-group">
                     <label class="input-field-label" for="username">NIP / NISN / Email</label>
@@ -242,117 +219,6 @@
 
 </div>
 
-<<<<<<< HEAD
-=======
-<!-- ================= MODAL AKUN DEMO ================= -->
-<div class="modal-backdrop" id="demoModalBackdrop" onclick="handleBackdropClick(event)">
-    <div class="modal-dialog">
-        <div class="modal-header">
-            <h3><i class="bi bi-key-fill"></i> Pilih Akun Demo</h3>
-            <button type="button" class="modal-close-btn" onclick="closeDemoModal()" title="Tutup Modal">
-                <i class="bi bi-x"></i>
-            </button>
-        </div>
-        <div class="modal-body">
-            <p class="modal-instruction">
-                Klik salah satu role di bawah ini untuk mengisi formulir login secara instan (Password: <strong>password</strong>):
-            </p>
-            <div class="demo-account-grid">
-                <!-- Admin -->
-                <div class="demo-account-card" onclick="selectDemoRole('admin')">
-                    <div class="demo-role-badge">
-                        <span>Admin Sistem</span>
-                        <i class="bi bi-shield-lock-fill"></i>
-                    </div>
-                    <div class="demo-email">admin@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Hak akses penuh konfigurasi & master data</div>
-                </div>
-
-                <!-- Wali Kelas -->
-                <div class="demo-account-card" onclick="selectDemoRole('wali_kelas')">
-                    <div class="demo-role-badge">
-                        <span>Wali Kelas</span>
-                        <i class="bi bi-mortarboard-fill"></i>
-                    </div>
-                    <div class="demo-email">walikelas@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Monitoring kehadiran siswa kelas binaan</div>
-                </div>
-
-                <!-- Guru Piket -->
-                <div class="demo-account-card" onclick="selectDemoRole('guru_piket')">
-                    <div class="demo-role-badge">
-                        <span>Guru Piket</span>
-                        <i class="bi bi-clipboard-check-fill"></i>
-                    </div>
-                    <div class="demo-email">gurupiket@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Pencatatan izin keluar & ketertiban harian</div>
-                </div>
-
-                <!-- Guru Mapel -->
-                <div class="demo-account-card" onclick="selectDemoRole('guru_mapel')">
-                    <div class="demo-role-badge">
-                        <span>Guru Mapel</span>
-                        <i class="bi bi-journal-text"></i>
-                    </div>
-                    <div class="demo-email">gurumapel@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Pengisian jurnal mengajar & presensi jam ke</div>
-                </div>
-
-                <!-- Waka (Wakil Kepala Sekolah) -->
-                <div class="demo-account-card" onclick="selectDemoRole('waka')">
-                    <div class="demo-role-badge">
-                        <span>Waka (Waka Sekolah)</span>
-                        <i class="bi bi-person-workspace"></i>
-                    </div>
-                    <div class="demo-email">wakakurikulum@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Portal Kurikulum, SDM, atau Kesiswaan sesuai bidang tugas</div>
-                </div>
-
-                <!-- Waka Piket (Akun Dinas Bersama) -->
-                <div class="demo-account-card" onclick="selectDemoRole('waka_piket')">
-                    <div class="demo-role-badge">
-                        <span>Waka Piket (Akun Bersama)</span>
-                        <i class="bi bi-shield-check"></i>
-                    </div>
-                    <div class="demo-email">waka.piket@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Akun dinas pos piket & persetujuan dispensasi harian</div>
-                </div>
-
-                <!-- Wali Murid -->
-                <div class="demo-account-card" onclick="selectDemoRole('wali_murid')">
-                    <div class="demo-role-badge">
-                        <span>Wali Murid / Siswa</span>
-                        <i class="bi bi-people-fill"></i>
-                    </div>
-                    <div class="demo-email">walimurid@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Melihat riwayat kehadiran & rekap harian</div>
-                </div>
-
-                <!-- Satpam -->
-                <div class="demo-account-card" onclick="selectDemoRole('satpam')">
-                    <div class="demo-role-badge">
-                        <span>Satpam Gate</span>
-                        <i class="bi bi-door-open-fill"></i>
-                    </div>
-                    <div class="demo-email">satpam@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Verifikasi izin keluar gerbang & gerbang masuk</div>
-                </div>
-
-                <!-- Kepala Sekolah -->
-                <div class="demo-account-card" onclick="selectDemoRole('kepala_sekolah')">
-                    <div class="demo-role-badge">
-                        <span>Kepala Sekolah</span>
-                        <i class="bi bi-award-fill"></i>
-                    </div>
-                    <div class="demo-email">kepsek@smkn1boyolangu.sch.id</div>
-                    <div class="demo-desc">Laporan eksekutif kehadiran & ketercapaian</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
 <!-- ================= MODAL BANTUAN / LUPA PASSWORD ================= -->
 <div class="modal-backdrop" id="helpModalBackdrop" onclick="handleHelpBackdropClick(event)">
     <div class="modal-dialog" style="max-width: 440px;">
@@ -399,51 +265,6 @@
         }
     }
 
-<<<<<<< HEAD
-=======
-    // Demo account mapping
-    const demoAccounts = {
-        'admin': 'admin@smkn1boyolangu.sch.id',
-        'wali_kelas': 'walikelas@smkn1boyolangu.sch.id',
-        'guru_piket': 'gurupiket@smkn1boyolangu.sch.id',
-        'guru_mapel': 'gurumapel@smkn1boyolangu.sch.id',
-        'waka': 'wakakurikulum@smkn1boyolangu.sch.id',
-        'waka_kurikulum': 'wakakurikulum@smkn1boyolangu.sch.id',
-        'waka_sdm': 'wakasdm@smkn1boyolangu.sch.id',
-        'waka_piket': 'waka.piket@smkn1boyolangu.sch.id',
-        'wali_murid': 'walimurid@smkn1boyolangu.sch.id',
-        'satpam': 'satpam@smkn1boyolangu.sch.id',
-        'kepala_sekolah': 'kepsek@smkn1boyolangu.sch.id'
-    };
-
-    // Quick fill when role select changed
-    function quickFillDemoCredential() {
-        const role = document.getElementById('role').value;
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-
-        if (role && demoAccounts[role]) {
-            usernameInput.value = demoAccounts[role];
-            passwordInput.value = 'password';
-        }
-    }
-
-    // Modal Demo Handlers
-    function openDemoModal() {
-        document.getElementById('demoModalBackdrop').classList.add('active');
-    }
-
-    function closeDemoModal() {
-        document.getElementById('demoModalBackdrop').classList.remove('active');
-    }
-
-    function handleBackdropClick(e) {
-        if (e.target.id === 'demoModalBackdrop') {
-            closeDemoModal();
-        }
-    }
-
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
     // Modal Help Handlers
     function openHelpModal(e) {
         if (e) e.preventDefault();

@@ -67,84 +67,10 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $userMapel = User::create([
-<<<<<<< HEAD
             'name'      => 'Siti Rahayu, S.Kom',
             'email'     => 's.rahayu@smkn1boyolangu.sch.id',
             'password'  => \Illuminate\Support\Facades\Hash::make(Str::random(32)),
             'role'      => 'guru_mapel',
-=======
-            'name' => 'Siti Rahayu, S.Kom (Guru Mapel)',
-            'email' => 'gurumapel@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'guru_mapel',
-            'is_active' => true,
-        ]);
-        GuruMapel::create([
-            'user_id' => $userMapel->id,
-            'nip' => '198805202012022004',
-            'nama_lengkap' => 'Siti Rahayu, S.Kom',
-            'jenis_kelamin' => 'P',
-            'no_hp' => '081234567893',
-        ]);
-
-        // Kepala Sekolah
-        $userKepsek = User::create([
-            'name' => 'Dr. H. Supriyanto, M.Pd (Kepala Sekolah)',
-            'email' => 'kepsek@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'kepala_sekolah',
-            'is_active' => true,
-        ]);
-        KepalaSekolah::create([
-            'user_id' => $userKepsek->id,
-            'nip' => '196808101994031005',
-            'nama_lengkap' => 'Dr. H. Supriyanto, M.Pd',
-            'jenis_kelamin' => 'L',
-            'no_hp' => '081234567894',
-            'periode_jabatan' => '2022-2026',
-        ]);
-
-        // Waka Kurikulum
-        $userWakaKurikulum = User::create([
-            'name' => 'Budi Santoso, M.T (Waka Kurikulum)',
-            'email' => 'wakakurikulum@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'waka',
-            'is_active' => true,
-        ]);
-        Waka::create([
-            'user_id' => $userWakaKurikulum->id,
-            'nip' => '197911042006041006',
-            'nama_lengkap' => 'Budi Santoso, M.T',
-            'jenis_kelamin' => 'L',
-            'no_hp' => '081234567895',
-            'bidang' => 'Kurikulum',
-        ]);
-
-        // Waka SDM
-        $userWakaSdm = User::create([
-            'name' => 'Dr. Hendra Wijaya, M.Pd (Waka SDM)',
-            'email' => 'wakasdm@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'waka',
-            'is_active' => true,
-        ]);
-        Waka::create([
-            'user_id' => $userWakaSdm->id,
-            'nip' => '198103152008011009',
-            'nama_lengkap' => 'Dr. Hendra Wijaya, M.Pd',
-            'jenis_kelamin' => 'L',
-            'no_hp' => '081234567897',
-            'bidang' => 'SDM',
-        ]);
-
-        // Wali Murid / Siswa Sample
-        $userWaliMurid = User::create([
-            'name' => 'Bapak/Ibu Wali Murid',
-            'email' => 'walimurid@smkn1boyolangu.sch.id',
-            'password' => Hash::make('password'),
-            'role' => 'wali_murid',
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
             'is_active' => true,
         ]);
 

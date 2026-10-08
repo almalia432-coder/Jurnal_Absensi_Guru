@@ -225,7 +225,6 @@ class PortalResolver
     }
 
     /**
-<<<<<<< HEAD
      * Periksa apakah user memiliki jadwal penugasan resmi pada tanggal tertentu.
      * Mengabaikan role umum/legacy fallback; khusus verifikasi petugas piket/waka piket.
      *
@@ -256,8 +255,6 @@ class PortalResolver
     }
 
     /**
-=======
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
      * Tentukan portal utama / default bagi user.
      * Mengembalikan null jika user tidak memiliki portal aktif.
      *
@@ -457,7 +454,6 @@ class PortalResolver
             'metadata'   => $metadata,
         ];
     }
-<<<<<<< HEAD
 
     /**
      * Dapatkan daftar user aktif penerima notifikasi pengajuan Izin Guru:
@@ -498,6 +494,4 @@ class PortalResolver
 
         return $recipients->unique('id')->values();
     }
-=======
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
 }

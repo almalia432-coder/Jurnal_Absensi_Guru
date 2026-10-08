@@ -78,12 +78,8 @@
         font-weight: 800;
         display: inline-block;
     }
-<<<<<<< HEAD
     .badge-status.Disetujui, .badge-status.Disetujui_Waka, .badge-status.Disetujui_KS { background: #dcfce7; color: #166534; }
     .badge-status.Disetujui_Piket { background: #dbeafe; color: #1e40af; }
-=======
-    .badge-status.Disetujui, .badge-status.Disetujui_Waka { background: #dcfce7; color: #166534; }
->>>>>>> 15462279a3ce11dce17010ba8b2e624622fc525f
     .badge-status.Menunggu { background: #fef3c7; color: #b45309; }
     .badge-status.Ditolak { background: #fee2e2; color: #991b1b; }
     .badge-status.Selesai { background: #e0e7ff; color: #3730a3; }
